@@ -1,0 +1,181 @@
+{
+    "layer": "bottom",
+    "position": "top",
+    "height": 24,
+    "spacing": 5,
+
+    /*
+        To find a nerd font available on your system, type the following and use one of them
+        % fc-list| grep Nerd
+    */
+    "font": "Arimo Nerd Font 12",
+
+    "modules-left": [
+        "sway/workspaces",
+        "sway/mode"
+    ],
+    "modules-center": [
+        "sway/window"
+    ],
+
+    "modules-right": [
+        // "custom/network-throughput-wlo1",
+        "custom/wifi-status-wlo1",
+        // "custom/speedtest",
+        "custom/filesystem-usage-root",
+        "custom/filesystem-usage-work",
+        "custom/memory-usage",
+        "custom/cpu-usage",
+        "custom/swap-usage",
+        "custom/weather-san-diego"
+        // "pulseaudio"
+    ],
+
+    "sway/mode": {
+        "format": "{}"
+    },
+
+    "sway/window": {
+        "format": "{title}"
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-icons": {
+            "default": [
+                "\uf026",
+                "\uf027",
+                "\uf028"
+            ]
+        },
+        "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+        "on-click-right": "pavucontrol",
+        "format-muted": "\uf00d {volume}%"
+    },
+
+    /*
+        Custom module definitions
+    */
+    
+    /* CPU Usage
+        usage: cpu-usage.py [-h] [-t] [-i INTERVAL] [-b]
+
+        Get CPU usage from mpstat(1)
+
+        options:
+        -h, --help            show this help message and exit
+        -t, --toggle          Toggle the output format
+        -i, --interval INTERVAL
+                                The update interval (in seconds)
+        -b, --background      Run this script in the background
+    */
+    "custom/cpu-usage": {
+        "exec": "~/.config/waybar/scripts/cpu-usage.py",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/cpu-usage.py --toggle"
+    },
+
+    /* Filesystem Usage
+        usage: filesystem-usage.py [-h] [-m MOUNTPOINT] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-l LABEL] [-t]
+
+        Get disk info from df(1)
+
+        options:
+        -h, --help            show this help message and exit
+        -m, --mountpoint MOUNTPOINT
+                                The mountpoint to check
+        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
+                                The unit to use for display
+        -l, --label LABEL     For now we need to pass a friendly mountpoint label
+        -t, --toggle          Toggle the output format
+    */
+    "custom/filesystem-usage-root": {
+        "exec": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint / --label root --unit auto",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint / --label root --unit auto --toggle"
+    },
+
+    "custom/filesystem-usage-work": {
+        "exec": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint /work --label work --unit auto",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint /work --label work --unit auto --toggle"
+    },
+
+    /* Memory Usage
+        usage: memory-usage.py [-h] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-t]
+
+        Get memory usage from free(1)
+
+        options:
+        -h, --help            show this help message and exit
+        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
+                                The unit to use for display
+        -t, --toggle          Toggle the output format
+    */
+    "custom/memory-usage": {
+        "exec": "~/.config/waybar/scripts/memory-usage.py",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/memory-usage.py --toggle"
+    },
+
+    /* Swap Usage
+        usage: swap-usage.py [-h] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-t] [-i INTERVAL] [-b]
+
+        Get swap usage from free(1)
+
+        options:
+        -h, --help            show this help message and exit
+        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
+                                The unit to use for display
+        -t, --toggle          Toggle the output format
+    */
+    "custom/swap-usage": {
+        "exec": "~/.config/waybar/scripts/swap-usage.py",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/swap-usage.py --toggle"
+    },
+
+    /* Weather
+        Usage: weather.py run [OPTIONS]
+
+        Get weather info from World Weather API
+
+        Options:
+        -a, --api-key TEXT   World Weather API key  [required]
+        -l, --location TEXT  The location to query  [required]
+        -c, --use-celsius    Use Celsius instead of Fahrenheit
+        --label TEXT         A "friendly name" to be used to form the IPC calls
+                            [required]
+        -t, --toggle         Toggle the output format
+        -h, --help           Show this message and exit.
+    */
+    "custom/weather-san-diego": {
+        "exec": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego",
+        "interval": 300,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego --toggle",
+        "on-click-right": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego"
+    },
+
+    /* WiFi Status
+        Usage: wifi-status.py run [OPTIONS]
+
+        Get WiFi status using iw(8)
+
+        Options:
+        --interface TEXT  The interface to check  [required]
+        --toggle          Toggle the output format
+        -h, --help        Show this message and exit.
+    */
+    "custom/wifi-status-wlo1": {
+        "exec": "~/.config/waybar/scripts/wifi-status.py run --interface wlo1",
+        "interval": 5,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/wifi-status.py run --interface wlo1 --toggle"
+    }
+}

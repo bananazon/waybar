@@ -1,137 +1,58 @@
-#custom-spacer {
-    background: transparent;
-}
-
-/* WiFi Status */
-#custom-wifi-status-wlo1.connected {
-    border: 2px solid #B0B0B0;
+/* ---------- Common Styles ---------- */
+/* Applies to all modules to avoid repetition */
+#custom-cpu-usage,
+#custom-filesystem-usage-root,
+#custom-filesystem-usage-work,
+#custom-memory-usage,
+#custom-spacer,
+#custom-swap-usage,
+#custom-weather-san-diego,
+#custom-wifi-status-wlo1 {
     border-radius: 6px;
     padding: 4px 8px;
+}
+
+/* ---------- WiFi Status ---------- */
+#custom-wifi-status-wlo1.connected {
+    border: 2px solid #B0B0B0;
 }
 
 #custom-wifi-status-wlo1.disconnected {
-    color: #888888;
-    /* background: #2e3440; */
-    /* border: 2px solid #4c566a; */
     border: 2px solid #B0B0B0;
-    padding: 4px 8px;
-    border-radius: 6px;
+    color: #888888;
 }
 
 #custom-wifi-status-wlo1.error {
-    color: #ff0000;
-    /* background: #2e3440; */
-    /* border: 2px solid #4c566a; */
     border: 2px solid #B0B0B0;
-    padding: 4px 8px;
-    border-radius: 6px;
+    color: #ff0000;
 }
 
-/* CPU Usage */
-#custom-cpu-usage.good {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+/* ---------- CPU Usage ---------- */
+#custom-cpu-usage.good { border: 2px solid #3a5; }
+#custom-cpu-usage.warning { border: 2px solid #E69500; }
+#custom-cpu-usage.critical { border: 2px solid #a33; }
 
-#custom-cpu-usage.warning {
-    border: 2px solid #E69500;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+/* ---------- Memory Usage ---------- */
+#custom-memory-usage.good { border: 2px solid #3a5; }
+#custom-memory-usage.warning { border: 2px solid #E69500; }
+#custom-memory-usage.critical { border: 2px solid #a33; }
 
-#custom-cpu-usage.critical {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+/* ---------- Swap Usage ---------- */
+#custom-swap-usage.good { border: 2px solid #3a5; }
+#custom-swap-usage.warning { border: 2px solid #E69500; }
+#custom-swap-usage.critical { border: 2px solid #a33; }
 
-/* Memory Usage */
-#custom-memory-usage.good {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-memory-usage.warning {
-    border: 2px solid #E69500;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-memory-usage.critical {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-/* Swap Usage */
-#custom-swap-usage.good {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-swap-usage.warning {
-    border: 2px solid #E69500;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-swap-usage.critical {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-/* Filesystem Usage */
+/* ---------- Filesystem Usage ---------- */
 /* root */
-#custom-filesystem-usage-root.good {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-filesystem-usage-root.warning {
-    border: 2px solid #E69500;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-filesystem-usage-root.critical {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+#custom-filesystem-usage-root.good { border: 2px solid #3a5; }
+#custom-filesystem-usage-root.warning { border: 2px solid #E69500; }
+#custom-filesystem-usage-root.critical { border: 2px solid #a33; }
 
 /* work */
-#custom-filesystem-usage-work.good {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+#custom-filesystem-usage-work.good { border: 2px solid #3a5; }
+#custom-filesystem-usage-work.warning { border: 2px solid #E69500; }
+#custom-filesystem-usage-work.critical { border: 2px solid #a33; }
 
-#custom-filesystem-usage-work.warning {
-    border: 2px solid #E69500;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-filesystem-usage-work.critical {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-/* Weather */
-#custom-weather-san-diego.success {
-    border: 2px solid #3a5;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
-
-#custom-weather-san-diego.failure {
-    border: 2px solid #a33;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
+/* ---------- Weather ---------- */
+#custom-weather-san-diego.success { border: 2px solid #3a5; }
+#custom-weather-san-diego.failure { border: 2px solid #a33; }

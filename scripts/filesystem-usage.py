@@ -168,7 +168,7 @@ def main():
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error}',
+            'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error if disk_info.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Filesystem Usage',
         }

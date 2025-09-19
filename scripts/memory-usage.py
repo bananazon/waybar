@@ -256,7 +256,7 @@ def main():
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_memory} {memory_info.error}',
+            'text'    : f'{glyphs.md_memory} {memory_info.error if memory_info.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'System Memory',
         }

@@ -332,7 +332,7 @@ def run(api_key, location, use_celsius, label, toggle):
             }
     else:
         output = {
-            'text'    : f'{icon} {location} {weather_data.error}',
+            'text'    : f'{icon} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : f'{location} error',
         }

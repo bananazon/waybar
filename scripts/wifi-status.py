@@ -198,7 +198,7 @@ def run(interface, toggle):
     else:
         wifi_icon = glyphs.md_wifi_strength_alert_outline
         output = {
-            'text'   : f'{wifi_icon} {wifi_status.interface} {wifi_status.error}',
+            'text'   : f'{wifi_icon} {wifi_status.interface} {wifi_status.error if wifi_status.error is not None else "Unknown error"}',
             # 'tooltip': interface,
             'class'  : 'error',
         }

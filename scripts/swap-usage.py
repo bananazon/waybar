@@ -114,7 +114,7 @@ def main():
             }
     else:
         output = {
-            'text'    : f'{glyphs.cod_arrow_swap} {swap_info.error}',
+            'text'    : f'{glyphs.cod_arrow_swap} {swap_info.error if swap_info.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Swap Usage',
         }

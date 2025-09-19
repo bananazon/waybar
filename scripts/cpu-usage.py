@@ -200,7 +200,7 @@ def main():
             }
     else:
         output = {
-            'text'    : f'{get_icon()} {cpu_info.error}',
+            'text'    : f'{get_icon()} {cpu_info.error if cpu_info.error is not None else "Unknown error"}',
             'tooltip' : 'CPU error',
             'class'   : 'error',
         }

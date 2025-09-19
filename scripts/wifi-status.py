@@ -192,7 +192,7 @@ def run(interface, toggle):
             wifi_icon = glyphs.md_wifi_strength_alert_outline
             output = {
                 'text'   : f'{wifi_icon} {wifi_status.interface} disconnected',
-                'tooltip': interface,
+                # 'tooltip': interface,
                 'class'  : 'disconnected',
             }
     else:

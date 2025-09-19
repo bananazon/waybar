@@ -115,7 +115,7 @@ def main():
     else:
         output = {
             'text'    : f'{glyphs.cod_arrow_swap} {swap_info.error}',
-            'class'   : 'critical',
+            'class'   : 'error',
             'tooltip' : 'Swap Usage',
         }
 

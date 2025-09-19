@@ -333,7 +333,7 @@ def run(api_key, location, use_celsius, label, toggle):
     else:
         output = {
             'text'    : f'{icon} {location} {weather_data.error}',
-            'class'   : 'failure',
+            'class'   : 'error',
             'tooltip' : f'{location} error',
         }
 

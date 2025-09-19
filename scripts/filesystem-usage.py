@@ -169,7 +169,7 @@ def main():
     else:
         output = {
             'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error}',
-            'class'   : 'critical',
+            'class'   : 'error',
             'tooltip' : 'Filesystem Usage',
         }
     

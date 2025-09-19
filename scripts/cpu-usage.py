@@ -202,7 +202,7 @@ def main():
         output = {
             'text'    : f'{get_icon()} {cpu_info.error}',
             'tooltip' : 'CPU error',
-            'class'   : 'critical',
+            'class'   : 'error',
         }
 
     print(json.dumps(output))

@@ -257,7 +257,7 @@ def main():
     else:
         output = {
             'text'    : f'{glyphs.md_memory} {memory_info.error}',
-            'class'   : 'critical',
+            'class'   : 'error',
             'tooltip' : 'System Memory',
         }
 

@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from pprint import pprint as pp
 from typing import List, Tuple, Optional, Union
+import getpass
 import importlib.util
 import json
 import os
@@ -69,9 +70,22 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
 #  Process management
 #==========================================================
 
-def waybar_is_running() -> bool:
-    rc, stdout, _ = run_piped_command('pgrep -x waybar')
-    return True if rc == 0 and stdout != '' else False
+def waybar_is_running():
+    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
+        try:
+            if proc.info.get('cmdline') is not None:
+                cmd = ' '.join(list(proc.info['cmdline']))
+                if cmd == 'waybar' and proc.info.get('username') == getpass.getuser():
+                    return {
+                        'cmd'      : cmd,
+                        'cmdline'  : list(proc.info.get('cmdline')) if proc.info.get('cmdline') is not None else [],
+                        'created'  : int(proc.info.get('create_time')),
+                        'pid'      : proc.info.get('pid'),
+                        'username' : proc.info.get('username'),
+                    }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return None
 
 def process_is_running(name: str=None, full: bool=False):
     flag = 'f' if full else 'x'
@@ -252,25 +266,6 @@ def missing_binaries(binaries: list=[]):
             missing.append(binary)
     return missing
 
-def network_is_reachable():
-    host = '8.8.8.8'
-    port = 53
-    timeout = 3
-    try:
-        socket.setdefaulttimeout(timeout)
-        with socket.create_connection((host, port)):
-            return True
-    except OSError:
-        return False
-
-def check_network():
-    if not network_is_reachable():
-        # How to immport glyphs?
-        error_exit(
-            icon    = surrogatepass('\udb83\udc9c'),
-            message = 'the network is unreachable',
-        )
-
 def validate_requirements(required: list=[]):
     missing = []
 
@@ -285,14 +280,30 @@ def validate_requirements(required: list=[]):
             message = f'Please install via pip: {", ".join(missing)}',
         )
 
+def network_is_reachable():
+    host = '8.8.8.8'
+    port = 53
+    timeout = 3
+    try:
+        socket.setdefaulttimeout(timeout)
+        with socket.create_connection((host, port)):
+            return True
+    except OSError:
+        return False
+
 def interface_exists(interface: str=None) -> bool:
-    return os.path.isdir(f'/sys/class/net/{interface}')
-    # cat /sys/class/net/enp1s0/carrier
+    try:
+        return os.path.isdir(f'/sys/class/net/{interface}')
+    except:
+        return False
 
 def interface_is_connected(interface: str=None) -> bool:
-    with open(f'/sys/class/net/{interface}/carrier', 'r') as f:
-        contents = f.read()
-    return True if int(contents) == 1 else False
+    try:
+        with open(f'/sys/class/net/{interface}/carrier', 'r') as f:
+            contents = f.read()
+        return True if int(contents) == 1 else False
+    except:
+        return False
 
 #==========================================================
 #  Formatting and conversion

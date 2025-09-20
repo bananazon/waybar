@@ -1,24 +1,15 @@
-# Ignore my config files
-disk-usage.json
-weather.json
-scripts/*.json
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 waybar/__pycache__/
 
 # My personal config file
-config
+config.jsonc
 
 # Ignore the config.example generator
 scripts/generate-config-example.sh
 
 # Test files
-config.ini.test
 dummy.*
-example.sh
-menu-test.sh
-weather.sh
 
 *-output.txt
-
+scripts/foo*py

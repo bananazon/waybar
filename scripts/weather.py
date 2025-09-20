@@ -6,14 +6,21 @@ from urllib.parse import quote, urlunparse
 from typing import Any, Dict, List, Optional, NamedTuple
 from urllib.request import urlopen, Request
 import json
+import logging
 import os
+import signal
 import sys
+import threading
 import time
 import urllib.request
 
 util.validate_requirements(required=['click'])
-
 import click
+
+update_event = threading.Event()
+
+# ---- Unbuffered stdout ----
+sys.stdout.reconfigure(line_buffering=True)
 
 LABEL     : str | None=None
 LOCATION  : str | None=None
@@ -57,6 +64,15 @@ class WeatherData(NamedTuple):
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LOADING = f'{glyphs.md_timer_outline} Fetching weather...'
+LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
+LOGFILE = Path.home() / '.waybar-weather-result.log'
+
+logging.basicConfig(
+    filename=LOGFILE,
+    filemode='a',  # 'a' = append, 'w' = overwrite
+    format='%(asctime)s [%(levelname)-5s] - %(message)s',
+    level=logging.INFO
+)
 
 def set_globals(label: str=None, location: str=None):
     global LABEL
@@ -161,7 +177,7 @@ def get_weather_icon(condition_code, is_day):
 
     return glyphs.md_weather_sunny
 
-def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None, mode: int=0):
+def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
     global TEMPFILE
 
     weather_data = None
@@ -254,25 +270,101 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
 
     return weather_data
 
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    """
-    Retrieve weather from weatherapi.com
-    """
-    pass
+def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None, mode=None):
+    global LOCKFILE
+    global STATEFILE
 
-@cli.command(help='Get weather info from World Weather API')
+    while True:
+        update_event.wait()
+        update_event.clear()
+
+        if not util.waybar_is_running():
+            logging.info('[main] waybar not running')
+            sys.exit(0)
+        else:
+            if util.network_is_reachable():
+                print(json.dumps(LOADING_DICT))
+
+                weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
+                if weather_data.success:
+                    current_temp = weather_data.current_temp
+                    low_temp     = weather_data.todays_low
+                    high_temp    = weather_data.todays_high
+                    icon         = weather_data.icon
+                    location     = weather_data.location_short
+                    sunrise      = util.to_24hour_time(input=weather_data.sunrise_unix) if weather_data.sunrise_unix > 0 else weather_data.sunrise
+                    sunset       = util.to_24hour_time(input=weather_data.sunset_unix) if weather_data.sunset_unix > 0 else weather_data.sunset
+                    moonrise     = util.to_24hour_time(input=weather_data.moonrise_unix) if weather_data.moonrise_unix > 0 else weather_data.moonrise
+                    moonset      = util.to_24hour_time(input=weather_data.moonset_unix) if weather_data.moonset_unix > 0 else weather_data.moonset
+                    wind_degree  = weather_data.wind_degree
+                    wind_speed   = weather_data.wind_speed
+
+                    if mode == 0:
+                        output = {
+                            'text'    : f'{icon} {location} {current_temp}',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} current condition and temperature',
+                        }
+                    elif mode == 1:
+                        output = {
+                            'text'    : f'{icon} {location} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} daily high and low temperaturea',
+                        }
+                    elif mode == 2:
+                        output = {
+                            'text'    : f'{icon} {location} {wind_speed} @ {wind_degree}°',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} wind speed and direction',
+                        }
+                    elif mode == 3:
+                        output = {
+                            'text'    : f'{icon} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} sunrise and sunset times',
+                        }
+                    elif mode == 4:
+                        output = {
+                            'text'    : f'{icon} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} moonrise and moonset times',
+                        }
+                    elif mode == 5:
+                        output = {
+                            'text'    : f'{icon} {location} humidity {weather_data.humidity}',
+                            'class'   : 'success',
+                            'tooltip' : f'{location} humidity level',
+                        }
+                else:
+                    output = {
+                        'text'    : f'{icon} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
+                        'class'   : 'error',
+                        'tooltip' : f'{location} error',
+                    }
+            else:
+                output = {
+                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'class'   : 'error',
+                    'tooltip' : f'{location} error',
+                }
+
+            print(json.dumps(output))
+
+def refresh_handler(signum, frame):
+    logging.info('Received SIGHUP — triggering speedtest')
+    update_event.set()
+
+signal.signal(signal.SIGHUP, refresh_handler)
+
+@click.command(help='Get weather info from World Weather API', context_settings=CONTEXT_SETTINGS)
 @click.option('-a', '--api-key', required=True, help=f'World Weather API key')
 @click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
 @click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
 @click.option('-t', '--toggle', is_flag=True, help='Toggle the output format', required=False)
-def run(api_key, location, use_celsius, label, toggle):
-    global LOCKFILE
-    global STATEFILE
-
+@click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
+def main(api_key, location, use_celsius, label, toggle, interval):
     mode_count = 6
-    util.check_network()
     set_globals(label=label, location=location)
 
     if toggle:
@@ -280,64 +372,12 @@ def run(api_key, location, use_celsius, label, toggle):
     else:
         mode = state.read_state(statefile=STATEFILE)
     
-    weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label, mode=mode)
-    if weather_data.success:
-        current_temp = weather_data.current_temp
-        low_temp     = weather_data.todays_low
-        high_temp    = weather_data.todays_high
-        icon         = weather_data.icon
-        location     = weather_data.location_short
-        sunrise      = util.to_24hour_time(input=weather_data.sunrise_unix) if weather_data.sunrise_unix > 0 else weather_data.sunrise
-        sunset       = util.to_24hour_time(input=weather_data.sunset_unix) if weather_data.sunset_unix > 0 else weather_data.sunset
-        moonrise     = util.to_24hour_time(input=weather_data.moonrise_unix) if weather_data.moonrise_unix > 0 else weather_data.moonrise
-        moonset      = util.to_24hour_time(input=weather_data.moonset_unix) if weather_data.moonset_unix > 0 else weather_data.moonset
-        wind_degree  = weather_data.wind_degree
-        wind_speed   = weather_data.wind_speed
+    threading.Thread(target=worker, args=(api_key, location, use_celsius, label, mode), daemon=True).start()
+    update_event.set()
 
-        if mode == 0:
-            output = {
-                'text'    : f'{icon} {location} {current_temp}',
-                'class'   : 'success',
-                'tooltip' : f'{location} current condition and temperature',
-            }
-        elif mode == 1:
-            output = {
-                'text'    : f'{icon} {location} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}',
-                'class'   : 'success',
-                'tooltip' : f'{location} daily high and low temperaturea',
-            }
-        elif mode == 2:
-            output = {
-                'text'    : f'{icon} {location} {wind_speed} @ {wind_degree}°',
-                'class'   : 'success',
-                'tooltip' : f'{location} wind speed and direction',
-            }
-        elif mode == 3:
-            output = {
-                'text'    : f'{icon} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}',
-                'class'   : 'success',
-                'tooltip' : f'{location} sunrise and sunset times',
-            }
-        elif mode == 4:
-            output = {
-                'text'    : f'{icon} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}',
-                'class'   : 'success',
-                'tooltip' : f'{location} moonrise and moonset times',
-            }
-        elif mode == 5:
-            output = {
-                'text'    : f'{icon} {location} humidity {weather_data.humidity}',
-                'class'   : 'success',
-                'tooltip' : f'{location} humidity level',
-            }
-    else:
-        output = {
-            'text'    : f'{icon} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
-            'class'   : 'error',
-            'tooltip' : f'{location} error',
-        }
-
-    print(json.dumps(output))
+    while True:
+        time.sleep(interval)
+        update_event.event(set)
 
 if __name__ == '__main__':
-    cli()
+    main()

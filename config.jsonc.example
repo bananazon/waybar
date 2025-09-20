@@ -1,7 +1,7 @@
 {
     "layer": "bottom",
     "position": "top",
-    "height": 24,
+    "height": 31,
     "spacing": 5,
 
     /*
@@ -19,7 +19,7 @@
     ],
 
     "modules-right": [
-        // "custom/network-throughput-wlo1",
+        "custom/network-throughput-wlo1",
         "custom/wifi-status-wlo1",
         // "custom/speedtest",
         "custom/filesystem-usage-root",
@@ -27,6 +27,8 @@
         "custom/memory-usage",
         "custom/cpu-usage",
         "custom/swap-usage",
+        "custom/system-updates-dnf",
+        "custom/system-updates-flatpak",
         "custom/weather-san-diego"
         // "pulseaudio"
     ],
@@ -57,18 +59,7 @@
         Custom module definitions
     */
     
-    /* CPU Usage
-        usage: cpu-usage.py [-h] [-t] [-i INTERVAL] [-b]
-
-        Get CPU usage from mpstat(1)
-
-        options:
-        -h, --help            show this help message and exit
-        -t, --toggle          Toggle the output format
-        -i, --interval INTERVAL
-                                The update interval (in seconds)
-        -b, --background      Run this script in the background
-    */
+    /* CPU Usage */
     "custom/cpu-usage": {
         "exec": "~/.config/waybar/scripts/cpu-usage.py",
         "interval": 10,
@@ -76,20 +67,7 @@
         "on-click": "~/.config/waybar/scripts/cpu-usage.py --toggle"
     },
 
-    /* Filesystem Usage
-        usage: filesystem-usage.py [-h] [-m MOUNTPOINT] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-l LABEL] [-t]
-
-        Get disk info from df(1)
-
-        options:
-        -h, --help            show this help message and exit
-        -m, --mountpoint MOUNTPOINT
-                                The mountpoint to check
-        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
-                                The unit to use for display
-        -l, --label LABEL     For now we need to pass a friendly mountpoint label
-        -t, --toggle          Toggle the output format
-    */
+    /* Filesystem Usage */
     "custom/filesystem-usage-root": {
         "exec": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint / --label root --unit auto",
         "interval": 10,
@@ -104,17 +82,7 @@
         "on-click": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint /work --label work --unit auto --toggle"
     },
 
-    /* Memory Usage
-        usage: memory-usage.py [-h] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-t]
-
-        Get memory usage from free(1)
-
-        options:
-        -h, --help            show this help message and exit
-        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
-                                The unit to use for display
-        -t, --toggle          Toggle the output format
-    */
+    /* Memory Usage */
     "custom/memory-usage": {
         "exec": "~/.config/waybar/scripts/memory-usage.py",
         "interval": 10,
@@ -122,17 +90,21 @@
         "on-click": "~/.config/waybar/scripts/memory-usage.py --toggle"
     },
 
-    /* Swap Usage
-        usage: swap-usage.py [-h] [-u {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}] [-t] [-i INTERVAL] [-b]
+    /* Network Throughput */
+    "custom/network-throughput-wlo1": {
+        "exec": "~/.config/waybar/scripts/network-throughput.py --interface wlo1",
+        "interval": 2,
+        "return-type": "json"
+    },
 
-        Get swap usage from free(1)
+    /* Speedtest */
+    "custom/speedtest": {
+        "exec": "~/.config/waybar/scripts/speedtest.sh",
+        "interval": "once",
+        "return-type": "json"
+    },
 
-        options:
-        -h, --help            show this help message and exit
-        -u, --unit {K,Ki,M,Mi,G,Gi,T,Ti,P,Pi,E,Ei,Z,Zi,auto}
-                                The unit to use for display
-        -t, --toggle          Toggle the output format
-    */
+    /* Swap Usage */
     "custom/swap-usage": {
         "exec": "~/.config/waybar/scripts/swap-usage.py",
         "interval": 10,
@@ -140,20 +112,22 @@
         "on-click": "~/.config/waybar/scripts/swap-usage.py --toggle"
     },
 
-    /* Weather
-        Usage: weather.py run [OPTIONS]
+    /* System Updates */
+    "custom/system-updates-dnf": {
+        "exec": "~/.config/waybar/scripts/system-updates.py run --type dnf",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/system-updates.py run --type dnf"
+    },
 
-        Get weather info from World Weather API
+    "custom/system-updates-flatpak": {
+        "exec": "~/.config/waybar/scripts/system-updates.py run --type flatpak",
+        "interval": 10,
+        "return-type": "json",
+        "on-click": "~/.config/waybar/scripts/system-updates.py run --type flatpak"
+    },
 
-        Options:
-        -a, --api-key TEXT   World Weather API key  [required]
-        -l, --location TEXT  The location to query  [required]
-        -c, --use-celsius    Use Celsius instead of Fahrenheit
-        --label TEXT         A "friendly name" to be used to form the IPC calls
-                            [required]
-        -t, --toggle         Toggle the output format
-        -h, --help           Show this message and exit.
-    */
+    /* Weather */
     "custom/weather-san-diego": {
         "exec": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego",
         "interval": 300,
@@ -162,16 +136,7 @@
         "on-click-right": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego"
     },
 
-    /* WiFi Status
-        Usage: wifi-status.py run [OPTIONS]
-
-        Get WiFi status using iw(8)
-
-        Options:
-        --interface TEXT  The interface to check  [required]
-        --toggle          Toggle the output format
-        -h, --help        Show this message and exit.
-    */
+    /* WiFi Status */
     "custom/wifi-status-wlo1": {
         "exec": "~/.config/waybar/scripts/wifi-status.py run --interface wlo1",
         "interval": 5,

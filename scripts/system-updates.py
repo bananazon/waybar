@@ -27,8 +27,6 @@ class SystemUpdates(NamedTuple):
     packages : Optional[List[str]] = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline} Checking updates...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
 LOGFILE = Path.home() / '.waybar-system-update-result.log'
 VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
@@ -146,16 +144,6 @@ def find_dnf_updates(package_type: str=None):
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
-    # This is here to test locally as I don't have dnf
-    # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
-    #     stdout = f.read()
-    #     packages = []
-    #     _, after = stdout.split('Repositories loaded.', 1)
-    #     lines = after.lstrip().strip().split('\n')
-    #     for line in lines:
-    #         bits = re.split(r'\s+', line)
-    #         packages.append(bits[0])
-
     logging.info(f'[find_dnf_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
 
@@ -257,21 +245,13 @@ def find_snap_updates(package_type: str=None):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        lines = stdout.lstrip().strip().split('\n')
-        for line in lines[1:]:
-            bits = re.split(r'\s+', line)
-            packages.append(bits[0])
+        if stdout !='All snaps up to date':
+            lines = stdout.lstrip().strip().split('\n')
+            for line in lines[1:]:
+                bits = re.split(r'\s+', line)
+                packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
-
-    # This is here to test locally as I don't have yum
-    # with open(os.path.join(util.get_script_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
-    #     stdout = f.read()
-    #     packages = []
-    #     lines = stdout.lstrip().strip().split('\n')
-    #     for line in lines[1:]:
-    #         bits = re.split(r'\s+', line)
-    #         packages.append(bits[0])
 
     logging.info(f'[find_snap_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -351,16 +331,6 @@ def find_yum_updates(package_type: str=None):
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
-    # This is here to test locally as I don't have yum
-    # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
-    #     stdout = f.read()
-    #     packages = []
-    #     _, after = stdout.split('Repositories loaded.', 1)
-    #     lines = after.lstrip().strip().split('\n')
-    #     for line in lines:
-    #         bits = re.split(r'\s+', line)
-    #         packages.append(bits[0])
-
     logging.info(f'[find_yum_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
 
@@ -401,7 +371,9 @@ def worker(type: str=None):
             if util.network_is_reachable():
                 logging.info(f'[run] Starting - package_type={type}')
 
-                print(json.dumps(LOADING_DICT))
+
+                loading_dict = { 'text': f'{glyphs.md_timer_outline} Checking {type}...', 'class': 'loading', 'tooltip': 'Speedtest is running'}
+                print(json.dumps(loading_dict))
 
                 data = find_updates(package_type=type)
 

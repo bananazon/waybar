@@ -106,3 +106,6 @@ md_alert               = util.surrogatepass('\udb80\udc26')
 md_network_off         = util.surrogatepass('\udb83\udc9b')
 md_network_off_outline = util.surrogatepass('\udb83\udc9c')
 oct_alert              = util.surrogatepass('\uf421')
+
+# Network
+md_network = util.surrogatepass('\udb81\udef3')

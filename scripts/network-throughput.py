@@ -33,12 +33,11 @@ class NetworkThrouhput(NamedTuple):
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-def get_icon(interface: str=None):
+def get_icon(interface: str=None, connected: bool=True):
     if os.path.isdir(f'/sys/class/net/{interface}/wireless'):
-        return glyphs.md_wifi_strength_4
+        return glyphs.md_wifi_strength_4 if connected else glyphs.md_wifi_strength_off
     else:
-        return glyphs.md_network
-
+        return glyphs.md_network if connected else glyphs.md_network_off
 
 def get_sample(interface: str=None):
     try:
@@ -109,7 +108,7 @@ def main(interface):
                 }
         else:
             output = {
-                'text'  : f'{get_icon(interface=interface)} {interface} disconnected',
+                'text'  : f'{get_icon(interface=interface, connected=False)} {interface} disconnected',
                 'class' : 'error'
             }
 

@@ -155,8 +155,6 @@ def main():
     mode_count = 4
     parser = argparse.ArgumentParser(description='Get CPU usage from mpstat(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
-    parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
     if args.toggle:

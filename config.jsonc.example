@@ -10,50 +10,22 @@
     */
     "font": "Arimo Nerd Font 12",
 
-    "modules-left": [
-        "sway/workspaces",
-        "sway/mode"
-    ],
-    "modules-center": [
-        "sway/window"
-    ],
-
     "modules-right": [
+        // "custom/network-throughput-enp1s0",
         "custom/network-throughput-wlo1",
         "custom/wifi-status-wlo1",
-        // "custom/speedtest",
+        "custom/speedtest",
         "custom/filesystem-usage-root",
         "custom/filesystem-usage-work",
         "custom/memory-usage",
         "custom/cpu-usage",
-        "custom/swap-usage",
+        // "custom/swap-usage",
+        // "custom/system-updates-brew",
         "custom/system-updates-dnf",
         "custom/system-updates-flatpak",
+        // "custom/system-updates-snap",
         "custom/weather-san-diego"
-        // "pulseaudio"
     ],
-
-    "sway/mode": {
-        "format": "{}"
-    },
-
-    "sway/window": {
-        "format": "{title}"
-    },
-
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-icons": {
-            "default": [
-                "\uf026",
-                "\uf027",
-                "\uf028"
-            ]
-        },
-        "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
-        "on-click-right": "pavucontrol",
-        "format-muted": "\uf00d {volume}%"
-    },
 
     /*
         Custom module definitions
@@ -68,6 +40,7 @@
     },
 
     /* Filesystem Usage */
+    // https://github.com/Alexays/Waybar/wiki/Configuration#multiple-instances-of-a-module
     "custom/filesystem-usage-root": {
         "exec": "~/.config/waybar/scripts/filesystem-usage.py --mountpoint / --label root --unit auto",
         "interval": 10,
@@ -91,6 +64,12 @@
     },
 
     /* Network Throughput */
+    "custom/network-throughput-enp1s0": {
+        "exec": "~/.config/waybar/scripts/network-throughput.py --interface enp1s0",
+        "interval": 2,
+        "return-type": "json"
+    },
+
     "custom/network-throughput-wlo1": {
         "exec": "~/.config/waybar/scripts/network-throughput.py --interface wlo1",
         "interval": 2,
@@ -99,9 +78,10 @@
 
     /* Speedtest */
     "custom/speedtest": {
-        "exec": "~/.config/waybar/scripts/speedtest.sh",
-        "interval": "once",
-        "return-type": "json"
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/waybar/scripts/waybar-speedtest.py --interval 600",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/waybar-speedtest.py --interval 600')"
     },
 
     /* Swap Usage */
@@ -113,27 +93,40 @@
     },
 
     /* System Updates */
-    "custom/system-updates-dnf": {
-        "exec": "~/.config/waybar/scripts/system-updates.py run --type dnf",
-        "interval": 10,
+    "custom/system-updates-brew": {
+        "format": "{}",
         "return-type": "json",
-        "on-click": "~/.config/waybar/scripts/system-updates.py run --type dnf"
+        "exec": "~/.config/waybar/scripts/system-updates.py --type brew --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type brew --interval 1800')"
+    },
+
+    "custom/system-updates-dnf": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/waybar/scripts/system-updates.py --type dnf --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type dnf --interval 1800')"
     },
 
     "custom/system-updates-flatpak": {
-        "exec": "~/.config/waybar/scripts/system-updates.py run --type flatpak",
-        "interval": 10,
+        "format": "{}",
         "return-type": "json",
-        "on-click": "~/.config/waybar/scripts/system-updates.py run --type flatpak"
+        "exec": "~/.config/waybar/scripts/system-updates.py --type flatpak --interval 1800",
+        "on-click": "kilcl -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type flatpak --interval 1800')"
+    },
+
+    "custom/system-updates-snap": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/waybar/scripts/system-updates.py --type snap --interval 1800",
+        "on-click": "kilcl -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type snap --interval 1800')"
     },
 
     /* Weather */
     "custom/weather-san-diego": {
-        "exec": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego",
-        "interval": 300,
+        "format" : "{}",
         "return-type": "json",
-        "on-click": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego --toggle",
-        "on-click-right": "~/.config/waybar/scripts/weather.py run --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego"
+        "exec": "~/.config/waybar/scripts/weather.py --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego --interval 300",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/weather.py --api-key <your_weather_api_key> --location San Diego, CA, US --label san-diego --interval 300')"
     },
 
     /* WiFi Status */

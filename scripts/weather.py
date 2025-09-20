@@ -377,7 +377,7 @@ def main(api_key, location, use_celsius, label, toggle, interval):
 
     while True:
         time.sleep(interval)
-        update.event.(set)
+        update.event(set)
 
 if __name__ == '__main__':
     main()

@@ -4,15 +4,16 @@
 #custom-filesystem-usage-root,
 #custom-filesystem-usage-work,
 #custom-memory-usage,
-#custom-spacer,
+#custom-network-throughput-wlo1,
+#custom-speedtest,
 #custom-swap-usage,
+#custom-system-updates-dnf,
+#custom-system-updates-flatpak,
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
     border-radius: 6px;
     padding: 4px 8px;
 }
-
-
 
 /* ---------- CPU Usage ---------- */
 #custom-cpu-usage.good { border: 2px solid #3a5; }
@@ -39,11 +40,27 @@
 #custom-memory-usage.critical { border: 2px solid #a33; }
 #custom-memory-usage.error { border: 2px solid #a33; color: #888888; }
 
+/* ---------- Network Throughput ---------- */
+#custom-network-throughput-wlo1.success { border: 2px solid #3a5; }
+#custom-network-throughput-wlo1.error { border: 2px solid #a33; color: #888888; }
+
+/* ---------- Speedtest ---------- */
+#custom-speedtest.loading { border: 2px solid #b0b0b0; }
+#custom-speedtest.good { border: 2px solid #3a5; }
+#custom-speedtest.warning { border: 2px solid #E69500; }
+#custom-speedtest.critical { border: 2px solid #a33; }
+#custom-speedtest.error { border: 2px solid #a33; color: #888888; }
+#custom-speedtest.success { border: 2px solid #3a5; }
+
 /* ---------- Swap Usage ---------- */
 #custom-swap-usage.good { border: 2px solid #3a5; }
 #custom-swap-usage.warning { border: 2px solid #E69500; }
 #custom-swap-usage.critical { border: 2px solid #a33; }
 #custom-swap-usage.error { border: 2px solid #a33; color: #888888; }
+
+/* ---------- System Updates ---------- */
+#custom-system-updates-dnf.success { border: 2px solid #3a5; }
+#custom-system-updates-flatpak.success { border: 2px solid #3a5; }
 
 /* ---------- Weather ---------- */
 #custom-weather-san-diego.success { border: 2px solid #3a5; }
@@ -51,6 +68,5 @@
 #custom-weather-san-diego.error { border: 2px solid #a33; color: #888888; }
 
 /* ---------- WiFi Status ---------- */
-#custom-wifi-status-wlo1.connected { border: 2px solid #3a5; }
-#custom-wifi-status-wlo1.disconnected { border: 2px solid #a33; color: #888888; }
+#custom-wifi-status-wlo1.success { border: 2px solid #3a5; }
 #custom-wifi-status-wlo1.error { border: 2px solid #a33; color: #888888; }

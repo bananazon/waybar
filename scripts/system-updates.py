@@ -7,11 +7,18 @@ import json
 import logging
 import os
 import re
+import signal
 import sys
+import threading
 import time
 
 util.validate_requirements(required=['click'])
 import click
+
+update_event = threading.Event()
+
+# ---- Unbuffered stdout ----
+sys.stdout.reconfigure(line_buffering=True)
 
 class SystemUpdates(NamedTuple):
     success  : Optional[bool] = False
@@ -20,8 +27,10 @@ class SystemUpdates(NamedTuple):
     packages : Optional[List[str]] = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
+LOADING = f'{glyphs.md_timer_outline} Checking updates...'
+LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
 LOGFILE = Path.home() / '.waybar-system-update-result.log'
+VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 logging.basicConfig(
     filename=LOGFILE,
@@ -378,52 +387,64 @@ def find_updates(package_type: str = ''):
     data = func(package_type=package_type) if func else None
 
     return data
-    
-    # if data:
-    #     packages = 'package' if data.count == 1 else 'packages'
-    #     message = f'{util.color_title(glyphs.md_package_variant)} {package_type} {data.count} outdated {packages}'
-    # else:
-    #     message = f'{util.color_title(glyphs.md_package_variant)} {util.color_error(package_type)} {util.color_error("failed to find updates")}'
-    
-    # logging.info(f'[find_updates] data received - output message={message}')
 
-    # write_tempfile(tempfile, message)
+def worker(type: str=None):
+    while True:
+        update_event.wait()
+        update_event.clear()
 
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    """
-    System update checker
-    """
-    pass
+        logging.info('[main] entering main loop')
+        if not util.waybar_is_running():
+            logging.info('[main] waybar not running')
+            sys.exit(0)
+        else:
+            if util.network_is_reachable():
+                logging.info(f'[run] Starting - package_type={type}')
 
-@cli.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
+                print(json.dumps(LOADING_DICT))
+
+                data = find_updates(package_type=type)
+
+                if data.success:
+                    packages = 'package' if data.count == 1 else 'packages'
+                    output = {
+                        'text'    : f'{glyphs.md_package_variant} {type} {data.count} outdated {packages}',
+                        'class'   : 'success',
+                        'tooltip' : f'{type} updates',
+                    }
+                else:
+                    output = {
+                        'text'    : f'{glyphs.md_package_variant} {type} failed to find updates',
+                        'class'   : 'success',
+                        'tooltip' : f'{type} updates',
+                    }
+            else:
+                output= {
+                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'class'   : 'error',
+                    'tooltip' : f'{apt} error',
+                }
+
+            print(json.dumps(output))
+
+def refresh_handler(signum, frame):
+    logging.info('Received SIGHUP — triggering find_updates')
+    update_event.set()
+
+signal.signal(signal.SIGHUP, refresh_handler)
+
+@click.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
 @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
-def run(type):
-    """
-    Run a system update check
-    """
-    util.network_is_reachable()
+@click.option('-i', '--interval', type=int, help='The update interval (in seconds)')
+def main(type, interval):
+    logging.info('[main] entering')
 
-    logging.info(f'[run] Starting - package_type={type}')
+    threading.Thread(target=worker, args=(type,), daemon=True).start()
+    update_event.set()
 
-    logging.info(f'[run] running in foreground - package_type={type}')
-    data = find_updates(package_type=type)
-
-    if data.success:
-        packages = 'package' if data.count == 1 else 'packages'
-        output = {
-            'text'    : f'{glyphs.md_package_variant} {type} {data.count} outdated {packages}',
-            'class'   : 'success',
-            'tooltip' : f'{type} updates',
-        }
-    else:
-        output = {
-            'text'    : f'{glyphs.md_package_variant} {type} failed to find updates',
-            'class'   : 'success',
-            'tooltip' : f'{type} updates',
-        }
-
-    print(json.dumps(output))
+    while True:
+        time.sleep(interval)
+        update.event(set)
 
 if __name__ == '__main__':
-    cli()
+    main()

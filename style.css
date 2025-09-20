@@ -8,12 +8,15 @@
 #custom-network-throughput-wlo1,
 #custom-speedtest,
 #custom-swap-usage,
+#custom-system-updates-brew,
 #custom-system-updates-dnf,
 #custom-system-updates-flatpak,
+#custom-system-updates-snap,
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
     border-radius: 6px;
     padding: 4px 8px;
+    font-size: 8.5pt;
 }
 
 /* ---------- CPU Usage ---------- */
@@ -66,13 +69,23 @@
 
 /* ---------- System Updates ---------- */
 /* dnf */
+#custom-system-updates-brew.loading { border: 2px solid #b0b0b0; }
+#custom-system-updates-brew.success { border: 2px solid #3a5; }
+
+/* dnf */
 #custom-system-updates-dnf.loading { border: 2px solid #b0b0b0; }
 #custom-system-updates-dnf.success { border: 2px solid #3a5; }
+
 /* flatpak */
 #custom-system-updates-flatpak.loading { border: 2px solid #b0b0b0; }
 #custom-system-updates-flatpak.success { border: 2px solid #3a5; }
 
+/* snap */
+#custom-system-updates-snap.loading { border: 2px solid #b0b0b0; }
+#custom-system-updates-snap.success { border: 2px solid #3a5; }
+
 /* ---------- Weather ---------- */
+#custom-weather-san-diego.loading { border: 2px solid #b0b0b0; }
 #custom-weather-san-diego.success { border: 2px solid #3a5; }
 #custom-weather-san-diego.failure { border: 2px solid #a33; }
 #custom-weather-san-diego.error { border: 2px solid #a33; color: #888888; }

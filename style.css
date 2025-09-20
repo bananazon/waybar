@@ -4,6 +4,7 @@
 #custom-filesystem-usage-root,
 #custom-filesystem-usage-work,
 #custom-memory-usage,
+#custom-network-throughput-enp1s0,
 #custom-network-throughput-wlo1,
 #custom-speedtest,
 #custom-swap-usage,
@@ -41,6 +42,11 @@
 #custom-memory-usage.error { border: 2px solid #a33; color: #888888; }
 
 /* ---------- Network Throughput ---------- */
+/* enp1s0 */
+#custom-network-throughput-enp1s0.success { border: 2px solid #3a5; }
+#custom-network-throughput-enp1s0.error { border: 2px solid #a33; color: #888888; }
+
+/* wlo1 */
 #custom-network-throughput-wlo1.success { border: 2px solid #3a5; }
 #custom-network-throughput-wlo1.error { border: 2px solid #a33; color: #888888; }
 
@@ -59,7 +65,11 @@
 #custom-swap-usage.error { border: 2px solid #a33; color: #888888; }
 
 /* ---------- System Updates ---------- */
+/* dnf */
+#custom-system-updates-dnf.loading { border: 2px solid #b0b0b0; }
 #custom-system-updates-dnf.success { border: 2px solid #3a5; }
+/* flatpak */
+#custom-system-updates-flatpak.loading { border: 2px solid #b0b0b0; }
 #custom-system-updates-flatpak.success { border: 2px solid #3a5; }
 
 /* ---------- Weather ---------- */

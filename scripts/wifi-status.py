@@ -18,7 +18,6 @@ class WifiStatus(NamedTuple):
     error     : Optional[str]  = None
     bandwidth : Optional[int]  = 0
     channel   : Optional[str]  = None
-    connected : Optional[bool] = False
     frequency : Optional[int]  = 0
     interface : Optional[str]  = None
     signal    : Optional[int]  = 0
@@ -85,14 +84,11 @@ def get_ssid():
     return None
 
 def get_wifi_status(interface: str=None):
-    output_dict = {}
     command = f'iw dev {interface} link'
     rc, stdout, stderr = util.run_piped_command(command)
     
     if rc == 0:
         if stdout != '':
-            connected = False if stdout.startswith('Not connected') else True
-
             match = re.search(r'signal:\s+(-\d+)', stdout, re.MULTILINE)
             if match:
                 signal = int(match.group(1))
@@ -140,7 +136,6 @@ def get_wifi_status(interface: str=None):
         success   = True,
         bandwidth = channel_bandwidth,
         channel   = channel,
-        connected = connected,
         frequency = frequency,
         interface = interface,
         signal    = signal,
@@ -162,48 +157,49 @@ def cli():
 def run(interface, toggle):
     global INTERFACE_LABEL
 
-    output = {}
-    mode_count = 2
-    INTERFACE_LABEL = interface
-
-    if toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+    if not util.interface_exists(interface=interface):
+        print(json.dumps({
+            'text'  : f'{glyphs.md_alert} {interface} does not exist',
+            'class' : 'error',
+        }))
     else:
-        mode = state.read_state(statefile=get_statefile())
-    
-    wifi_status = get_wifi_status(interface=interface)
+        if util.interface_is_connected(interface=interface):
+            mode_count = 2
+            INTERFACE_LABEL = interface
 
-    if wifi_status.success:
-        if wifi_status.connected:
-            wifi_icon = get_status_icon(wifi_status.signal)
-            if mode == 0:
+            if toggle:
+                mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+            else:
+                mode = state.read_state(statefile=get_statefile())
+
+            wifi_status = get_wifi_status(interface=interface)
+
+            if wifi_status.success:
+                wifi_icon = get_status_icon(wifi_status.signal)
+                if mode == 0:
+                    output = {
+                        'text'  : f'{wifi_icon} {wifi_status.interface} {wifi_status.signal} dBm',
+                        'class' : 'success',
+                    }
+                elif mode == 1:
+                    output = {
+                        'text'  : f'{wifi_icon} {wifi_status.interface} channel {wifi_status.channel} ({wifi_status.frequency} MHz) {wifi_status.bandwidth} MHz width',
+                        'class' : 'success',
+                    }
+            else:
+                wifi_icon = glyphs.md_wifi_strength_alert_outline
                 output = {
-                    'text'   : f'{wifi_icon} {wifi_status.interface} {wifi_status.signal} dBm',
-                    # 'tooltip': interface,
-                    'class'  : 'connected',
-                }
-            elif mode == 1:
-                output = {
-                    'text'   : f'{wifi_icon} {wifi_status.interface} channel {wifi_status.channel} ({wifi_status.frequency} MHz) {wifi_status.bandwidth} MHz width',
-                    # 'tooltip': interface,
-                    'class'  : 'connected',
+                    'text'  : f'{wifi_icon} {wifi_status.interface} {wifi_status.error if wifi_status.error is not None else "Unknown error"}',
+                    'class' : 'error',
                 }
         else:
             wifi_icon = glyphs.md_wifi_strength_alert_outline
             output = {
-                'text'   : f'{wifi_icon} {wifi_status.interface} disconnected',
-                # 'tooltip': interface,
-                'class'  : 'disconnected',
+                'text'  : f'{wifi_icon} {interface} disconnected',
+                'class' : 'error'
             }
-    else:
-        wifi_icon = glyphs.md_wifi_strength_alert_outline
-        output = {
-            'text'   : f'{wifi_icon} {wifi_status.interface} {wifi_status.error if wifi_status.error is not None else "Unknown error"}',
-            # 'tooltip': interface,
-            'class'  : 'error',
-        }
 
-    print(json.dumps(output))
+        print(json.dumps(output))
 
 if __name__ == '__main__':
     cli()

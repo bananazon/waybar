@@ -1,0 +1,52 @@
+# ~/.config/waybar/config.yaml
+
+waybar_path: /home/gdanko/.config/waybar
+scripts_path: /home/gdanko/.config/waybar/scripts
+
+static_modules:
+  - name: cpu-usage
+    enabled: true
+    interval: 5
+  - name: memory-usage
+    enabled: true
+    interval: 5
+  - name: speedtest
+    enabled: true
+    interval: 300
+  - name: swap-usage
+    enabled: false
+    interval: 5
+
+filesystems:
+  - label: root
+    enabled: true
+    mountpoint: /
+    interval: 10
+  - label: work
+    enabled: false
+    mountpoint: /work
+    interval: 10
+
+network_interfaces:
+  - name: wlo1
+    enabled: true
+    type: wifi
+    interval: 5
+  - name: enp1s0
+    enabled: false
+    type: network
+    interval: 2
+
+software_updates:
+  - type: dnf
+    interval: 1800
+  - type: flatpak
+    interval: 1800
+
+weather:
+  api_key: figurethisout
+  locations:
+  - location: "San Diego, CA, US"
+    enabled: true
+    label: san-diego
+    interval: 300

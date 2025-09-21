@@ -1,0 +1,102 @@
+{
+    "layer": "bottom",
+    "position": "top",
+    "height": 31,
+    "spacing": 5,
+
+    "font": "Arimo Nerd Font 12",
+
+    "modules-right": {{ modules_right | tojson(indent=4) | indent(4) }},
+
+    {% if "cpu-usage" in static_modules and "enabled" in static_modules["cpu-usage"] and static_modules["cpu-usage"]["enabled"] == true %}
+    "custom/cpu-usage": {
+        "exec": "{{ scripts_path }}/cpu-usage.py",
+        "interval": {{ (static_modules["cpu-usage"]["interval"] if static_modules["cpu-usage"]["interval"] else none) or 10 }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/cpu-usage.py --toggle"
+    },
+    {% endif %}
+
+    {% for fs in filesystems %}
+    {% if fs.enabled == true %}
+    "custom/filesystem-usage-{{ fs.label }}": {
+        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit auto",
+        "interval": {{ fs.interval }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit auto --toggle"
+    },
+    {% endif %}
+    {% endfor %}
+
+    {% if "memory-usage" in static_modules and "enabled" in static_modules["memory-usage"] and static_modules["memory-usage"]["enabled"] == true %}
+    "custom/memory-usage": {
+        "exec": "{{ scripts_path }}/memory-usage.py",
+        "interval": {{ (static_modules["memory-usage"]["interval"] if static_modules["memory-usage"]["interval"] else none) or 10 }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/memory-usage.py --toggle"
+    },
+    {% endif %}
+
+    {% for iface in network_interfaces %}
+    {% if iface.enabled %}
+    "custom/network-throughput-{{ iface.name }}": {
+        "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
+        "interval": {{ (iface.interval if iface.interval else none) or 10 }},
+        "return-type": "json"
+    },
+    {% endif %}
+    {% endfor %}
+
+    {% if "speedtest" in static_modules and "enabled" in static_modules["speedtest"] and static_modules["speedtest"]["enabled"] == true %}
+    "custom/speedtest": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}')"
+    },
+
+    {% endif %}
+    {% if "swap-usage" in static_modules and "enabled" in static_modules["swap-usage"] and static_modules["swap-usage"]["enabled"] == true %}
+    "custom/swap-usage": {
+        "exec": "{{ scripts_path }}/swap-usage.py",
+        "interval": {{ (static_modules["swap-usage"]["interval"] if static_modules["swap-usage"]["interval"] else none) or 10 }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/swap-usage.py --toggle"
+    },
+    {% endif %}
+
+    {% for s in software_updates %}
+    "custom/system-updates-{{ s.type }}": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/system-updates.py --type {{ s.type }} --interval {{ s.interval }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/system-updates.py --type brew --interval {{ s.interval }}')"
+    },
+    {% endfor %}
+
+    {% for iface in network_interfaces %}
+    {% if iface.type == 'wifi' and iface.enabled %}
+    "custom/wifi-status-{{ iface.name }}": {
+        "exec": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }}",
+        "interval": {{ (iface.interval if iface.interval else none) or 10 }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }} --toggle"
+    },
+    {% endif %}
+    {% endfor %}
+
+    {% for location in weather.locations %}
+    {% if location.enabled %}
+    "custom/weather-{{ location.label }}": {
+        "format" : "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.interval }}",
+        "on-click": "{{ scripts_path }}/weather.py toggle --label {{ location.label }} && kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.interval }}')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.interval }}')"
+    },
+    {% endif %}
+    {% endfor %}
+    "custom/nothing": {
+        "exec": "cat /dev/null"
+    }
+}

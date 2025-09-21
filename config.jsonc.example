@@ -20,10 +20,10 @@
         "custom/memory-usage",
         "custom/cpu-usage",
         // "custom/swap-usage",
-        // "custom/system-updates-brew",
-        "custom/system-updates-dnf",
-        "custom/system-updates-flatpak",
-        // "custom/system-updates-snap",
+        // "custom/software-updates-brew",
+        "custom/software-updates-dnf",
+        "custom/software-updates-flatpak",
+        // "custom/software-updates-snap",
         "custom/weather-san-diego"
     ],
 
@@ -93,40 +93,45 @@
     },
 
     /* System Updates */
-    "custom/system-updates-brew": {
+    "custom/software-updates-brew": {
         "format": "{}",
         "return-type": "json",
-        "exec": "~/.config/waybar/scripts/system-updates.py --type brew --interval 1800",
-        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type brew --interval 1800')"
+        "exec": "~/.config/waybar/scripts/software-updates.py --type brew --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/software-updates.py --type brew --interval 1800')"
     },
 
-    "custom/system-updates-dnf": {
+    "custom/software-updates-dnf": {
         "format": "{}",
         "return-type": "json",
-        "exec": "~/.config/waybar/scripts/system-updates.py --type dnf --interval 1800",
-        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type dnf --interval 1800')"
+        "exec": "~/.config/waybar/scripts/software-updates.py --type dnf --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/software-updates.py --type dnf --interval 1800')"
     },
 
-    "custom/system-updates-flatpak": {
+    "custom/software-updates-flatpak": {
         "format": "{}",
         "return-type": "json",
-        "exec": "~/.config/waybar/scripts/system-updates.py --type flatpak --interval 1800",
-        "on-click": "kilcl -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type flatpak --interval 1800')"
+        "exec": "~/.config/waybar/scripts/software-updates.py --type flatpak --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/software-updates.py --type flatpak --interval 1800')"
     },
 
-    "custom/system-updates-snap": {
+    "custom/software-updates-snap": {
         "format": "{}",
         "return-type": "json",
-        "exec": "~/.config/waybar/scripts/system-updates.py --type snap --interval 1800",
-        "on-click": "kilcl -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/system-updates.py --type snap --interval 1800')"
+        "exec": "~/.config/waybar/scripts/software-updates.py --type snap --interval 1800",
+        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/software-updates.py --type snap --interval 1800')"
     },
 
-    /* Weather */
+    /* Weather
+        on-click toggles the mode and refreshes
+        on-click-right refreshes the current mode
+    */
     "custom/weather-san-diego": {
         "format" : "{}",
         "return-type": "json",
-        "exec": "~/.config/waybar/scripts/weather.py --api-key <your_weather_api_key> --location 'San Diego, CA, US' --label san-diego --interval 300",
-        "on-click": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/weather.py --api-key <your_weather_api_key> --location San Diego, CA, US --label san-diego --interval 300')"
+        "exec": "~/.config/waybar/scripts/weather.py run --api-key asdf --location 'San Diego, CA, US' --label san-diego --interval 300",
+        "on-click": "~/.config/waybar/scripts/weather.py toggle --label san-diego && kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/weather.py run --api-key asdf --location San Diego, CA, US --label san-diego --interval 300')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 /home/gdanko/.config/waybar/scripts/weather.py run --api-key asdf --location San Diego, CA, US --label san-diego --interval 300')"
+
     },
 
     /* WiFi Status */

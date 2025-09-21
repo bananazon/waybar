@@ -66,11 +66,11 @@
     {% endif %}
 
     {% for s in software_updates %}
-    "custom/system-updates-{{ s.type }}": {
+    "custom/software-updates-{{ s.type }}": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/system-updates.py --type {{ s.type }} --interval {{ s.interval }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/system-updates.py --type brew --interval {{ s.interval }}')"
+        "exec": "{{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.interval }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type brew --interval {{ s.interval }}')"
     },
     {% endfor %}
 

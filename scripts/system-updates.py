@@ -372,7 +372,11 @@ def worker(type: str=None):
                 logging.info(f'[run] Starting - package_type={type}')
 
 
-                loading_dict = { 'text': f'{glyphs.md_timer_outline} Checking {type}...', 'class': 'loading', 'tooltip': 'Speedtest is running'}
+                loading_dict = {
+                    'text'    : f'{glyphs.md_timer_outline} Checking {type}...',
+                    'class'   : 'loading',
+                    'tooltip' : f'Checking {type}',
+                }
                 print(json.dumps(loading_dict))
 
                 data = find_updates(package_type=type)

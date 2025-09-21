@@ -168,7 +168,7 @@ def main(download, upload, bytes, interval):
 
     while True:
         time.sleep(interval)
-        update.event(set)
+        update_event.set()
 
 if __name__ == '__main__':
     main()

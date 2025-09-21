@@ -75,7 +75,7 @@ def main():
     if args.toggle:
         mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
     else:
-        mode = state.read_state(statefile=get_statefile())
+        mode = state.current_state(statefile=get_statefile())
 
     swap_info = get_swap_usage()
 

@@ -1,7 +1,7 @@
 import inspect
 import os
 
-def read_state(statefile=None):
+def current_state(statefile=None):
     """
     Read state from file, default to 0 if missing or invalid.
     """
@@ -24,7 +24,7 @@ def next_state(statefile=None, mode_count: int=0, backward: bool=False):
     """
     Cycle through states 0..n-1 forward or backward.
     """
-    state_number = read_state(statefile=statefile)
+    state_number = current_state(statefile=statefile)
 
     if backward:
         state_number = (state_number - 1) % mode_count

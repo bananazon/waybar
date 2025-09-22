@@ -54,8 +54,8 @@
         "exec": "{{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}",
         "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}')"
     },
-
     {% endif %}
+
     {% if "swap-usage" in static_modules and "enabled" in static_modules["swap-usage"] and static_modules["swap-usage"]["enabled"] == true %}
     "custom/swap-usage": {
         "exec": "{{ scripts_path }}/swap-usage.py",

@@ -101,6 +101,10 @@ This module retrieves weather from [weatherapi.com](https://www.weatherapi.com) 
 ### Wi-Fi Status
 This module displays the signal strength in dBm for the specified interface and has two available output formats.
 
+#### Output Formats
+1. `wlo1 -48 dBm`
+2. `wlo1 channel 48 (5240 MHz) 160 MHz width`
+   
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
 

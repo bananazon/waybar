@@ -13,3 +13,6 @@ dummy.*
 
 *-output.txt
 scripts/foo*py
+
+# External scripts
+scripts-external

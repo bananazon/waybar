@@ -1,6 +1,10 @@
 # ~/.config/waybar/config.yaml
 
-waybar_path: /home/gdanko/.config/waybar
+layer: 'bottom'
+position: 'top'
+height: 31
+spacing: 5
+font: Arimo Nerd Font 12
 scripts_path: /home/gdanko/.config/waybar/scripts
 
 static_modules:
@@ -23,7 +27,7 @@ filesystems:
     mountpoint: /
     interval: 10
   - label: work
-    enabled: false
+    enabled: true
     mountpoint: /work
     interval: 10
 
@@ -44,9 +48,13 @@ software_updates:
     interval: 1800
 
 weather:
-  api_key: figurethisout
+  api_key: "{key:wapi_key}"
   locations:
   - location: "San Diego, CA, US"
     enabled: true
     label: san-diego
+    interval: 300
+  - location: "Los Angeles, CA, US"
+    enabled: false
+    label: los-Angeles
     interval: 300

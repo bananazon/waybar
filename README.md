@@ -1,6 +1,20 @@
 # waybar
 I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Macs and I really enjoy their functionality. I was looking for something similar in the Linux world and stumbled across [Polybar](https://polybar.github.io). I used it for some time but I found some limitations I didn't care for. I then discovered Waybar and tried it in a VM, since the distro I was using didn't support Wayland. Well, I've since switched to a distro that supports Wayland and here we are. I hope you enjoy my work.
 
+## Prerequisites
+The following Python modules are required
+1. [`click`](https://pypi.org/project/click)
+2. [`cryptography`](https://pypi.org/project/cryptography)
+3. [`Jinja2`](https://pypi.org/project/Jinja2)
+4. [`psutil`](https://pypi.org/project/psutil)
+5. [`PyYAML`](https://pypi.org/project/PyYAML)
+6. [`speedtest-cli`](https://pypi.org/project/speedtest-cli)
+
+The following binaries are required and may not be installed by default
+1. `dmidecode`
+2. `iwconfig` (I will switch to `iw` for this use case ASAP)
+3. `mpstat` (part of the `sysstat` package)
+
 ## Installation
 What I do is pretty straight forward:
 1. `cd ~/.config`
@@ -10,7 +24,7 @@ But if you're already using Waybar and have your setup in ~/.config/waybar`, do 
 1. Clone the repository.
 2. Copy the scripts directory to your Waybar directory. There are some common files in `./scripts/waybar` so you kind of need it all.
 
-There is a `configure` directory in the repository that has a means to generate a config.jsonc file from a template file. It has its own README.md so go take a look at that when you have a momemnt.
+There is a `configure` directory in the repository that has a means to generate a config.jsonc file from a template file. It has its own README.md so go take a look at that when you have a moment.
 
 ## Modules
 Each module has a `--help` option, so you can see available options.

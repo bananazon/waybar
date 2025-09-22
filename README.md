@@ -87,6 +87,28 @@ This module retrieves weather from [weatherapi.com](https://www.weatherapi.com) 
 ### Wi-Fi Status
 This module displays the signal strength in dBm for the specified interface and has two available output formats.
 
+## Permissions
+You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
+
+### For Systems Update
+```
+# mint has a wrapper in /usr/local/bin
+user ALL=(ALL) NOPASSWD: /usr/local/bin/apt
+user ALL=(ALL) NOPASSWD: /usr/bin/apt
+user ALL=(ALL) NOPASSWD: /usr/bin/dnf
+user ALL=(ALL) NOPASSWD: /usr/bin/flatpak
+user ALL=(ALL) NOPASSWD: /usr/bin/mintupdate-cli
+user ALL=(ALL) NOPASSWD: /usr/bin/snap
+user ALL=(ALL) NOPASSWD: /usr/bin/yay
+user ALL=(ALL) NOPASSWD: /usr/bin/yum
+```
+
+### For Memory Usage
+```
+user ALL=(ALL) NOPASSWD: /usr/sbin/dmidecode
+```
+
+
 #### Output Formats
 1. `wlo1 -48 dBm`
 2. `wlo1 channel 48 (5240 MHz) 160 MHz width`

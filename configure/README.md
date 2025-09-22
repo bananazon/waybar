@@ -40,7 +40,7 @@ weather:
     label: los-Angeles
     interval: 300
 ```
-When you execute `render-config.py`, it traverses the YAML looking for any value in the format of `{key:xxxxx}` and attempts to retrieve the key from the keystore via `value = keystore.get('waybar', key_name)` and raises an exception if the key doesn't exist under the `waybar` service. You MUST use the waybar service for all of your keys since `render-config.py` has it hard coded. If the required keys exist in the keystore, the configuration file will be rendered with them in place.
+When you execute `render-config.py`, it traverses the YAML looking for any value in the format of `{key:xxxxx}` and attempts to retrieve the key from the keystore via `value = keystore.get('waybar', key_name)` and raises an exception if the key doesn't exist under the `waybar` service. You MUST use the waybar service for all of your keys since `render-config.py` has it hard coded. If the required keys exist in the keystore, the configuration file will be rendered with them in place. If you have an existing config.jsonc file, you can simply copy the generated bits to your file. I know it works because my config was generated via this script. As long as you don't monkey with the template or add dumb stuff to your YAML, you should be fine.
 
 ## Notes
 1. I stated previously, you should use the `waybar` service when storing keys.

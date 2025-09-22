@@ -70,7 +70,7 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.interval }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type brew --interval {{ s.interval }}')"
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.interval }}')"
     },
     {% endfor %}
 

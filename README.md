@@ -12,8 +12,7 @@ The following Python modules are required
 
 The following binaries are required and may not be installed by default
 1. `dmidecode`
-2. `iwconfig` (I will switch to `iw` for this use case ASAP)
-3. `mpstat` (part of the `sysstat` package)
+2. `mpstat` (part of the `sysstat` package)
 
 ## Installation
 What I do is pretty straight forward:

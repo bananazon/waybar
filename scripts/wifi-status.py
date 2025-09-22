@@ -64,17 +64,6 @@ def get_status_icon(signal):
     else:  # signal_dbm <= -90
         return glyphs.md_wifi_strength_alert_outline
 
-def get_signal(interface: str=None) -> int:
-    command = f'iwconfig {interface}'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0:
-        if stdout != '':
-            match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
-            if match:
-                return match.group(1)
-
-    return None
-
 def get_ssid():
     command = f'iwgetid -r'
     rc, stdout, stderr = util.run_piped_command(command)

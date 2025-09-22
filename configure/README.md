@@ -44,3 +44,4 @@ When you execute `render-config.py`, it traverses the YAML looking for any value
 
 ## Notes
 1. I stated previously, you should use the `waybar` service when storing keys.
+2. The `custom/nothing` entry at the end of the template is there because each module puts a comma at the end of its block. This is because we don't know which module will be the "last" in the list. A comma at end of the last block will break the JSON parsing. I put `custom/nothing` in there as a quick and dirty way to always ensure the JSON will render properly.

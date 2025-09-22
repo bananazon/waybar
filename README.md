@@ -33,7 +33,7 @@ This module shows filesystem usage information with three available output forma
 3. `/foo 779.41 GiB used / 2.64 TiB free`
 
 ### Memory Usage
-This module shows memory usage information with four available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [permissions](#permissions) section before implementing this module.
+This module shows memory usage information with four available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
 
 #### Output Formats
 1. `8.04 GiB / 59.75 GiB`

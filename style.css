@@ -68,7 +68,7 @@
 #custom-swap-usage.error { border: 2px solid #a33; color: #888888; }
 
 /* ---------- System Updates ---------- */
-/* dnf */
+/* brew */
 #custom-software-updates-brew.loading { border: 2px solid #b0b0b0; }
 #custom-software-updates-brew.success { border: 2px solid #3a5; }
 

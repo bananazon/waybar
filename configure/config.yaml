@@ -14,22 +14,26 @@ static_modules:
   - name: memory-usage
     enabled: true
     interval: 5
+    unit: auto
   - name: speedtest
     enabled: true
-    interval: 300
+    # interval: 300
   - name: swap-usage
     enabled: false
     interval: 5
+    unit: auto
 
 filesystems:
   - label: root
     enabled: true
     mountpoint: /
     interval: 10
+    unit: Gi
   - label: work
     enabled: true
     mountpoint: /work
     interval: 10
+    unit: auto
 
 network_interfaces:
   - name: wlo1

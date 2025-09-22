@@ -1,10 +1,10 @@
 {
-    "layer": "bottom",
-    "position": "top",
-    "height": 31,
-    "spacing": 5,
+    "layer": "{{ layer }}",
+    "position": "{{ position }}",
+    "height": {{ height }},
+    "spacing": {{ spacing }},
 
-    "font": "Arimo Nerd Font 12",
+    "font": "{{ font }}",
 
     "modules-right": {{ modules_right | tojson(indent=4) | indent(4) }},
 

@@ -10,6 +10,9 @@ import re
 import sys
 import time
 
+CACHE_DIR = util.get_cache_directory()
+STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "swap-usage"}-state'
+
 class SwapInfo(NamedTuple):
     success   : Optional[bool]  = False
     error     : Optional[str]   = None
@@ -19,11 +22,6 @@ class SwapInfo(NamedTuple):
     pct_total : Optional[int]   = 0
     pct_used  : Optional[int]   = 0
     pct_free  : Optional[int]   = 0
-
-def get_statefile() -> str:
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-    return Path.home() / f'.waybar-{statefile_no_ext}-state'
 
 def get_swap_usage():
     """
@@ -73,9 +71,9 @@ def main():
     args = parser.parse_args()
 
     if args.toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
     else:
-        mode = state.current_state(statefile=get_statefile())
+        mode = state.current_state(statefile=STATEFILE)
 
     swap_info = get_swap_usage()
 

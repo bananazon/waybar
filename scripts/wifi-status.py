@@ -9,9 +9,11 @@ import re
 import sys
 import time
 
-# Ensure required modules are present
 util.validate_requirements(required=['click'])
 import click
+
+CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 class WifiStatus(NamedTuple):
     success   : Optional[bool] = False
@@ -22,23 +24,6 @@ class WifiStatus(NamedTuple):
     interface : Optional[str]  = None
     signal    : Optional[int]  = 0
     ssid      : Optional[str]  = None
-
-# Paths and constants
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-# Globals
-INTERFACE_LABEL : str | None = None
-
-def get_statefile() -> str:
-    """
-    Return the statefile as a Path object
-    """
-    global INTERFACE_LABEL
-
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-
-    return Path.home() / f'.waybar-{statefile_no_ext}-{INTERFACE_LABEL}-state'
 
 def get_status_icon(signal):
     """
@@ -144,8 +129,6 @@ def cli():
 @click.option('--interface', required=True, help='The interface to check')
 @click.option('--toggle', is_flag=True, help='Toggle the output format')
 def run(interface, toggle):
-    global INTERFACE_LABEL
-
     if not util.interface_exists(interface=interface):
         print(json.dumps({
             'text'  : f'{glyphs.md_alert} {interface} does not exist',
@@ -154,12 +137,12 @@ def run(interface, toggle):
     else:
         if util.interface_is_connected(interface=interface):
             mode_count = 2
-            INTERFACE_LABEL = interface
+            statefile = CACHE_DIR / f'waybar-{util.called_by() or "wifi-status"}-{interface}-state'
 
             if toggle:
-                mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+                mode = state.next_state(statefile=statefile, mode_count=mode_count)
             else:
-                mode = state.current_state(statefile=get_statefile())
+                mode = state.current_state(statefile=statefile)
 
             wifi_status = get_wifi_status(interface=interface)
 

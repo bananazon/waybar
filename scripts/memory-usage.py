@@ -10,6 +10,9 @@ import re
 import sys
 import time
 
+CACHE_DIR = util.get_cache_directory()
+STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "memory-usage"}-state'
+
 class DIMMInfo(NamedTuple):
     configured_voltage : Optional[str] = None
     data_width         : Optional[int] = 0
@@ -45,11 +48,6 @@ class MemoryInfo(NamedTuple):
     pct_used    : Optional[int]  = 0
     pct_free    : Optional[int]  = 0
     memory_type : Optional[List[MemoryType]] = None
-
-def get_statefile() -> str:
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-    return Path.home() / f'.waybar-{statefile_no_ext}-state'
 
 def get_memory_type():
     command = 'sudo dmidecode -t memory'
@@ -209,9 +207,9 @@ def main():
     args = parser.parse_args()
 
     if args.toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
     else:
-        mode = state.current_state(statefile=get_statefile())
+        mode = state.current_state(statefile=STATEFILE)
 
     memory_info = get_memory_usage()
 

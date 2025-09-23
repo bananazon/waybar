@@ -11,6 +11,9 @@ import re
 import sys
 import time
 
+CACHE_DIR = util.get_cache_directory()
+STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "cpu-usage"}-state'
+
 class CpuInfo(NamedTuple):
     success        : Optional[bool]  = False
     error          : Optional[str]   = None
@@ -33,11 +36,6 @@ class CpuInfo(NamedTuple):
     steal          : Optional[float] = 0.0
     system         : Optional[float] = 0.0
     user           : Optional[float] = 0.0
-
-def get_statefile() -> str:
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-    return Path.home() / f'.waybar-{statefile_no_ext}-state'
 
 def get_icon():
     if platform.machine() == 'x86':
@@ -158,9 +156,9 @@ def main():
     args = parser.parse_args()
 
     if args.toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
     else:
-        mode = state.current_state(statefile=get_statefile())
+        mode = state.current_state(statefile=STATEFILE)
 
     cpu_info = get_cpu_info()
 

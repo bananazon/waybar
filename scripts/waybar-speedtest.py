@@ -15,9 +15,13 @@ util.validate_requirements(required=['click', 'speedtest'])
 import click
 import speedtest
 
-update_event = threading.Event()
+CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LOADING = f'{glyphs.md_timer_outline} Speedtest running...'
+LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
+LOGFILE = CACHE_DIR / 'waybar-speedtest.log'
 
-# ---- Unbuffered stdout ----
+update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
 class SpeedtestResults(NamedTuple):
@@ -29,11 +33,6 @@ class SpeedtestOutput(NamedTuple):
     download: Optional[SpeedtestResults] = None
     upload: Optional[SpeedtestResults] = None
     icon: Optional[str] = None
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline} Speedtest running...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
-LOGFILE = Path.home() / '.waybar-speedtest-results.log'
 
 logging.basicConfig(
     filename=LOGFILE,

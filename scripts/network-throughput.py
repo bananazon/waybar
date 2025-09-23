@@ -12,6 +12,9 @@ import time
 util.validate_requirements(required=['click'])
 import click
 
+CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 class NetworkSample(NamedTuple):
     interface   : Optional[str] = None
     rx_bytes    : Optional[int] = -1
@@ -30,8 +33,6 @@ class NetworkThrouhput(NamedTuple):
     error       : Optional[str]  = None
     received    : Optional[str]  = None
     transmitted : Optional[str]  = None
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 def get_icon(interface: str=None, connected: bool=True):
     if os.path.isdir(f'/sys/class/net/{interface}/wireless'):

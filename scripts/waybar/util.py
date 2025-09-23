@@ -4,6 +4,7 @@ from pprint import pprint as pp
 from typing import List, Tuple, Optional, Union
 import getpass
 import importlib.util
+import inspect
 import json
 import os
 import psutil
@@ -86,16 +87,6 @@ def waybar_is_running():
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     return None
-
-def process_is_running(name: str=None, full: bool=False):
-    flag = 'f' if full else 'x'
-    command = f'pgrep -{flag} "{name}"'
-    rc, stdout, stderr = run_piped_command(command)
-    if rc == 0 and stdout != '':
-        pids = stdout.split('\n')
-        return True, pids
-    else:
-        return False, []
 
 #==========================================================
 #  Unit conversersion
@@ -206,9 +197,6 @@ def file_exists(filename: str='') -> bool:
 def file_is_executable(filename: str='') -> bool:
     return True if os.access(filename, os.X_OK) else False
 
-def get_home_directory() -> str:
-    return Path.home()
-
 def get_config_directory() -> str:
     return os.path.join(
         Path.home(),
@@ -221,6 +209,24 @@ def get_script_directory() -> str:
         get_config_directory(),
         'scripts',
     )
+
+def get_cache_directory():
+    xdg_cache = os.environ.get('XDG_CACHE_HOME')
+    if xdg_cache:
+        cache_dir = Path(xdg_cache / 'waybar')
+    else:
+        cache_dir = Path.home() / '.cache/waybar'
+    
+    if not os.path.exists(cache_dir):
+        try:
+            os.mkdir(cache_dir, mode=0o700)
+        except:
+            error_exit(
+                icon = surrogatepass('\udb80\udc26'),
+                message = f'Couldn\'t create "{cache_dir}"'
+            )
+
+    return cache_dir
 
 #==========================================================
 #  Dependencies and validation
@@ -343,3 +349,17 @@ def get_valid_units() -> list:
     Return a list of valid storage units
     """
     return ['K', 'Ki', 'M', 'Mi', 'G', 'Gi', 'T', 'Ti', 'P', 'Pi', 'E', 'Ei', 'Z', 'Zi', 'auto']
+
+def error_exit(icon, message):
+    print(json.dumps({
+        'text'  : f'{icon} {message}',
+        'class' : 'error',
+    }))
+    sys.exit(1)
+
+def called_by():
+    caller = inspect.stack()[1]
+    try:
+        return os.path.splitext(os.path.basename(caller.filename))[0]
+    except:
+        return None

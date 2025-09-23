@@ -16,19 +16,18 @@ util.validate_requirements(required=['click'])
 import click
 
 update_event = threading.Event()
-
-# ---- Unbuffered stdout ----
 sys.stdout.reconfigure(line_buffering=True)
+
+CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LOGFILE = CACHE_DIR / 'waybar-software-updates.log'
+VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 class SystemUpdates(NamedTuple):
     success  : Optional[bool] = False
     error    : Optional[str]  = None
     count    : Optional[int]  = 0
     packages : Optional[List[str]] = None
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOGFILE = Path.home() / '.waybar-system-update-result.log'
-VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 logging.basicConfig(
     filename=LOGFILE,

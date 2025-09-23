@@ -12,9 +12,9 @@ import subprocess
 import sys
 import time
 
-# Constants
+CACHE_DIR = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache/waybar'))
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOGFILE = Path.home() / f'waybar.log'
+LOGFILE = CACHE_DIR / f'waybar.log'
 
 class RightPadFormatter(logging.Formatter):
     def __init__(self, levelnames):

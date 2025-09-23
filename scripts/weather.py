@@ -16,9 +16,9 @@ import urllib.request
 util.validate_requirements(required=['click'])
 import click
 
-update_event = threading.Event()
+CACHE_DIR = util.get_cache_directory()
 
-# ---- Unbuffered stdout ----
+update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
 LABEL     : str | None=None
@@ -63,7 +63,7 @@ class WeatherData(NamedTuple):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LOADING = f'{glyphs.md_timer_outline} Fetching weather...'
 LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
-LOGFILE = Path.home() / '.waybar-weather-result.log'
+LOGFILE = CACHE_DIR / 'waybar-weather-result.log'
 
 logging.basicConfig(
     filename=LOGFILE,
@@ -83,8 +83,8 @@ def set_globals(label: str=None, location: str=None):
 
     LABEL     = label
     LOCATION  = location
-    STATEFILE = Path.home() / f'.waybar-{module_no_ext}-{LABEL}-state'
-    TEMPFILE  = Path.home() / f'.waybar-{module_no_ext}-{LABEL}-result.txt'
+    STATEFILE = CACHE_DIR / f'waybar-{module_no_ext}-{LABEL}-state'
+    TEMPFILE  = CACHE_DIR / f'waybar-{module_no_ext}-{LABEL}-result.txt'
 
 def get_weather_icon(condition_code, is_day):
     # https://www.weatherapi.com/docs/weather_conditions.json

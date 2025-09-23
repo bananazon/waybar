@@ -10,8 +10,7 @@ import re
 import sys
 import time
 
-DISK_IDENTIFIER : str | None = None
-DISK_LABEL      : str | None = None
+CACHE_DIR = util.get_cache_directory()
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
@@ -26,6 +25,7 @@ class FilesystemInfo(NamedTuple):
     free       : Optional[int]   = 0
 
 def get_uuid(mountpoint: str='') -> str:
+    # Fix me to be more resilient
     rc, device, _ = util.run_piped_command(f'findmnt -n -o SOURCE {mountpoint}')
     if rc == 0 and device != '':
         rc, uuid, _ = util.run_piped_command(f'blkid -s UUID -o value "{device}"')
@@ -35,31 +35,6 @@ def get_uuid(mountpoint: str='') -> str:
         util.error_exit(icon=glyphs.md_alert, message=f'{mountpoint} is an invalid mountpoint')
     
     return None
-
-def set_label(label: str=None):
-    """
-    Set the global label variable
-    """
-    global DISK_LABEL
-    DISK_LABEL = label
-
-def set_disk_identifier(mountpoint: str=None):
-    """
-    Set the disk UUID
-    """
-    global DISK_IDENTIFIER, DISK_LABEL
-
-    uuid = get_uuid(mountpoint=mountpoint)
-
-    DISK_IDENTIFIER = uuid if uuid else DISK_LABEL
-    
-def get_statefile() -> str:
-    global DISK_IDENTIFIER
-
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-
-    return Path.home() / f'.waybar-{statefile_no_ext}-{DISK_IDENTIFIER}-state'
 
 def get_disk_usage(mountpoint: str) -> list:
     """
@@ -123,13 +98,13 @@ def main():
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     args = parser.parse_args()
 
-    set_label(label=args.label)
-    set_disk_identifier(mountpoint=args.mountpoint)
+    disk_identifier = get_uuid(mountpoint=args.mountpoint) or args.label
+    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{disk_identifier}-state'
 
     if args.toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        mode = state.next_state(statefile=statefile, mode_count=mode_count)
     else:
-        mode = state.current_state(statefile=get_statefile())
+        mode = state.current_state(statefile=statefile)
 
     disk_info = get_disk_usage(args.mountpoint)
 

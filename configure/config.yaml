@@ -46,9 +46,17 @@ network_interfaces:
     interval: 2
 
 software_updates:
+  - type: brew
+    enabled: false
+    interval: 1800
   - type: dnf
+    enabled: true
     interval: 1800
   - type: flatpak
+    enabled: true
+    interval: 1800
+  - type: snap
+    enabled: false
     interval: 1800
 
 weather:

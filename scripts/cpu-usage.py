@@ -144,7 +144,7 @@ def get_cpu_info() -> CpuInfo:
     else:
         cpu_info = CpuInfo(
             success   = False,
-            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+            error     = stderr or f'failed to execute "{command}"',
         )
 
     return cpu_info

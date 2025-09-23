@@ -58,7 +58,7 @@ def get_swap_usage():
     else:
         swap_info = SwapInfo(
             success   = False,
-            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+            error     = stderr or f'failed to execute "{command}"',
         )
 
     return swap_info

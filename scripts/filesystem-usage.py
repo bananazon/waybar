@@ -78,13 +78,13 @@ def get_disk_usage(mountpoint: str) -> list:
             filesystem_info = FilesystemInfo(
                 success    = False,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} no output from {command}',
+                error      = f'no output from {command}',
             )
     else:
         filesystem_info = FilesystemInfo(
-            success   = False,
-            interface = interface,
-            error     = f'{mountpoint} {stderr}' if stderr != '' else f'{mountpoint} failed to execute {command}',
+            success    = False,
+            mountpoint = mountpoint,
+            error      = stderr or f'failed to execute {command}',
         )
 
     return filesystem_info
@@ -143,7 +143,7 @@ def main():
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error if disk_info.error is not None else "Unknown error"}',
+            'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error or "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Filesystem Usage',
         }

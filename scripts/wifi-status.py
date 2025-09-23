@@ -76,7 +76,7 @@ def get_wifi_status(interface: str=None):
         wifi_status = WifiStatus(
             success   = False,
             interface = interface,
-            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+            error     = stderr or f'failed to execute "{command}"',
         )
 
     command = f'iw dev {interface} info'
@@ -103,9 +103,9 @@ def get_wifi_status(interface: str=None):
         wifi_status = WifiStatus(
             success   = False,
             interface = interface,
-            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+            error     = stderr or f'failed to execute "{command}"',
         )
-    
+
     wifi_status = WifiStatus(
         success   = True,
         bandwidth = channel_bandwidth,

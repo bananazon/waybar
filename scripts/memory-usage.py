@@ -138,16 +138,10 @@ def get_memory_type():
                 error   = 'no information found about installed memory',
             )
     else:
-        if stderr != '':
-            memory_type = MemoryType(
-                success = False,
-                error   = stderr,
-            )
-        else:
-            memory_type = MemoryType(
-                success = False,
-                error   = f'failed to execute {command}',
-            )
+        memory_type = MemoryType(
+            success = False,
+            error   = stderr or f'failed to execute {command}',
+        )
 
     return memory_type
 
@@ -194,7 +188,7 @@ def get_memory_usage():
     else:
         mem_info = MemInfo(
             success   = False,
-            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+            error     = stderr or f'failed to execute "{command}"',
         )
 
     return mem_info

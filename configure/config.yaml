@@ -28,7 +28,7 @@ filesystems:
     enabled: true
     mountpoint: /
     interval: 10
-    unit: Gi
+    unit: auto
   - label: work
     enabled: true
     mountpoint: /work

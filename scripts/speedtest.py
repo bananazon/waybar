@@ -51,8 +51,10 @@ def get_icon(speed: int = 0) -> str:
         return glyphs.md_speedometer_fast
 
 def run_speedtest():
+    logging.info('[run_speedtest] running speedtest')
     command = 'speedtest-cli --secure --json'
     rc, stdout, stderr = util.run_piped_command(command)
+    logging.info('[run_speedtest] speedtest finished')
     if rc == 0:
         if stdout != '':
             json_data, err = util.parse_json_string(stdout)
@@ -91,41 +93,42 @@ def run_speedtest():
     )
 
 def worker():
-    update_event.wait()
-    update_event.clear()
+    while True:
+        update_event.wait()
+        update_event.clear()
 
-    if not util.waybar_is_running():
-        logging.info('[main] waybar not running')
-        sys.exit(0)
-    else:
-        if util.network_is_reachable():
-            print(json.dumps(LOADING_DICT))
+        if not util.waybar_is_running():
+            logging.info('[main] waybar not running')
+            sys.exit(0)
+        else:
+            if util.network_is_reachable():
+                print(json.dumps(LOADING_DICT))
 
-            speedtest_data = run_speedtest()
+                speedtest_data = run_speedtest()
 
-            if speedtest_data.success:
-                parts = []
-                parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
-                parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
-                output = {
-                    'text'    : f'{speedtest_data.icon} Speedtest {" ".join(parts)}',
-                    'class'   : 'success',
-                    'tooltip' : 'Speedtest results',
-                }
+                if speedtest_data.success:
+                    parts = []
+                    parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
+                    parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
+                    output = {
+                        'text'    : f'{speedtest_data.icon} Speedtest {" ".join(parts)}',
+                        'class'   : 'success',
+                        'tooltip' : 'Speedtest results',
+                    }
+                else:
+                    output = {
+                        'text'  : f'{speedtest_data.icon} {speedtest_data.error}',
+                        'class' : 'error',
+                        'tooltip' : 'Speedtest error',
+                    }
             else:
                 output = {
-                    'text'  : f'{speedtest_data.icon} {speedtest_data.error}',
-                    'class' : 'error',
+                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'class'   : 'error',
                     'tooltip' : 'Speedtest error',
                 }
-        else:
-            output = {
-                'text'    : f'{glyphs.md_alert} the network is unreachable',
-                'class'   : 'error',
-                'tooltip' : 'Speedtest error',
-            }
 
-    print(json.dumps(output))
+        print(json.dumps(output))
 
 def refresh_handler(signum, frame):
     logging.info('Received SIGHUP — triggering speedtest')

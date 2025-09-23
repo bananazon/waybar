@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 
-CACHE_DIR = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache/waybar'))
+CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LOGFILE = CACHE_DIR / f'waybar.log'
 

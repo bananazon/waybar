@@ -80,8 +80,8 @@ This module shows swap usage information with three available output formats tha
 2. `0% used`
 3. `0.00 B used / 1.91 GiB free`
 
-### System Updates
-This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, `yum`. Please see the [permissions](#permissions) section before implementing this module.
+### Software Updates
+This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, `yum`. Please see the [`permissions`](#permissions) section before implementing this module.
 
 #### Output Formats
 1. `apt 0 outdated packages`
@@ -107,7 +107,7 @@ This module displays the signal strength in dBm for the specified interface and 
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
 
-### For Systems Update
+### For Software Updates
 ```
 # mint has a wrapper in /usr/local/bin
 user ALL=(ALL) NOPASSWD: /usr/local/bin/apt

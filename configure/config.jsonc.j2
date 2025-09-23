@@ -8,10 +8,10 @@
 
     "modules-right": {{ modules_right | tojson(indent=4) | indent(4) }},
 
-    {% if "cpu-usage" in static_modules and "enabled" in static_modules["cpu-usage"] and static_modules["cpu-usage"]["enabled"] == true %}
+    {% if cpu_usage.enabled == true %}
     "custom/cpu-usage": {
         "exec": "{{ scripts_path }}/cpu-usage.py",
-        "interval": {{ (static_modules["cpu-usage"]["interval"] if static_modules["cpu-usage"]["interval"] else none) or 10 }},
+        "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }},
         "return-type": "json",
         "on-click": "{{ scripts_path }}/cpu-usage.py --toggle"
     },
@@ -20,20 +20,20 @@
     {% for fs in filesystems %}
     {% if fs.enabled == true %}
     "custom/filesystem-usage-{{ fs.label }}": {
-        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit auto",
-        "interval": {{ fs.interval }},
+        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit {{ (fs.unit if fs.unit else none) or auto }}",
+        "interval": {{ fs.get("interval", 10) if fs is defined else 10 }},
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit auto --toggle"
+        "on-click": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit {{ (fs.unit if fs.unit else none) or auto }} --toggle"
     },
     {% endif %}
     {% endfor %}
 
-    {% if "memory-usage" in static_modules and "enabled" in static_modules["memory-usage"] and static_modules["memory-usage"]["enabled"] == true %}
+    {% if memory_usage.enabled == true %}
     "custom/memory-usage": {
-        "exec": "{{ scripts_path }}/memory-usage.py",
-        "interval": {{ (static_modules["memory-usage"]["interval"] if static_modules["memory-usage"]["interval"] else none) or 10 }},
+        "exec": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }}",
+        "interval": {{ memory_usage.get("interval", 10) if memory_usage is defined else 10 }},
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/memory-usage.py --toggle"
+        "on-click": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }} --toggle"
     },
     {% endif %}
 
@@ -41,27 +41,27 @@
     {% if iface.enabled %}
     "custom/network-throughput-{{ iface.name }}": {
         "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
-        "interval": {{ (iface.interval if iface.interval else none) or 10 }},
+        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
         "return-type": "json"
     },
     {% endif %}
     {% endfor %}
 
-    {% if "speedtest" in static_modules and "enabled" in static_modules["speedtest"] and static_modules["speedtest"]["enabled"] == true %}
+    {% if speedtest.enabled == true %}
     "custom/speedtest": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/waybar-speedtest.py --interval {{ (static_modules["speedtest"]["interval"] if static_modules["speedtest"]["interval"] else none) or 1800 }}')"
+        "exec": "{{ scripts_path }}/waybar-speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/waybar-speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
     },
     {% endif %}
 
-    {% if "swap-usage" in static_modules and "enabled" in static_modules["swap-usage"] and static_modules["swap-usage"]["enabled"] == true %}
+    {% if swap_usage.enabled == true %}
     "custom/swap-usage": {
-        "exec": "{{ scripts_path }}/swap-usage.py",
-        "interval": {{ (static_modules["swap-usage"]["interval"] if static_modules["swap-usage"]["interval"] else none) or 10 }},
+        "exec": "{{ scripts_path }}/swap-usage.py --unit {{ swap_usage.get("unit", "auto") if swap_usage is defined else "auto" }}",
+        "interval": {{ swap_usage.get("interval", 10) if swap_usage is defined else 10 }},
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/swap-usage.py --toggle"
+        "on-click": "{{ scripts_path }}/swap-usage.py --unit {{ swap_usage.get("unit", "auto") if swap_usage is defined else "auto" }} --toggle"
     },
     {% endif %}
 
@@ -69,8 +69,8 @@
     "custom/software-updates-{{ s.type }}": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.interval }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.interval }}')"
+        "exec": "{{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}')"
     },
     {% endfor %}
 
@@ -78,7 +78,7 @@
     {% if iface.type == 'wifi' and iface.enabled %}
     "custom/wifi-status-{{ iface.name }}": {
         "exec": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }}",
-        "interval": {{ (iface.interval if iface.interval else none) or 10 }},
+        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
         "return-type": "json",
         "on-click": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }} --toggle"
     },
@@ -90,9 +90,9 @@
     "custom/weather-{{ location.label }}": {
         "format" : "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.interval }}",
-        "on-click": "{{ scripts_path }}/weather.py toggle --label {{ location.label }} && kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.interval }}')",
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.interval }}')"
+        "exec": "{{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}",
+        "on-click": "{{ scripts_path }}/weather.py toggle --label {{ location.label }} && kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py run --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}')"
     },
     {% endif %}
     {% endfor %}

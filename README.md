@@ -124,8 +124,3 @@ user ALL=(ALL) NOPASSWD: /usr/bin/yum
 ```
 user ALL=(ALL) NOPASSWD: /usr/sbin/dmidecode
 ```
-
-
-#### Output Formats
-1. `wlo1 -48 dBm`
-2. `wlo1 channel 48 (5240 MHz) 160 MHz width`

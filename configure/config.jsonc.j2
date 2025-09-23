@@ -51,8 +51,8 @@
     "custom/speedtest": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/waybar-speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/waybar-speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
+        "exec": "{{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
     },
     {% endif %}
 

@@ -155,17 +155,20 @@ def render_template(template_file, yaml_file, output_file, dryrun):
     
     try:
         output = config_template.render(
+            cpu_usage          = static_module_map.get('cpu-usage', {}),
             filesystems        = yaml_data.get('filesystems', []),
             font               = yaml_data.get('font', 'Arimo Nerd Font 12'),
-            layer              = yaml_data.get('layer', 'bottom'),
-            position           = yaml_data.get('position', 'top'),
             height             = yaml_data.get('height', 31),
-            spacing            = yaml_data.get('spacing', 5),
+            layer              = yaml_data.get('layer', 'bottom'),
+            memory_usage       = static_module_map.get('memory-usage', {}),
             modules_right      = modules_right,
             network_interfaces = yaml_data.get('network_interfaces', []),
+            position           = yaml_data.get('position', 'top'),
             scripts_path       = yaml_data.get('scripts_path', '~/.config/waybar/scripts'), 
             software_updates   = yaml_data.get('software_updates', []),
-            static_modules     = static_module_map,
+            spacing            = yaml_data.get('spacing', 5),
+            speedtest          = static_module_map.get('speedtest', {}),
+            swap_usage         = static_module_map.get('swap-usage', {}),
             weather            = yaml_data.get('weather', []),
         )
     except Exception as e:

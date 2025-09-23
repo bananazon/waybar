@@ -410,7 +410,7 @@ signal.signal(signal.SIGHUP, refresh_handler)
 
 @click.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
 @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
-@click.option('-i', '--interval', type=int, help='The update interval (in seconds)')
+@click.option('-i', '--interval', type=int, default=1800, help='The update interval (in seconds)')
 def main(type, interval):
     logging.info('[main] entering')
 

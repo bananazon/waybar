@@ -111,7 +111,7 @@ def worker():
                     parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
                     parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
                     output = {
-                        'text'    : f'{speedtest_data.icon} Speedtest {" ".join(parts)}',
+                        'text'    : f'{speedtest_data.icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}',
                         'class'   : 'success',
                         'tooltip' : 'Speedtest results',
                     }

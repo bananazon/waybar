@@ -1,3 +1,7 @@
+window#waybar {
+    background: transparent;
+}
+
 /* ---------- Common Styles ---------- */
 /* Applies to all modules to avoid repetition */
 #custom-cpu-usage,
@@ -15,8 +19,9 @@
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
     border-radius: 6px;
-    padding: 4px 8px;
+    color: #ffffff;
     font-size: 8.5pt;
+    padding: 4px 8px;
 }
 
 /* ---------- CPU Usage ---------- */

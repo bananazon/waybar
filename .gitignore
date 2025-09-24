@@ -14,5 +14,6 @@ dummy.*
 *-output.txt
 scripts/foo*py
 
-# External scripts
+# External
 scripts-external
+css-external

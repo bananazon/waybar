@@ -150,24 +150,24 @@ def run(interface, toggle):
                 wifi_icon = get_status_icon(wifi_status.signal)
                 if mode == 0:
                     output = {
-                        'text'  : f'{wifi_icon} {wifi_status.interface} {wifi_status.signal} dBm',
+                        'text'  : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} {wifi_status.signal} dBm',
                         'class' : 'success',
                     }
                 elif mode == 1:
                     output = {
-                        'text'  : f'{wifi_icon} {wifi_status.interface} channel {wifi_status.channel} ({wifi_status.frequency} MHz) {wifi_status.bandwidth} MHz width',
+                        'text'  : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} channel {wifi_status.channel} ({wifi_status.frequency} MHz) {wifi_status.bandwidth} MHz width',
                         'class' : 'success',
                     }
             else:
                 wifi_icon = glyphs.md_wifi_strength_alert_outline
                 output = {
-                    'text'  : f'{wifi_icon} {wifi_status.interface} {wifi_status.error if wifi_status.error is not None else "Unknown error"}',
+                    'text'  : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} {wifi_status.error if wifi_status.error is not None else "Unknown error"}',
                     'class' : 'error',
                 }
         else:
             wifi_icon = glyphs.md_wifi_strength_alert_outline
             output = {
-                'text'  : f'{wifi_icon} {interface} disconnected',
+                'text'  : f'{wifi_icon}{glyphs.icon_spacer}{interface} disconnected',
                 'class' : 'error'
             }
 

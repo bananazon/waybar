@@ -61,7 +61,7 @@ class WeatherData(NamedTuple):
     wind_speed        : Optional[str]   = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline} Fetching weather...'
+LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
 LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
 LOGFILE = CACHE_DIR / 'waybar-weather-result.log'
 
@@ -304,37 +304,37 @@ def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label
 
                     if mode == 0:
                         output = {
-                            'text'    : f'{icon} {location_short} {current_temp}',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {current_temp}',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} current condition and temperature',
                         }
                     elif mode == 1:
                         output = {
-                            'text'    : f'{icon} {location_short} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} daily high and low temperaturea',
                         }
                     elif mode == 2:
                         output = {
-                            'text'    : f'{icon} {location_short} {wind_speed} @ {wind_degree}°',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {wind_speed} @ {wind_degree}°',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} wind speed and direction',
                         }
                     elif mode == 3:
                         output = {
-                            'text'    : f'{icon} {location_short}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} sunrise and sunset times',
                         }
                     elif mode == 4:
                         output = {
-                            'text'    : f'{icon} {location_short} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} moonrise and moonset times',
                         }
                     elif mode == 5:
                         output = {
-                            'text'    : f'{icon} {location_short} humidity {weather_data.humidity}',
+                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} humidity {weather_data.humidity}',
                             'class'   : 'success',
                             'tooltip' : f'{location_short} humidity level',
                         }

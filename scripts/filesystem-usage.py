@@ -125,25 +125,25 @@ def main():
 
         if mode == 0:
             output = {
-                'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {used} / {total}',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used} / {total}',
                 'class'   : output_class,
                 'tooltip' : 'Filesystem Usage',
             }
         elif mode == 1:
             output = {
-                'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {pct_used}% used',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {pct_used}% used',
                 'class'   : output_class,
                 'tooltip' : 'Filesystem Usage',
             }
         elif mode == 2:
             output = {
-                'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {used}% used / {free}% free',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used}% used / {free}% free',
                 'class'   : output_class,
                 'tooltip' : 'Filesystem Usage',
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_harddisk} {args.mountpoint} {disk_info.error or "Unknown error"}',
+            'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {disk_info.error or "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Filesystem Usage',
         }

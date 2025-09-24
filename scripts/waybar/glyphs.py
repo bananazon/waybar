@@ -100,6 +100,7 @@ cod_package           = util.surrogatepass('\ueb29')
 fa_arrow_rotate_right = util.surrogatepass('\uf01e')
 md_package_variant    = util.surrogatepass('\udb80\udfd6')
 md_timer_outline      = util.surrogatepass('\udb81\udd1b')
+icon_spacer           = '  '
 
 # Alerts
 md_alert               = util.surrogatepass('\udb80\udc26')

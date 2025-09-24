@@ -172,19 +172,19 @@ def main():
     if cpu_info.success:
         if mode == 0:
             output = {
-                'text'    : f'{get_icon()} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%',
+                'text'    : f'{get_icon()}{glyphs.icon_spacer}user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%',
                 'tooltip' : 'CPU user%, system%, and idle%',
                 'class'   : output_class,
             }
         elif mode == 1:
             output = {
-                'text'    : f'{get_icon()} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}',
+                'text'    : f'{get_icon()}{glyphs.icon_spacer}load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}',
                 'tooltip' : 'Load averages',
                 'class'   : output_class,
             }
         elif mode == 2:
             output = {
-                'text'    : f'{get_icon()} {cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}',
+                'text'    : f'{get_icon()}{glyphs.icon_spacer}{cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}',
                 'tooltip' : 'core count/thread count x CPU model',
                 'class'   : output_class,
             }

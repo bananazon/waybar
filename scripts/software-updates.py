@@ -344,7 +344,6 @@ def find_updates(package_type: str = ''):
         'brew'       : find_brew_updates,
         'dnf'        : find_dnf_updates,
         'flatpak'    : find_flatpak_updates,
-        'mintupdate' : find_mint_updates,
         'pacman'     : find_pacman_updates,
         'snap'       : find_snap_updates,
         'yay-aur'    : lambda package_type: find_yay_updates(package_type=package_type, aur=True),
@@ -372,7 +371,7 @@ def worker(type: str=None):
 
 
                 loading_dict = {
-                    'text'    : f'{glyphs.md_timer_outline} Checking {type}...',
+                    'text'    : f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {type}...',
                     'class'   : 'loading',
                     'tooltip' : f'Checking {type}',
                 }
@@ -383,19 +382,19 @@ def worker(type: str=None):
                 if data.success:
                     packages = 'package' if data.count == 1 else 'packages'
                     output = {
-                        'text'    : f'{glyphs.md_package_variant} {type} {data.count} outdated {packages}',
+                        'text'    : f'{glyphs.md_package_variant}{glyphs.icon_spacer}{type} {data.count} outdated {packages}',
                         'class'   : 'success',
                         'tooltip' : f'{type} updates',
                     }
                 else:
                     output = {
-                        'text'    : f'{glyphs.md_package_variant} {type} failed to find updates',
+                        'text'    : f'{glyphs.md_package_variant}{glyphs.icon_spacer}{type} failed to find updates',
                         'class'   : 'success',
                         'tooltip' : f'{type} updates',
                     }
             else:
                 output= {
-                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
                     'class'   : 'error',
                     'tooltip' : f'{apt} error',
                 }

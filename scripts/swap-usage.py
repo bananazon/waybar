@@ -94,25 +94,25 @@ def main():
 
         if mode == 0:
             output = {
-                'text'    : f'{glyphs.cod_arrow_swap} {used} / {total}',
+                'text'    : f'{glyphs.cod_arrow_swap}{glyphs.icon_spacer}{used} / {total}',
                 'class'   : output_class,
                 'tooltip' : 'Swap Usage',
             }
         elif mode == 1:
             output = {
-                'text'    : f'{glyphs.cod_arrow_swap} {pct_used}% used',
+                'text'    : f'{glyphs.cod_arrow_swap}{glyphs.icon_spacer}{pct_used}% used',
                 'class'   : output_class,
                 'tooltip' : 'Swap Usage',
             }
         elif mode == 2:
             output = {
-                'text'    : f'{glyphs.cod_arrow_swap} {used}% used / {free}% free',
+                'text'    : f'{glyphs.cod_arrow_swap}{glyphs.icon_spacer}{used}% used / {free}% free',
                 'class'   : output_class,
                 'tooltip' : 'Swap Usage',
             }
     else:
         output = {
-            'text'    : f'{glyphs.cod_arrow_swap} {swap_info.error if swap_info.error is not None else "Unknown error"}',
+            'text'    : f'{glyphs.cod_arrow_swap}{glyphs.icon_spacer}{swap_info.error if swap_info.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Swap Usage',
         }

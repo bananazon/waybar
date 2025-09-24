@@ -224,31 +224,31 @@ def main():
 
         if mode == 0:
             output = {
-                'text'    : f'{glyphs.md_memory} {used} / {total}',
+                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}',
                 'class'   : output_class,
                 'tooltip' : 'System Memory',
             }
         elif mode == 1:
             output = {
-                'text'    : f'{glyphs.md_memory} {pct_used}% used',
+                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{pct_used}% used',
                 'class'   : output_class,
                 'tooltip' : 'System Memory',
             }
         elif mode == 2:
             output = {
-                'text'    : f'{glyphs.md_memory} {used}% used / {free}% free',
+                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used}% used / {free}% free',
                 'class'   : output_class,
                 'tooltip' : 'System Memory',
             }
         elif mode == 3:
             output = {
-                'text'    : f'{glyphs.md_memory} {len(memory_info.memory_type.info)} x {util.byte_converter(memory_info.memory_type.info[0].size, unit='G', use_int=True)} {memory_info.memory_type.info[0].data_width}bit {memory_info.memory_type.info[0].form_factor} @ {memory_info.memory_type.info[0].speed}',
+                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{len(memory_info.memory_type.info)} x {util.byte_converter(memory_info.memory_type.info[0].size, unit='G', use_int=True)} {memory_info.memory_type.info[0].data_width}bit {memory_info.memory_type.info[0].form_factor} @ {memory_info.memory_type.info[0].speed}',
                 'class'   : output_class,
                 'tooltip' : 'System Memory',
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_memory} {memory_info.error if memory_info.error is not None else "Unknown error"}',
+            'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{memory_info.error if memory_info.error is not None else "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'System Memory',
         }

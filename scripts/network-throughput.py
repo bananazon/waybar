@@ -99,17 +99,17 @@ def main(interface):
             network_throughput = get_network_throughput(interface=interface)
             if network_throughput.success:
                 output = {
-                    'text'  : f'{get_icon(interface=interface)} {interface} {glyphs.cod_arrow_small_down}{network_throughput.received} {glyphs.cod_arrow_small_up}{network_throughput.transmitted}',
+                    'text'  : f'{get_icon(interface=interface)}{glyphs.icon_spacer}{interface} {glyphs.cod_arrow_small_down}{network_throughput.received} {glyphs.cod_arrow_small_up}{network_throughput.transmitted}',
                     'class' : 'success',
                 }
             else:
                 output = {
-                    'text'  : f'{get_icon(interface=interface)} {interface} {network_throughput.error}',
+                    'text'  : f'{get_icon(interface=interface)}{glyphs.icon_spacer}{interface} {network_throughput.error}',
                     'class' : 'error',
                 }
         else:
             output = {
-                'text'  : f'{get_icon(interface=interface, connected=False)} {interface} disconnected',
+                'text'  : f'{get_icon(interface=interface, connected=False)}{glyphs.icon_spacer}{interface} disconnected',
                 'class' : 'error'
             }
 

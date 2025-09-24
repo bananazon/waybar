@@ -17,7 +17,7 @@ import speedtest
 
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline} Speedtest running...'
+LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running...'
 LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
 LOGFILE = CACHE_DIR / 'waybar-speedtest.log'
 
@@ -117,13 +117,13 @@ def worker():
                     }
                 else:
                     output = {
-                        'text'  : f'{speedtest_data.icon} {speedtest_data.error}',
+                        'text'  : f'{speedtest_data.icon}{glyphs.icon_spacer}{speedtest_data.error}',
                         'class' : 'error',
                         'tooltip' : 'Speedtest error',
                     }
             else:
                 output = {
-                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
                     'class'   : 'error',
                     'tooltip' : 'Speedtest error',
                 }

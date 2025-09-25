@@ -140,7 +140,7 @@ def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=Fals
         prefix_map = {'K': 1, 'Ki': 1, 'M': 2, 'Mi': 2,  'G': 3, 'Gi': 3, 'T': 4, 'Ti': 4, 'P': 5, 'Pi': 5, 'E': 6, 'Ei': 6, 'Z': 7, 'Zi': 7}
         if unit in prefix_map.keys():
             if use_int:
-                return f'{int(number / (divisor ** prefix_map[prefix]))}{unit}{suffix}'
+                return f'{int(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
             else:
                 return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
         else:

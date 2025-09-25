@@ -41,20 +41,29 @@ def main():
     process, available = plex_status = get_plex_status(ip=args.ip, port=args.port)
     process_color = 'green' if process else 'red'
     availability_color = 'green' if available else 'red'
-    tooltip = f'Plex Media Server\nIP: {args.ip}\nPort: {args.port}\nProcess: {"OK" if process else "Not OK"}\nAvailability: {"OK" if available else "Not OK"}'
+    process_ok = 'OK' if process else 'Not OK'
+    availability_ok = 'OK' if available else 'Not OK'
+    tooltip = [
+        'Plex Media Server',
+        f'IP: {args.ip}',
+        f'Port: {args.port}',
+        f'Process: <span foreground="{process_color}">{process_ok}</span>',
+        f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
+    ]
+
     if process and available:
         output = {
             'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
             'class'   : 'success',
             'markup'  : 'pango',
-            'tooltip' : tooltip,
+            'tooltip' : '\n'.join(tooltip),
         }
     else:
         output = {
             'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
             'class'   : 'error',
             'markup'  : 'pango',
-            'tooltip' : tooltip,
+            'tooltip' : '\n'.join(tooltip),
         }
 
     print(json.dumps(output)) 

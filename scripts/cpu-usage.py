@@ -14,6 +14,8 @@ import time
 CACHE_DIR = util.get_cache_directory()
 STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "cpu-usage"}-state'
 
+CPU_INFO : dict | None=None
+
 class CpuInfo(NamedTuple):
     success        : Optional[bool]  = False
     error          : Optional[str]   = None
@@ -45,14 +47,6 @@ def get_icon():
     else:
         return glyphs.oct_cpu
 
-def get_cpu_type():
-    command = 'grep -m 1 "model name" /proc/cpuinfo'
-    rc, stdout, _ = util.run_piped_command(command)
-    if rc == 0:
-        return re.split(r'\s*:\s*', stdout)[1]
-    else:
-        return 'Unknown CPU model'
-
 def get_cpu_freq():
     rc, stdout, _ = util.run_piped_command('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq')
     freq_cur = stdout if (rc == 0 and stdout and stdout != '') else -1
@@ -64,23 +58,6 @@ def get_cpu_freq():
     freq_max = stdout if (rc == 0 and stdout and stdout != '') else -1
 
     return int(freq_cur) * 1000, int(freq_min) * 1000, int(freq_max) * 1000
-
-def get_logical_cpu_cores():
-    command = 'grep -c ^processor /proc/cpuinfo'
-    rc, stdout, _ = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        return int(stdout)
-
-    return -1
-
-def get_physical_cpu_cores():
-    command = 'grep -m 1 "cpu cores" /proc/cpuinfo'
-    rc, stdout, _ = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        physical_cores = re.split(r'\s+:\s+', stdout)[1]
-        return int(physical_cores)
-
-    return -1
 
 def get_load_averages():
     """
@@ -95,10 +72,30 @@ def get_load_averages():
 
     return [-1.0, -1.0, -1.0]
 
+def parse_proc_cpuinfo(path='/proc/cpuinfo'):
+    """
+    Read /proc/cpuinfo and return a list of CPU blocks as dicts
+    """
+    global CPU_INFO
+
+    text = Path(path).read_text()
+    blocks = re.split(r'\n\s*\n', text.strip())
+
+    def parse_block(block: str):
+        data = {}
+        for line in block.splitlines():
+            if ":" in line:
+                key, value = line.split(":", 1)
+                data[util.to_snake_case(key.strip())] = util.convert_value(value)
+        return data
+
+    CPU_INFO = [parse_block(block) for block in blocks]
+
 def get_cpu_info() -> CpuInfo:
     """
     Gather information about the CPU and return it to main()
     """
+    global CPU_INFO
 
     if platform.machine() == 'x86':
         icon = glyphs.md_cpu_32_bit
@@ -116,9 +113,9 @@ def get_cpu_info() -> CpuInfo:
             values = re.split(r'\s+', stdout)
             cpu_info = CpuInfo(
                 success            = True,
-                model              = get_cpu_type(),
-                cores_logical      = get_logical_cpu_cores(),
-                cores_physical     = get_physical_cpu_cores(),
+                model              = CPU_INFO[0].get('model_name') or 'Unknown',
+                cores_logical      = len(CPU_INFO) or -1,
+                cores_physical     = CPU_INFO[0].get('cpu_cores') or -1,
                 freq_cur           = freq_cur,
                 freq_max           = freq_max,
                 freq_min           = freq_min,
@@ -149,11 +146,29 @@ def get_cpu_info() -> CpuInfo:
 
     return cpu_info
 
+def generate_tooltip(cpu_info):
+    global CPU_INFO
+
+    tooltip = [
+        f'{cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}',
+        f'Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}'
+    ]
+    for idx, core in enumerate(CPU_INFO):
+        speed = util.processor_speed(round(core.get('cpu_mhz')) * 1000000)
+        tooltip.append(
+            f'core {idx:02d} = {speed}'
+        )
+
+    return '\n'.join(tooltip)
+
 def main():
-    mode_count = 4
+    mode_count = 2
     parser = argparse.ArgumentParser(description='Get CPU usage from mpstat(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     args = parser.parse_args()
+    global CPU_INFO
+
+    parse_proc_cpuinfo()
 
     if args.toggle:
         mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
@@ -161,6 +176,7 @@ def main():
         mode = state.current_state(statefile=STATEFILE)
 
     cpu_info = get_cpu_info()
+    tooltip = generate_tooltip(cpu_info)
 
     if float(cpu_info.idle) < 40:
         output_class = 'critical'
@@ -173,25 +189,13 @@ def main():
         if mode == 0:
             output = {
                 'text'    : f'{get_icon()}{glyphs.icon_spacer}user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%',
-                'tooltip' : 'CPU user%, system%, and idle%',
+                'tooltip' : tooltip,
                 'class'   : output_class,
             }
         elif mode == 1:
             output = {
                 'text'    : f'{get_icon()}{glyphs.icon_spacer}load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}',
-                'tooltip' : 'Load averages',
-                'class'   : output_class,
-            }
-        elif mode == 2:
-            output = {
-                'text'    : f'{get_icon()}{glyphs.icon_spacer}{cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}',
-                'tooltip' : 'core count/thread count x CPU model',
-                'class'   : output_class,
-            }
-        elif mode == 3:
-            output = {
-                'text'    : f'{get_icon()} current: {util.processor_speed(cpu_info.freq_cur)}, min: {util.processor_speed(cpu_info.freq_min)}, max: {util.processor_speed(cpu_info.freq_max)}',
-                'tooltip' : 'CPU frequency (current, min, max)',
+                'tooltip' : tooltip,
                 'class'   : output_class,
             }
     else:

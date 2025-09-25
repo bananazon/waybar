@@ -149,14 +149,19 @@ def get_cpu_info() -> CpuInfo:
 def generate_tooltip(cpu_info):
     global CPU_INFO
 
+    pc = cpu_info.cores_physical
+    lc = cpu_info.cores_logical
+    tpc = lc / pc
+
     tooltip = [
-        f'{cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}',
+        cpu_info.model,
+        f'Physical cores: {pc}, Threads/core: {tpc}, Logical cores: {lc}',
         f'Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}'
     ]
     for idx, core in enumerate(CPU_INFO):
         speed = util.processor_speed(round(core.get('cpu_mhz')) * 1000000)
         tooltip.append(
-            f'core {idx:02d} = {speed}'
+            f'Logical core {idx:02d} - {speed}'
         )
 
     return '\n'.join(tooltip)

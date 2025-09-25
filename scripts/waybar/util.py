@@ -89,7 +89,7 @@ def waybar_is_running():
     return None
 
 #==========================================================
-#  Unit conversersion
+#  Conversersion
 #==========================================================
 
 def network_speed(number: int=0, bytes: bool=False) -> str:
@@ -145,6 +145,18 @@ def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=Fals
                 return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
         else:
             return f'{number} {suffix}'
+
+def convert_value(value: str):
+    value = value.strip()  # normalize
+    if value.lower() in {'yes', 'no'}:
+        return value == 'yes'       # convert to bool
+    try:
+        if "." in value:
+            return float(value)
+        else:
+            return int(value)
+    except ValueError:
+        return value   
 
 #==========================================================
 #  Time functions

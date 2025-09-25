@@ -47,6 +47,15 @@
     {% endif %}
     {% endfor %}
 
+    {% if plex_status.enabled == true %}
+    "custom/plex-status": {
+        "exec": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }}",
+        "interval": {{ plex_status.get("interval", 10) if plex_status is defined else 10 }},
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }}"
+    },
+    {% endif %}
+
     {% if speedtest.enabled == true %}
     "custom/speedtest": {
         "format": "{}",

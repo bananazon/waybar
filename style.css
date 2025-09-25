@@ -10,6 +10,7 @@ window#waybar {
 #custom-memory-usage,
 #custom-network-throughput-enp1s0,
 #custom-network-throughput-wlo1,
+#custom-plex-status,
 #custom-speedtest,
 #custom-swap-usage,
 #custom-software-updates-brew,
@@ -18,6 +19,7 @@ window#waybar {
 #custom-software-updates-snap,
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
+    background: transparent;
     border-radius: 6px;
     color: #ffffff;
     font-size: 8.5pt;
@@ -28,49 +30,53 @@ window#waybar {
 #custom-cpu-usage.good { border: 2px solid #3a5; }
 #custom-cpu-usage.warning { border: 2px solid #E69500; }
 #custom-cpu-usage.critical { border: 2px solid #a33; }
-#custom-cpu-usage.error { border: 2px solid #a33; color: #888888; }
+#custom-cpu-usage.error { border: 2px solid #a33; }
 
 /* ---------- Filesystem Usage ---------- */
 /* root */
 #custom-filesystem-usage-root.good { border: 2px solid #3a5; }
 #custom-filesystem-usage-root.warning { border: 2px solid #E69500; }
 #custom-filesystem-usage-root.critical { border: 2px solid #a33; }
-#custom-filesystem-usage-root.error { border: 2px solid #a33; color: #888888; }
+#custom-filesystem-usage-root.error { border: 2px solid #a33; }
 
 /* work */
 #custom-filesystem-usage-work.good { border: 2px solid #3a5; }
 #custom-filesystem-usage-work.warning { border: 2px solid #E69500; }
 #custom-filesystem-usage-work.critical { border: 2px solid #a33; }
-#custom-filesystem-usage-work.error { border: 2px solid #a33; color: #888888; }
+#custom-filesystem-usage-work.error { border: 2px solid #a33; }
 
 /* ---------- Memory Usage ---------- */
 #custom-memory-usage.good { border: 2px solid #3a5; }
 #custom-memory-usage.warning { border: 2px solid #E69500; }
 #custom-memory-usage.critical { border: 2px solid #a33; }
-#custom-memory-usage.error { border: 2px solid #a33; color: #888888; }
+#custom-memory-usage.error { border: 2px solid #a33; }
 
 /* ---------- Network Throughput ---------- */
 /* enp1s0 */
 #custom-network-throughput-enp1s0.success { border: 2px solid #3a5; }
-#custom-network-throughput-enp1s0.error { border: 2px solid #a33; color: #888888; }
+#custom-network-throughput-enp1s0.error { border: 2px solid #a33; }
 
 /* wlo1 */
 #custom-network-throughput-wlo1.success { border: 2px solid #3a5; }
-#custom-network-throughput-wlo1.error { border: 2px solid #a33; color: #888888; }
+#custom-network-throughput-wlo1.error { border: 2px solid #a33; }
+
+/* Plex Status */
+#custom-plex-status.success { border: 2px solid #3a5; }
+#custom-plex-status.error { border: 2px solid #a33; }
 
 /* ---------- Speedtest ---------- */
 #custom-speedtest.loading { border: 2px solid #b0b0b0; }
 #custom-speedtest.good { border: 2px solid #3a5; }
 #custom-speedtest.warning { border: 2px solid #E69500; }
 #custom-speedtest.critical { border: 2px solid #a33; }
-#custom-speedtest.error { border: 2px solid #a33; color: #888888; }
+#custom-speedtest.error { border: 2px solid #a33; }
 #custom-speedtest.success { border: 2px solid #3a5; }
 
 /* ---------- Swap Usage ---------- */
 #custom-swap-usage.good { border: 2px solid #3a5; }
 #custom-swap-usage.warning { border: 2px solid #E69500; }
 #custom-swap-usage.critical { border: 2px solid #a33; }
-#custom-swap-usage.error { border: 2px solid #a33; color: #888888; }
+#custom-swap-usage.error { border: 2px solid #a33; }
 
 /* ---------- System Updates ---------- */
 /* brew */
@@ -93,8 +99,8 @@ window#waybar {
 #custom-weather-san-diego.loading { border: 2px solid #b0b0b0; }
 #custom-weather-san-diego.success { border: 2px solid #3a5; }
 #custom-weather-san-diego.failure { border: 2px solid #a33; }
-#custom-weather-san-diego.error { border: 2px solid #a33; color: #888888; }
+#custom-weather-san-diego.error { border: 2px solid #a33; }
 
 /* ---------- WiFi Status ---------- */
 #custom-wifi-status-wlo1.success { border: 2px solid #3a5; }
-#custom-wifi-status-wlo1.error { border: 2px solid #a33; color: #888888; }
+#custom-wifi-status-wlo1.error { border: 2px solid #a33; }

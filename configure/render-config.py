@@ -163,6 +163,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             memory_usage       = static_module_map.get('memory-usage', {}),
             modules_right      = modules_right,
             network_interfaces = yaml_data.get('network_interfaces', []),
+            plex_status        = static_module_map.get('plex-status', {}),
             position           = yaml_data.get('position', 'top'),
             scripts_path       = yaml_data.get('scripts_path', '~/.config/waybar/scripts'), 
             software_updates   = yaml_data.get('software_updates', []),

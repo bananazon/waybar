@@ -110,3 +110,6 @@ oct_alert              = util.surrogatepass('\uf421')
 
 # Network
 md_network = util.surrogatepass('\udb81\udef3')
+
+# Plex
+md_plex = util.surrogatepass('\udb81\udeba')

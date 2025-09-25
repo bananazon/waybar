@@ -19,7 +19,7 @@ static_modules:
     enabled: true
     interval: 60
     ip: "{key:plex_ip}"
-    port: 32400
+    port: "{key:plex_port}"
   - name: speedtest
     enabled: true
     interval: 300

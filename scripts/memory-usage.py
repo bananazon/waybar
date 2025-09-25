@@ -193,8 +193,27 @@ def get_memory_usage():
 
     return mem_info
 
+def generate_tooltip(memory_info):
+    unit = 'G'
+
+    tooltip = [
+        f'Total     = {util.byte_converter(number=memory_info.total, unit=unit)}',
+        f'Used      = {util.byte_converter(number=memory_info.used, unit=unit)}',
+        f'Free      = {util.byte_converter(number=memory_info.free, unit=unit)}',
+        f'Shared    = {util.byte_converter(number=memory_info.shared, unit=unit)}',
+        f'Buffers   = {util.byte_converter(number=memory_info.buffers, unit=unit)}',
+        f'Cache     = {util.byte_converter(number=memory_info.cache, unit=unit)}',
+        f'Available = {util.byte_converter(number=memory_info.available, unit=unit)}',
+        '',
+    ]
+
+    for idx, dimm in enumerate(memory_info.memory_type.info):
+        tooltip.append(f'DIMM {idx:02d} - {util.byte_converter(number=dimm.size, unit='G')} {dimm.type} {dimm.form_factor} @ {dimm.speed}')
+
+    return '\n'.join(tooltip)
+
 def main():
-    mode_count = 4
+    mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
@@ -206,6 +225,7 @@ def main():
         mode = state.current_state(statefile=STATEFILE)
 
     memory_info = get_memory_usage()
+    tooltip = generate_tooltip(memory_info)
 
     if memory_info.success:
         pct_total = memory_info.pct_total
@@ -226,25 +246,19 @@ def main():
             output = {
                 'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}',
                 'class'   : output_class,
-                'tooltip' : 'System Memory',
+                'tooltip' : tooltip,
             }
         elif mode == 1:
             output = {
                 'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{pct_used}% used',
                 'class'   : output_class,
-                'tooltip' : 'System Memory',
+                'tooltip' : tooltip,
             }
         elif mode == 2:
             output = {
                 'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used}% used / {free}% free',
                 'class'   : output_class,
-                'tooltip' : 'System Memory',
-            }
-        elif mode == 3:
-            output = {
-                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{len(memory_info.memory_type.info)} x {util.byte_converter(memory_info.memory_type.info[0].size, unit='G', use_int=True)} {memory_info.memory_type.info[0].data_width}bit {memory_info.memory_type.info[0].form_factor} @ {memory_info.memory_type.info[0].speed}',
-                'class'   : output_class,
-                'tooltip' : 'System Memory',
+                'tooltip' : tooltip,
             }
     else:
         output = {

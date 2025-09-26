@@ -277,7 +277,6 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
     return weather_data
 
 def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
-    global STATEFILE
     logging.info('[worker] entering function')
 
     while True:

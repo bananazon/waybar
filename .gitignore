@@ -11,7 +11,7 @@ scripts/generate-config-example.sh
 # Test files
 dummy.*
 
-*-output.txt
+*-output*.txt
 scripts/foo*py
 
 # External

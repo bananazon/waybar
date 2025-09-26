@@ -4,6 +4,7 @@ window#waybar {
 
 tooltip {
     background: rgba(0, 0, 0, 0.4);
+    min-width: 1000px;
 }
 
 tooltip label {
@@ -25,9 +26,11 @@ tooltip label {
 #custom-plex-status,
 #custom-speedtest,
 #custom-swap-usage,
+#custom-software-updates-apt,
 #custom-software-updates-brew,
 #custom-software-updates-dnf,
 #custom-software-updates-flatpak,
+#custom-software-updates-pacman,
 #custom-software-updates-snap,
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
@@ -91,21 +94,35 @@ tooltip label {
 #custom-swap-usage.error { border: 2px solid #a33; }
 
 /* ---------- System Updates ---------- */
+/* apt */
+#custom-software-updates-apt.loading { border: 2px solid #b0b0b0; }
+#custom-software-updates-apt.success { border: 2px solid #3a5; }
+#custom-software-updates-apt.error { border: 2px solid #a33; }
+
 /* brew */
 #custom-software-updates-brew.loading { border: 2px solid #b0b0b0; }
 #custom-software-updates-brew.success { border: 2px solid #3a5; }
+#custom-software-updates-brew.error { border: 2px solid #a33; }
 
 /* dnf */
 #custom-software-updates-dnf.loading { border: 2px solid #b0b0b0; }
 #custom-software-updates-dnf.success { border: 2px solid #3a5; }
+#custom-software-updates-dnf.error { border: 2px solid #a33; }
 
 /* flatpak */
 #custom-software-updates-flatpak.loading { border: 2px solid #b0b0b0; }
 #custom-software-updates-flatpak.success { border: 2px solid #3a5; }
+#custom-software-updates-flatpak.error { border: 2px solid #a33; }
+
+/* pacman */
+#custom-software-updates-pacman.loading { border: 2px solid #b0b0b0; }
+#custom-software-updates-pacman.success { border: 2px solid #3a5; }
+#custom-software-updates-pacman.error { border: 2px solid #a33; }
 
 /* snap */
 #custom-software-updates-snap.loading { border: 2px solid #b0b0b0; }
 #custom-software-updates-snap.success { border: 2px solid #3a5; }
+#custom-software-updates-snap.error { border: 2px solid #a33; }
 
 /* ---------- Weather ---------- */
 #custom-weather-san-diego.loading { border: 2px solid #b0b0b0; }

@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional, NamedTuple
 from urllib.parse import quote, urlunparse
-from waybar import glyphs, state, util
+from waybar import glyphs, util
 import json
 import logging
 import os
@@ -21,16 +21,13 @@ CACHE_DIR = util.get_cache_directory()
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
-LABEL     : str | None=None
-LOCATION  : str | None=None
-STATEFILE : str | None=None
-TEMPFILE  : str | None=None
-
 class WeatherData(NamedTuple):
     success           : Optional[bool]  = False
     error             : Optional[str]   = None
     icon              : Optional[str]   = None
     avg_humidity      : Optional[int]   = 0
+    cloud_cover       : Optional[float] = None
+    condition         : Optional[str]   = None
     condition_code    : Optional[int]   = 0
     country           : Optional[str]   = None
     dewpoint          : Optional[str]   = None
@@ -46,6 +43,7 @@ class WeatherData(NamedTuple):
     moonset           : Optional[str]   = None
     moonset_unix      : Optional[int]   = 0
     moon_illumination : Optional[int]   = 0
+    moon_phase        : Optional[str]   = None
     precipitation     : Optional[str]   = None
     region            : Optional[str]   = None
     sunrise           : Optional[str]   = None
@@ -54,6 +52,7 @@ class WeatherData(NamedTuple):
     sunset_unix       : Optional[int]   = 0
     todays_high       : Optional[str]   = None
     todays_low        : Optional[str]   = None
+    uv                : Optional[float] = None
     visibility        : Optional[str]   = None
     wind_chill        : Optional[str]   = None
     wind_degree       : Optional[int]   = 0
@@ -72,19 +71,26 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-def set_globals(label: str=None, location: str=None):
-    global LABEL
-    global LOCATION
-    global STATEFILE
-    global TEMPFILE
+def generate_tooltip(weather_data):
+    tooltip = [
+        f'Location    : {weather_data.location_full}',
+        f'Condition   : {weather_data.condition}',
+        f'Feels like  : {weather_data.feels_like}',
+        f'High / Low  : {weather_data.todays_high} / {weather_data.todays_low}',
+        f'Wind        : {weather_data.wind_speed} @ {weather_data.wind_degree}',
+        f'Cloud Cover : {weather_data.cloud_cover}%',
+        f'Humidity    : {weather_data.humidity}',
+        f'Dew Point   : {weather_data.dewpoint}',
+        f'UV Index    : {weather_data.uv} of 11',
+        f'Visibility  : {weather_data.visibility}',
+        f'Sunrise     : {util.to_24hour_time(weather_data.sunrise_unix)}',
+        f'Sunset      : {util.to_24hour_time(weather_data.sunset_unix)}',
+        f'Moonrise    : {util.to_24hour_time(weather_data.moonrise_unix)}',
+        f'Moonset     : {util.to_24hour_time(weather_data.moonset_unix)}',
+        f'Moon Phase  : {weather_data.moon_phase}',
+    ]
 
-    module = os.path.basename(__file__)
-    module_no_ext = os.path.splitext(module)[0]
-
-    LABEL     = label
-    LOCATION  = location
-    STATEFILE = CACHE_DIR / f'waybar-{module_no_ext}-{LABEL}-state'
-    TEMPFILE  = CACHE_DIR / f'waybar-{module_no_ext}-{LABEL}-result.txt'
+    return '\n'.join(tooltip)
 
 def get_weather_icon(condition_code, is_day):
     # https://www.weatherapi.com/docs/weather_conditions.json
@@ -175,10 +181,7 @@ def get_weather_icon(condition_code, is_day):
     return glyphs.md_weather_sunny
 
 def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
-    global TEMPFILE
-
     weather_data = None
-
     url_parts = (
         'https',
         'api.weatherapi.com',
@@ -224,6 +227,8 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
                         success        = True,
                         icon           = get_weather_icon(current_data['condition']['code'], current_data['is_day']),
                         avg_humidity   = f'{forecast_data.get("avghumidity")}%' or 'Unknown',
+                        cloud_cover    = current_data.get('cloud') or 'Unknown',
+                        condition      = (current_data.get('condition') or {}).get('text') or 'Unknown',
                         condition_code = (current_data.get('condition') or {}).get('code') or 'Unknown',
                         country        = location_data.get('country') or 'Unknown',
                         current_temp   = f'{current_data.get(f"temp_{unit_lower}")}°{unit}' or 'Unknown',
@@ -238,6 +243,7 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
                         moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
                         moonset        = astro_data.get('moonset') or 'No moonset',
                         moonset_unix   = util.to_unix_time(astro_data.get('moonset')),
+                        moon_phase     = astro_data.get('moon_phase') or None,
                         sunrise        = astro_data.get('sunrise') or 'No sunrise',
                         sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
                         sunset         = astro_data.get('sunset') or 'No sunset',
@@ -246,18 +252,21 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
                         region         = location_data.get('region') or 'Unknown',
                         todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' or 'Unknown',
                         todays_low     = f'{forecast_data.get(f"mintemp_{unit_lower}")}°{unit}' or 'Unknown',
+                        uv             = current_data.get('uv') or None,
                         visibility     = f'{current_data.get(f"vis_{distance}")} {distance}' or 'Unknown',
                         wind_chill     = f'{current_data.get(f"windchill_{unit_lower}")}°{unit}' or 'Unknown',
-                        wind_degree    = current_data.get('wind_degree') or 'Unknown',
+                        wind_degree    = f'{current_data.get("wind_degree")}°' or 'Unknown',
                         wind_dir       = current_data.get('wind_dir') or 'Unknown',
                         wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or 'Unknown',
                     )
                 except Exception as e:
-                    weather_data = WeatherData(
-                        success        = False,
-                        error          = f'could not retrieve the weather for {location}: {str(e)}',
-                        location_full  = location,
-                    )
+                        print(e)
+                        exit()
+                        weather_data = WeatherData(
+                            success        = False,
+                            error          = f'could not retrieve the weather for {location}: {str(e)}',
+                            location_full  = location,
+                        )
         else:
             weather_data = WeatherData(
                 success        = False,
@@ -280,68 +289,21 @@ def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                logging.info(f'[worker] refreshing statefile {STATEFILE}')
-
-                # Always read the latest mode
-                mode = state.current_state(statefile=STATEFILE)
-    
                 print(json.dumps(LOADING_DICT))
-                logging.info(f'[worker] mode={mode}')
 
                 weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
                 if weather_data.success:
-                    current_temp   = weather_data.current_temp
-                    low_temp       = weather_data.todays_low
-                    high_temp      = weather_data.todays_high
-                    icon           = weather_data.icon
-                    location_short = weather_data.location_short
-                    sunrise        = util.to_24hour_time(input=weather_data.sunrise_unix) if weather_data.sunrise_unix > 0 else weather_data.sunrise
-                    sunset         = util.to_24hour_time(input=weather_data.sunset_unix) if weather_data.sunset_unix > 0 else weather_data.sunset
-                    moonrise       = util.to_24hour_time(input=weather_data.moonrise_unix) if weather_data.moonrise_unix > 0 else weather_data.moonrise
-                    moonset        = util.to_24hour_time(input=weather_data.moonset_unix) if weather_data.moonset_unix > 0 else weather_data.moonset
-                    wind_degree    = weather_data.wind_degree
-                    wind_speed     = weather_data.wind_speed
+                    tooltip = generate_tooltip(weather_data)
 
-                    if mode == 0:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {current_temp}',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} current condition and temperature',
-                        }
-                    elif mode == 1:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} daily high and low temperaturea',
-                        }
-                    elif mode == 2:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {wind_speed} @ {wind_degree}°',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} wind speed and direction',
-                        }
-                    elif mode == 3:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} sunrise and sunset times',
-                        }
-                    elif mode == 4:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} moonrise and moonset times',
-                        }
-                    elif mode == 5:
-                        output = {
-                            'text'    : f'{icon}{glyphs.icon_spacer}{location_short} humidity {weather_data.humidity}',
-                            'class'   : 'success',
-                            'tooltip' : f'{location_short} humidity level',
-                        }
+                    output = {
+                        'text'    : f'{weather_data.icon}{glyphs.icon_spacer}{weather_data.location_short} {weather_data.current_temp}',
+                        'class'   : 'success',
+                        'tooltip' : tooltip,
+                    }
                 else:
                     icon = weather_data.icon or glyphs.md_alert
                     output = {
-                        'text'    : f'{icon} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
+                        'text'    : f'{glyphs.md_alert} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
                         'class'   : 'error',
                         'tooltip' : f'{location} error',
                     }
@@ -360,33 +322,13 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    """ Display weather from weatherapi.com """
-    pass
-
-@cli.command(help='Toggle the display format')
-@click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
-def toggle(label):
-    logging.info('[toggle] entering function')
-    global STATEFILE
-
-    mode_count = 6
-    set_globals(label=label)
-    logging.info(f'[toggle] STATEFILE={STATEFILE}')
-
-    mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
-    logging.info(f'[toggle] mode={mode}')
-
-@cli.command(help='Get weather info from World Weather API', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get weather info from World Weather API', context_settings=CONTEXT_SETTINGS)
 @click.option('-a', '--api-key', required=True, help=f'World Weather API key')
 @click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
 @click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
-def run(api_key, location, use_celsius, label, interval):
-    set_globals(label=label, location=location)
-
+def main(api_key, location, use_celsius, label, interval):
     threading.Thread(
         target = worker,
         args   = (api_key, location, use_celsius, label,),
@@ -399,4 +341,4 @@ def run(api_key, location, use_celsius, label, interval):
         update_event.set()
 
 if __name__ == '__main__':
-    cli()
+    main()

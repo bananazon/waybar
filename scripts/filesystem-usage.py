@@ -13,41 +13,44 @@ import time
 CACHE_DIR = util.get_cache_directory()
 
 class FilesystemInfo(NamedTuple):
-    success    : Optional[bool]  = False
-    error      : Optional[str]   = None
-    mountpoint : Optional[str]   = None
-    filesystem : Optional[str]   = None
-    pct_total  : Optional[int]   = 0
-    pct_used   : Optional[int]   = 0
-    pct_free   : Optional[int]   = 0
-    total      : Optional[int]   = 0
-    used       : Optional[int]   = 0
-    free       : Optional[int]   = 0
+    success    : Optional[bool] = False
+    error      : Optional[str]  = None
+    device     : Optional[str]  = None
+    filesystem : Optional[str]  = None
+    free       : Optional[int]  = 0
+    fsopts     : Optional[str]  = None   
+    fstype     : Optional[str]  = None
+    lsblk      : Optional[dict] = None
+    mountpoint : Optional[str]  = None
+    pct_free   : Optional[int]  = 0
+    pct_total  : Optional[int]  = 0
+    pct_used   : Optional[int]  = 0
+    total      : Optional[int]  = 0
+    used       : Optional[int]  = 0
 
-def get_uuid(mountpoint: str='') -> str:
-    # Fix me to be more resilient
-    rc, device, _ = util.run_piped_command(f'findmnt -n -o SOURCE {mountpoint}')
-    if rc == 0 and device != '':
-        rc, uuid, _ = util.run_piped_command(f'blkid -s UUID -o value "{device}"')
-        if rc == 0 and uuid != '':
-            return uuid
-    else:
-        util.error_exit(icon=glyphs.md_alert, message=f'{mountpoint} is an invalid mountpoint')
-    
+def parse_lsblk(filesystem: str=None):
+    # lsblk -O --json /dev/sda1
+    command = f'lsblk -O --json {filesystem}'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        json_data, err = util.parse_json_string(stdout)
+        return json_data.get('blockdevices')[0] or None
     return None
 
 def get_disk_usage(mountpoint: str) -> list:
     """
     Execute df -B 1 against a mount point and return a namedtuple with its values
     """
-
-    rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
+    rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint} --json')
     if rc != 0:
         return FilesystemInfo(
             success    = False,
             mountpoint = mountpoint,
             error      = f'{mountpoint} does not exist'
         )
+    
+    json_data, err = util.parse_json_string(stdout)
+    fs_data = json_data.get('filesystems')[0] or None
 
     command = f'df -B 1 {mountpoint} | sed -n "2p"'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -67,9 +70,12 @@ def get_disk_usage(mountpoint: str) -> list:
                 success    = True,
                 mountpoint = mountpoint,
                 filesystem = filesystem,
+                fsopts     = fs_data.get('options') or None,
+                fstype     = fs_data.get('fstype') or None,
                 total      = total,
                 used       = used,
                 free       = free,
+                lsblk      = parse_lsblk(filesystem=filesystem),
                 pct_total  = pct_total,
                 pct_used   = pct_used,
                 pct_free   = pct_free,
@@ -89,6 +95,25 @@ def get_disk_usage(mountpoint: str) -> list:
 
     return filesystem_info
 
+def generate_tooltip(disk_info):
+    tooltip = [
+        f'Device         : {disk_info.filesystem}',
+        f'Mountpoint     : {disk_info.mountpoint}',
+        f'Type           : {disk_info.fstype}',
+        # f'Options        : {disk_info.fsopts}',
+    ]
+
+    lsblk = disk_info.lsblk
+    if lsblk:
+        if lsblk.get('kname') is not None:
+            tooltip.append(f'Kernel name    : {disk_info.lsblk.get("kname")}')
+        if lsblk.get('rm') is not None:
+            tooltip.append(f'Removable      : {"yes" if disk_info.lsblk.get("rm") else "no"}')
+        if lsblk.get('ro') is not None:
+            tooltip.append(f'Read-only      : {"yes" if disk_info.lsblk.get("ro") else "no"}')
+        
+    return '\n'.join(tooltip)
+
 def main():
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
@@ -98,8 +123,7 @@ def main():
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     args = parser.parse_args()
 
-    disk_identifier = get_uuid(mountpoint=args.mountpoint) or args.label
-    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{disk_identifier}-state'
+    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{args.label}-state'
 
     if args.toggle:
         mode = state.next_state(statefile=statefile, mode_count=mode_count)
@@ -107,6 +131,7 @@ def main():
         mode = state.current_state(statefile=statefile)
 
     disk_info = get_disk_usage(args.mountpoint)
+    tooltip = generate_tooltip(disk_info)
 
     if disk_info.success:
         pct_total = disk_info.pct_total
@@ -127,19 +152,19 @@ def main():
             output = {
                 'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used} / {total}',
                 'class'   : output_class,
-                'tooltip' : 'Filesystem Usage',
+                'tooltip' : tooltip,
             }
         elif mode == 1:
             output = {
                 'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {pct_used}% used',
                 'class'   : output_class,
-                'tooltip' : 'Filesystem Usage',
+                'tooltip' : tooltip,
             }
         elif mode == 2:
             output = {
                 'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used}% used / {free}% free',
                 'class'   : output_class,
-                'tooltip' : 'Filesystem Usage',
+                'tooltip' : tooltip,
             }
     else:
         output = {

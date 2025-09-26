@@ -151,7 +151,7 @@ def generate_tooltip(cpu_info):
 
     pc = cpu_info.cores_physical
     lc = cpu_info.cores_logical
-    tpc = lc / pc
+    tpc = int(lc / pc)
 
     tooltip = [
         cpu_info.model,

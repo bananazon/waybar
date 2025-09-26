@@ -149,6 +149,10 @@ def run_speedtest():
 
     if client_data.get('ip'):
         client_location = ip_to_location(ip=client_data.get('ip'))
+    
+    server_ip = socket.gethostbyname(server_data.get('host').split(':')[0]) or None
+    if server_ip:
+        server_location = ip_to_location(ip=server_ip)
 
     return SpeedtestResults(
         success  = True,
@@ -164,15 +168,15 @@ def run_speedtest():
             timezone  = client_location.get('timezone'),
         ),
         server = Server(
-            city      = re.split(r'\s*,\s*', server_data.get('name'))[0] or None,
-            country   = server_data.get('country') or None,
+            city      = server_location.get('city') or re.split(r'\s*,\s*', server_data.get('name'))[0] or None,
+            country   = server_location.get('country') or server_data.get('country') or None,
             hostname  = server_data.get('host') or None,
-            ip        = socket.gethostbyname(server_data.get('host').split(':')[0]) or None,
+            ip        = server_ip,
             latitude  = server_data.get('lat') or None,
             longitude = server_data.get('lon') or None,
             latency   = server_data.get('latency') or None,
             name      = server_data.get('name') or None,
-            region    = re.split(r'\s*,\s*', server_data.get('name'))[1] or None,
+            region    = server_location.get('region') or re.split(r'\s*,\s*', server_data.get('name'))[1] or None,
             sponsor   = server_data.get('sponsor') or None,
         ),
         bytes_rx = round(json_data.get('bytes_received')) or -1,

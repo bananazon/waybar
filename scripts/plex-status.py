@@ -2,9 +2,14 @@
 
 from urllib.parse import quote, urlunparse
 from waybar import glyphs, util
-import argparse
 import json
 import urllib.request
+import xml.etree.ElementTree as ET
+
+util.validate_requirements(required=['click'])
+import click
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 def find_public_ip():
     url = 'https://ifconfig.io'
@@ -16,14 +21,35 @@ def find_public_ip():
             return body
     return None
 
-def get_plex_status(ip: str=None, port: int=0):
+def find_nat_port(port: int=0, token: str=None):
+    # token = 'xrT8-TCXqk8nsMxK-Uft'
+    # http://192.168.1.20:32400?X-Plex-Token=xrT8-TCXqk8nsMxK-Uft
+    # LastAutomaticMappedPort
+    url = f'http://localhost:{port}/:/prefs?X-Plex-Token={token}'
+    request = urllib.request.Request(url)
+    try:
+        with urllib.request.urlopen(request) as response:
+            body = response.read().decode('utf-8').strip()
+    except:
+        return None
+    
+    root = ET.fromstring(body)
+    for setting in root.findall(".//Setting"):
+        sid = setting.get('id')
+        if sid == 'LastAutomaticMappedPort':
+            return setting.get('value')
+
+    return None
+
+def get_plex_status(ip: str=None, port: int=0, nat_port: int=0):
     url = f'http://localhost:{port}/identity'
     request = urllib.request.Request(url)
     with urllib.request.urlopen(request) as response:
         body = response.read().decode('utf-8').strip()
         process = True if response.status == 200 else False
     
-    url = f'http://{ip}:{port}/identity'
+    url = f'http://{ip}:{nat_port}/identity'
+    print(url)
     request = urllib.request.Request(url)
     with urllib.request.urlopen(request, timeout=3) as response:
         body = response.read().decode('utf-8').strip()
@@ -31,39 +57,57 @@ def get_plex_status(ip: str=None, port: int=0):
 
     return process, available
 
-def main():
-    mode_count = 4
-    parser = argparse.ArgumentParser(description='Show the status of your Plex Media Server')
-    parser.add_argument('-i', '--ip', default=find_public_ip(), help='The public IP of the Plex media server', required=False)
-    parser.add_argument('-p', '--port', default=32400, help='The port of the Plex media server', required=False)
-    args = parser.parse_args()
+@click.command(help='Show the status of your Plex Media Server', context_settings=CONTEXT_SETTINGS)
+@click.option('-i', '--ip', required=False, default=find_public_ip(), show_default=True, help=f'The public IP of the Plex media server')
+@click.option('-p', '--port', required=False, default=32400, show_default=True, help=f'The port of the Plex media server')
+@click.option('-t', '--token', required=True, help=f'Plex Server API token; stored in \"/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Preferences.xml\"')
+def main(ip, port, token):
+    if util.network_is_reachable():
+        if not ip:
+            output = {
+                'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}unable to determine the public IP address',
+                'class'   : 'error',
+                'tooltip' : f'{location} error',
+            }
+        else:
+            nat_port = find_nat_port(port=port, token=token)
+            if nat_port:
+                process, available = plex_status = get_plex_status(ip=ip, port=port, nat_port=nat_port)
+                process_color = 'green' if process else 'red'
+                availability_color = 'green' if available else 'red'
+                process_ok = 'OK' if process else 'Not OK'
+                availability_ok = 'OK' if available else 'Not OK'
+                tooltip = [
+                    'Plex Media Server',
+                    f'IP: {ip}',
+                    f'Port: {port}',
+                    f'Process: <span foreground="{process_color}">{process_ok}</span>',
+                    f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
+                ]
 
-    process, available = plex_status = get_plex_status(ip=args.ip, port=args.port)
-    process_color = 'green' if process else 'red'
-    availability_color = 'green' if available else 'red'
-    process_ok = 'OK' if process else 'Not OK'
-    availability_ok = 'OK' if available else 'Not OK'
-    tooltip = [
-        'Plex Media Server',
-        f'IP: {args.ip}',
-        f'Port: {args.port}',
-        f'Process: <span foreground="{process_color}">{process_ok}</span>',
-        f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
-    ]
-
-    if process and available:
-        output = {
-            'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
-            'class'   : 'success',
-            'markup'  : 'pango',
-            'tooltip' : '\n'.join(tooltip),
-        }
+                if process and available:
+                    output = {
+                        'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+                        'class'   : 'success',
+                        'markup'  : 'pango',
+                        'tooltip' : '\n'.join(tooltip),
+                    }
+                else:
+                    output = {
+                        'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+                        'class'   : 'error',
+                        'markup'  : 'pango',
+                        'tooltip' : '\n'.join(tooltip),
+                    }
+            else:
+                output = {
+                    'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}could not determine the NAT port',
+                    'class'   : 'error',
+                }
     else:
         output = {
-            'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+            'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
             'class'   : 'error',
-            'markup'  : 'pango',
-            'tooltip' : '\n'.join(tooltip),
         }
 
     print(json.dumps(output)) 

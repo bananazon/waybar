@@ -69,6 +69,8 @@ logging.basicConfig(
 )
 
 def get_icon(speed: int = 0) -> str:
+    print(speed)
+
     if speed < 100_000_000:
         return glyphs.md_speedometer_slow
     elif speed < 500_000_000:
@@ -126,7 +128,7 @@ def parse_speedtest_data(json_data=None):
     server_data = speedtest_data.server
     speed_rx    = round(speedtest_data.download)
     speed_tx    = round(speedtest_data.upload)
-    icon        = get_icon((speed_rx + speed_rx) / 2)
+    icon        = get_icon((speed_rx + speed_tx) / 2)
 
     if client_data.ip:
         client_location = ip_to_location(ip=client_data.ip, name='ClientLocation')

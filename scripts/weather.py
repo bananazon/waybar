@@ -308,7 +308,7 @@ def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label
                     }
             else:
                 output = {
-                    'text'    : f'{glyphs.md_alert} the network is unreachable',
+                    'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
                     'class'   : 'error',
                     'tooltip' : f'{location} error',
                 }

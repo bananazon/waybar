@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
+from collections import namedtuple
 from pathlib import Path
-from waybar import glyphs, util
 from typing import Optional, NamedTuple
 from urllib.parse import quote, urlunparse
+from waybar import glyphs, util
 import json
 import logging
 import re
 import signal
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -68,20 +70,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-def ip_to_location(ip: str=None):
-    url = f'https://ipinfo.io/{ip}/json'
-    request = urllib.request.Request(url)
-    with urllib.request.urlopen(request, timeout=3) as response:
-        if response.status == 200:
-            body = response.read().decode('utf-8').strip()
-            try:
-                json_data, err = util.parse_json_string(body)
-                if not err:
-                    return json_data
-                return None
-            except:
-                return None
-    return None
+
 
 def get_icon(speed: int = 0) -> str:
     if speed < 100_000_000:
@@ -113,12 +102,122 @@ def generate_tooltip(data):
 
     return '\n'.join(tooltip)
 
+def dict_to_namedtuple(name, obj):
+    """
+    Recursively convert a dict (possibly nested) into a namedtuple.
+    """
+    if isinstance(obj, dict):
+        fields = {k: dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
+        NT = namedtuple(name, fields.keys())
+        return NT(**fields)
+    elif isinstance(obj, list):
+        return [dict_to_namedtuple(name, i) for i in obj]
+    else:
+        return obj
+
+def ip_to_location(ip: str=None, name: str=None):
+    url = f'https://ipinfo.io/{ip}/json'
+
+    try:
+        request = urllib.request.Request(url)
+        with urllib.request.urlopen(request, timeout=3) as response:
+            if response.status == 200:
+                body = response.read().decode('utf-8').strip()
+                try:
+                    json_data, err = util.parse_json_string(body)
+                    if not err:
+                        return dict_to_namedtuple(name, json_data)
+                    return None
+                except:
+                    return None
+        return None
+    except:
+        return None
+
+def parse_speedtest_data(json_data=None):
+    speedtest_data = dict_to_namedtuple('SpeedtestData', json_data)
+
+    client_data = speedtest_data.client
+    server_data = speedtest_data.server
+    speed_rx    = round(speedtest_data.download)
+    speed_tx    = round(speedtest_data.upload)
+    icon        = get_icon((speed_rx + speed_rx) / 2)
+
+    if client_data.ip:
+        client_location = ip_to_location(ip=client_data.ip, name='ClientLocation')
+
+    if server_data.host:
+        hostname = server_data.host.split(':')[0]
+        try:
+            server_ip = socket.gethostbyname(hostname)
+        except:
+            server_ip = None
+    
+    if server_ip:
+        server_location = ip_to_location(ip=server_ip, name='ServerLocation')
+    
+    if not client_data or not server_data or not client_location or not server_location:
+        return SpeedtestResults(
+            success = False,
+            icon    = glyphs.md_alert,
+            error   = 'Failed to parse the speedtest results',
+        )
+
+    return SpeedtestResults(
+        success  = True,
+        icon     = icon,
+        client   = Client(
+            city      = client_location.city,
+            country   = client_location.country,
+            ip        = client_data.ip,
+            isp       = client_location.org or client_data.isp,
+            latitude  = client_data.lat,
+            longitude = client_data.lon,
+            region    = client_location.region,
+            timezone  = client_location.timezone,
+        ),
+        server = Server(
+            city      = server_location.city or re.split(r'\s*,\s*', server_data.name)[0] or None,
+            country   = server_location.country or server_data.country or None,
+            hostname  = server_data.host,
+            ip        = server_ip,
+            latitude  = server_data.lat,
+            longitude = server_data.lon,
+            latency   = server_data.latency,
+            name      = server_data.name,
+            region    = server_location.region or re.split(r'\s*,\s*', server_data.name)[1] or None,
+            sponsor   = server_data.sponsor,
+        ),
+        bytes_rx = round(speedtest_data.bytes_received) or -1,
+        bytes_tx = round(speedtest_data.bytes_sent) or -1,
+        ping     = speedtest_data.ping or -1,
+        speed_rx = speed_rx,
+        speed_tx = speed_tx,
+    )
+
 def run_speedtest():
     logging.info('[run_speedtest] running speedtest')
     location = None
-    command = 'speedtest-cli --secure --json'
-    rc, stdout, stderr = util.run_piped_command(command)
-    logging.info('[run_speedtest] speedtest finished')
+
+    command_list = ['speedtest-cli', '--secure', '--json']
+    command = ' '.join(command_list)
+    try:
+        result = subprocess.run(
+            command_list,
+            capture_output = True,
+            text           = True,
+            check          = False
+        )
+        stdout = result.stdout.strip()
+        stderr = result.stderr.strip()
+        rc = result.returncode
+    except Exception as e:
+        return SpeedtestResults(
+            success = False,
+            error   = stderr or f'failed to execute "{command}"',
+            icon    = glyphs.md_alert,
+        )
+
     if rc == 0:
         if stdout != '':
             json_data, err = util.parse_json_string(stdout)
@@ -141,50 +240,8 @@ def run_speedtest():
             icon    = glyphs.md_alert,
         )
     
-    client_data = json_data.get('client') or None
-    server_data = json_data.get('server') or None
-    speed_rx = round(json_data.get('download')) or 0
-    speed_tx = round(json_data.get('upload')) or 0
-    icon = get_icon((speed_rx + speed_tx) /2)
-
-    if client_data.get('ip'):
-        client_location = ip_to_location(ip=client_data.get('ip'))
-    
-    server_ip = socket.gethostbyname(server_data.get('host').split(':')[0]) or None
-    if server_ip:
-        server_location = ip_to_location(ip=server_ip)
-
-    return SpeedtestResults(
-        success  = True,
-        icon     = icon,
-        client   = Client(
-            city      = client_location.get('city') or None,
-            country   = client_location.get('country') or None,
-            ip        = client_data.get('ip') or None,
-            isp       = client_location.get('org') or client_data.get('isp') or None,
-            latitude  = client_data.get('lat') or None,
-            longitude = client_data.get('lon') or None,
-            region    = client_location.get('region') or None,
-            timezone  = client_location.get('timezone'),
-        ),
-        server = Server(
-            city      = server_location.get('city') or re.split(r'\s*,\s*', server_data.get('name'))[0] or None,
-            country   = server_location.get('country') or server_data.get('country') or None,
-            hostname  = server_data.get('host') or None,
-            ip        = server_ip,
-            latitude  = server_data.get('lat') or None,
-            longitude = server_data.get('lon') or None,
-            latency   = server_data.get('latency') or None,
-            name      = server_data.get('name') or None,
-            region    = server_location.get('region') or re.split(r'\s*,\s*', server_data.get('name'))[1] or None,
-            sponsor   = server_data.get('sponsor') or None,
-        ),
-        bytes_rx = round(json_data.get('bytes_received')) or -1,
-        bytes_tx = round(json_data.get('bytes_sent')) or -1,
-        ping     = json_data.get('ping') or -1,
-        speed_rx = speed_rx,
-        speed_tx = speed_tx,
-    )
+    speedtest_results = parse_speedtest_data(json_data)
+    return speedtest_results
 
 def worker():
     while True:
@@ -199,17 +256,27 @@ def worker():
                 print(json.dumps(LOADING_DICT))
 
                 speedtest_data = run_speedtest()
-                tooltip = generate_tooltip(speedtest_data)
 
                 if speedtest_data.success:
+                    tooltip = generate_tooltip(speedtest_data)
                     parts = []
-                    parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
-                    parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
-                    output = {
-                        'text'    : f'{speedtest_data.icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}',
-                        'class'   : 'success',
-                        'tooltip' : tooltip,
-                    }
+                    if speedtest_data.speed_rx:
+                        parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
+                    if speedtest_data.speed_tx:
+                        parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
+
+                    if len(parts) == 2:
+                        output = {
+                            'text'    : f'{speedtest_data.icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}',
+                            'class'   : 'success',
+                            'tooltip' : tooltip,
+                        }
+                    elif len(parts) == 0:
+                        output = {
+                            'text'  : f'{glyphs.md_alert}{glyphs.icon_spacer}all tests failed',
+                            'class' : 'error',
+                            'tooltip' : 'Speedtest error',
+                        }
                 else:
                     output = {
                         'text'  : f'{speedtest_data.icon}{glyphs.icon_spacer}{speedtest_data.error}',
@@ -234,6 +301,9 @@ signal.signal(signal.SIGHUP, refresh_handler)
 @click.command(help='Run a network speed test and return the results', context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
 def main(interval):
+    # foo = run_speedtest()
+    # util.pprint(foo)
+    # exit()
     logging.info('[main] entering')
 
     threading.Thread(target=worker, args=(), daemon=True).start()

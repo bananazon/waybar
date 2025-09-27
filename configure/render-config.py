@@ -128,24 +128,18 @@ def render_template(template_file, yaml_file, output_file, dryrun):
 
     if yaml_data.get('software_updates') is not None:
         for item in yaml_data['software_updates']:
-            package_type = item['type']
-            modules_right.append(f'custom/software-updates-{package_type}')
+            if item['enabled']:
+                package_type = item['package_type']
+                modules_right.append(f'custom/software-updates-{package_type}')
 
     if yaml_data.get('weather') is not None:
         if yaml_data['weather'].get('locations') is not None:
             for item in yaml_data['weather']['locations']:
-                label = item['label']
-                modules_right.append(f'custom/weather-{label}')
+                if item['enabled']:
+                    label = item['label']
+                    modules_right.append(f'custom/weather-{label}')
     
     modules_right = sorted(modules_right)
-
-    if yaml_data.get('weather') is not None:
-        if yaml_data['weather'].get('api_key') is not None:
-            if yaml_data['weather']['api_key'].startswith('key:'):
-                bits = yaml_data['weather']['api_key'].split(':')
-                if len(bits) == 2:
-                    service = bits[0]
-                    key = bits[1]
 
     try:
         config_template = Template(template_str, trim_blocks=False, lstrip_blocks=False)
@@ -156,6 +150,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
     try:
         output = config_template.render(
             cpu_usage          = static_module_map.get('cpu-usage', {}),
+            exclusive          = yaml_data.get('exclusive', True),
             filesystems        = yaml_data.get('filesystems', []),
             font               = yaml_data.get('font', 'Arimo Nerd Font 12'),
             height             = yaml_data.get('height', 31),

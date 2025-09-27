@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
-from urllib.parse import quote, urlunparse
-from waybar import glyphs, util
+from waybar import glyphs, http, util
 import json
-import urllib.request
-import xml.etree.ElementTree as ET
 
 util.validate_requirements(required=['click'])
 import click
@@ -14,25 +11,16 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 def find_public_ip():
     url = 'https://ifconfig.io'
     headers = {'User-Agent': 'curl/7.54.1'}
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request) as response:
-        body = response.read().decode('utf-8').strip()
-        if response.status == 200:
-            return body
+    response = http.request(url=url, headers=headers)
+    if response.status == 200:
+        return response.body
     return None
 
 def get_plex_status(ip: str=None, port: int=0, token: str=None):
     url = f'http://localhost:{port}/identity'
-    request = urllib.request.Request(url)
-    with urllib.request.urlopen(request) as response:
-        body = response.read().decode('utf-8').strip()
-        process = True if response.status == 200 else False
-    
-    url = f'https://api.plex.tv/api/resources?includeHttps=1&X-Plex-Token={token}'
-    request = urllib.request.Request(url)
-    with urllib.request.urlopen(request, timeout=3) as response:
-        body = response.read().decode('utf-8').strip()
-        available = True if response.status == 200 else False
+    response = http.request(url=url)
+    process = True if response.status == 200 else False
+    available = True if response.status == 200 else False
 
     return process, available
 

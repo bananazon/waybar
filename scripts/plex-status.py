@@ -21,35 +21,14 @@ def find_public_ip():
             return body
     return None
 
-def find_nat_port(port: int=0, token: str=None):
-    # token = 'xrT8-TCXqk8nsMxK-Uft'
-    # http://192.168.1.20:32400?X-Plex-Token=xrT8-TCXqk8nsMxK-Uft
-    # LastAutomaticMappedPort
-    url = f'http://localhost:{port}/:/prefs?X-Plex-Token={token}'
-    request = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(request) as response:
-            body = response.read().decode('utf-8').strip()
-    except:
-        return None
-    
-    root = ET.fromstring(body)
-    for setting in root.findall(".//Setting"):
-        sid = setting.get('id')
-        if sid == 'LastAutomaticMappedPort':
-            return setting.get('value')
-
-    return None
-
-def get_plex_status(ip: str=None, port: int=0, nat_port: int=0):
+def get_plex_status(ip: str=None, port: int=0, token: str=None):
     url = f'http://localhost:{port}/identity'
     request = urllib.request.Request(url)
     with urllib.request.urlopen(request) as response:
         body = response.read().decode('utf-8').strip()
         process = True if response.status == 200 else False
     
-    url = f'http://{ip}:{nat_port}/identity'
-    print(url)
+    url = f'https://api.plex.tv/api/resources?includeHttps=1&X-Plex-Token={token}'
     request = urllib.request.Request(url)
     with urllib.request.urlopen(request, timeout=3) as response:
         body = response.read().decode('utf-8').strip()
@@ -70,39 +49,32 @@ def main(ip, port, token):
                 'tooltip' : f'{location} error',
             }
         else:
-            nat_port = find_nat_port(port=port, token=token)
-            if nat_port:
-                process, available = plex_status = get_plex_status(ip=ip, port=port, nat_port=nat_port)
-                process_color = 'green' if process else 'red'
-                availability_color = 'green' if available else 'red'
-                process_ok = 'OK' if process else 'Not OK'
-                availability_ok = 'OK' if available else 'Not OK'
-                tooltip = [
-                    'Plex Media Server',
-                    f'IP: {ip}',
-                    f'Port: {port}',
-                    f'Process: <span foreground="{process_color}">{process_ok}</span>',
-                    f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
-                ]
+            process, available = plex_status = get_plex_status(ip=ip, port=port, token=token)
+            process_color = 'green' if process else 'red'
+            availability_color = 'green' if available else 'red'
+            process_ok = 'OK' if process else 'Not OK'
+            availability_ok = 'OK' if available else 'Not OK'
+            tooltip = [
+                'Plex Media Server',
+                f'IP: {ip}',
+                f'Port: {port}',
+                f'Process: <span foreground="{process_color}">{process_ok}</span>',
+                f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
+            ]
 
-                if process and available:
-                    output = {
-                        'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
-                        'class'   : 'success',
-                        'markup'  : 'pango',
-                        'tooltip' : '\n'.join(tooltip),
-                    }
-                else:
-                    output = {
-                        'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
-                        'class'   : 'error',
-                        'markup'  : 'pango',
-                        'tooltip' : '\n'.join(tooltip),
-                    }
+            if process and available:
+                output = {
+                    'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+                    'class'   : 'success',
+                    'markup'  : 'pango',
+                    'tooltip' : '\n'.join(tooltip),
+                }
             else:
                 output = {
-                    'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}could not determine the NAT port',
+                    'text'    : f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
                     'class'   : 'error',
+                    'markup'  : 'pango',
+                    'tooltip' : '\n'.join(tooltip),
                 }
     else:
         output = {

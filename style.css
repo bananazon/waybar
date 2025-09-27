@@ -1,5 +1,9 @@
+/* https://docs.gtk.org/gtk3/css-properties.html */
+
 *{
     font-family: "Arimo Nerd Font", Roboto, Helvetica, Arial, sans-serif;
+    font-stretch: condensed;
+    font-weight: normal;
     font-size: 9.0pt;
 }
 
@@ -42,7 +46,7 @@ tooltip label {
     background: transparent;
     border-radius: 6px;
     color: #ffffff;
-    padding: 4px 8px;
+    padding: 4px 6px; /* top right bottom left */
 }
 
 /* Common style for loading */

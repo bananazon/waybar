@@ -196,8 +196,7 @@ def restart(debug, pid):
 
 @cli.command(name='status', help='Get the status of waybar and its background modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
-@click.option('--detail', is_flag=True, help='Show detailed information about any running background modules')
-def status(debug, detail):
+def status(debug):
     setup(debug=debug)
     proc = waybar_is_running()
 
@@ -209,15 +208,14 @@ def status(debug, detail):
             message += f' and is managing {len(pids)} background {"module" if len(pids) == 1 else "modules"}'
         print(message)
 
-        if detail:
-            longest_duration = 0
-            longest_pid = 0
-            for process in modules:
-                process['duration'] = get_duration(created=process['created'])
-                longest_duration = len(process['duration']) if len(process['duration']) > longest_duration else longest_duration
+        longest_duration = 0
+        longest_pid = 0
+        for process in modules:
+            process['duration'] = get_duration(created=process['created'])
+            longest_duration = len(process['duration']) if len(process['duration']) > longest_duration else longest_duration
 
-            for process in modules:
-                print(f'{process["pid"]:{longest_pid}} {process["duration"]:<{longest_duration}} {process["cmd_short"]}')
+        for process in modules:
+            print(f'{process["pid"]:{longest_pid}} {process["duration"]:<{longest_duration}} {process["cmd_short"]}')
     else:
         print('waybar isn\'t running')
 

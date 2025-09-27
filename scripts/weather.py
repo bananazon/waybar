@@ -17,6 +17,10 @@ util.validate_requirements(required=['click'])
 import click
 
 CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
+LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
+LOGFILE = CACHE_DIR / 'waybar-weather-result.log'
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -58,11 +62,6 @@ class WeatherData(NamedTuple):
     wind_degree       : Optional[int]   = 0
     wind_dir          : Optional[str]   = None
     wind_speed        : Optional[str]   = None
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
-LOGFILE = CACHE_DIR / 'waybar-weather-result.log'
 
 logging.basicConfig(
     filename=LOGFILE,

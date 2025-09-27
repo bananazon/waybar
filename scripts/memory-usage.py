@@ -3,15 +3,14 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional, NamedTuple
 from waybar import glyphs, state, util
-import argparse
 import json
-import os
 import re
-import sys
-import time
+
+util.validate_requirements(required=['click'])
+import click
 
 CACHE_DIR = util.get_cache_directory()
-STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "memory-usage"}-state'
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 class DIMMInfo(NamedTuple):
     configured_voltage : Optional[str] = None
@@ -212,17 +211,17 @@ def generate_tooltip(memory_info):
 
     return '\n'.join(tooltip)
 
-def main():
+@click.command(help='Get memory usage from free(1) and dmidecode(8)', context_settings=CONTEXT_SETTINGS)
+@click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
+@click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
+def main(unit, toggle):
     mode_count = 3
-    parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
-    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
-    parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
-    args = parser.parse_args()
+    statefile = Path(CACHE_DIR) / f'waybar-{util.called_by() or "memory-usage"}-state'
 
-    if args.toggle:
-        mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
+    if toggle:
+        mode = state.next_state(statefile=statefile, mode_count=mode_count)
     else:
-        mode = state.current_state(statefile=STATEFILE)
+        mode = state.current_state(statefile=statefile)
 
     memory_info = get_memory_usage()
     tooltip = generate_tooltip(memory_info)
@@ -231,9 +230,9 @@ def main():
         pct_total = memory_info.pct_total
         pct_used  = memory_info.pct_used
         pct_free  = memory_info.pct_free
-        total     = util.byte_converter(number=memory_info.total, unit=args.unit)
-        used      = util.byte_converter(number=memory_info.used, unit=args.unit)
-        free      = util.byte_converter(number=memory_info.free, unit=args.unit)
+        total     = util.byte_converter(number=memory_info.total, unit=unit)
+        used      = util.byte_converter(number=memory_info.used, unit=unit)
+        free      = util.byte_converter(number=memory_info.free, unit=unit)
 
         if pct_free < 20:
             output_class = 'critical'

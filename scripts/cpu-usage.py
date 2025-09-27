@@ -3,15 +3,16 @@
 from pathlib import Path
 from waybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
-import argparse
 import json
-import os
 import platform
 import re
 import sys
-import time
+
+util.validate_requirements(required=['click'])
+import click
 
 CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 STATEFILE = Path(CACHE_DIR) / f'waybar-{util.called_by() or "cpu-usage"}-state'
 
 CPU_INFO : dict | None=None
@@ -166,16 +167,15 @@ def generate_tooltip(cpu_info):
 
     return '\n'.join(tooltip)
 
-def main():
+@click.command(help='Get CPU usage from using mpstat(1) and /proc/cpuinfo', context_settings=CONTEXT_SETTINGS)
+@click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
+def main(toggle):
     mode_count = 2
-    parser = argparse.ArgumentParser(description='Get CPU usage from mpstat(1)')
-    parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
-    args = parser.parse_args()
     global CPU_INFO
 
     parse_proc_cpuinfo()
 
-    if args.toggle:
+    if toggle:
         mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
     else:
         mode = state.current_state(statefile=STATEFILE)

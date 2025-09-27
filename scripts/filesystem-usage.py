@@ -3,14 +3,14 @@
 from pathlib import Path
 from waybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
-import argparse
 import json
-import os
 import re
-import sys
-import time
+
+util.validate_requirements(required=['click'])
+import click
 
 CACHE_DIR = util.get_cache_directory()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool] = False
@@ -29,7 +29,6 @@ class FilesystemInfo(NamedTuple):
     used       : Optional[int]  = 0
 
 def parse_lsblk(filesystem: str=None):
-    # lsblk -O --json /dev/sda1
     command = f'lsblk -O --json {filesystem}'
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0 and stdout != '':
@@ -114,32 +113,30 @@ def generate_tooltip(disk_info):
         
     return '\n'.join(tooltip)
 
-def main():
+@click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)
+@click.option('-m', '--mountpoint', required=True, help=f'The mountpoint to check')
+@click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
+@click.option('-l', '--label', required=True, help=f'A unique label to use')
+@click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
+def main(mountpoint, unit, label, toggle):
     mode_count = 3
-    parser = argparse.ArgumentParser(description='Get disk info from df(1)')
-    parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
-    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
-    parser.add_argument('-l', '--label', help='For now we need to pass a friendly mountpoint label', required=False)
-    parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
-    args = parser.parse_args()
+    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{label}-state'
 
-    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{args.label}-state'
-
-    if args.toggle:
+    if toggle:
         mode = state.next_state(statefile=statefile, mode_count=mode_count)
     else:
         mode = state.current_state(statefile=statefile)
 
-    disk_info = get_disk_usage(args.mountpoint)
+    disk_info = get_disk_usage(mountpoint)
     tooltip = generate_tooltip(disk_info)
 
     if disk_info.success:
         pct_total = disk_info.pct_total
         pct_used  = disk_info.pct_used
         pct_free  = disk_info.pct_free
-        total     = util.byte_converter(number=disk_info.total, unit=args.unit)
-        used      = util.byte_converter(number=disk_info.used, unit=args.unit)
-        free      = util.byte_converter(number=disk_info.free, unit=args.unit)
+        total     = util.byte_converter(number=disk_info.total, unit=unit)
+        used      = util.byte_converter(number=disk_info.used, unit=unit)
+        free      = util.byte_converter(number=disk_info.free, unit=unit)
 
         if pct_free < 20:
             output_class = 'critical'
@@ -150,25 +147,25 @@ def main():
 
         if mode == 0:
             output = {
-                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used} / {total}',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used} / {total}',
                 'class'   : output_class,
                 'tooltip' : tooltip,
             }
         elif mode == 1:
             output = {
-                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {pct_used}% used',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {pct_used}% used',
                 'class'   : output_class,
                 'tooltip' : tooltip,
             }
         elif mode == 2:
             output = {
-                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {used}% used / {free}% free',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used}% used / {free}% free',
                 'class'   : output_class,
                 'tooltip' : tooltip,
             }
     else:
         output = {
-            'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{args.mountpoint} {disk_info.error or "Unknown error"}',
+            'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {disk_info.error or "Unknown error"}',
             'class'   : 'error',
             'tooltip' : 'Filesystem Usage',
         }

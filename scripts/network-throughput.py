@@ -6,7 +6,6 @@ from waybar import glyphs, util
 import json
 import os
 import re
-import sys
 import time
 
 util.validate_requirements(required=['click'])
@@ -50,8 +49,6 @@ def get_sample(interface: str=None):
     pattern = rf'{interface}:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)'
     match = re.search(pattern, content, re.MULTILINE)
     if match:
-        # int   bytes       packes      errs  drop    fifo    frame      comp      multi  | bytes       packets    errs   drop   fifo   colls   carrier    compressed
-        # wlo1: 77442682121 55683972    0     8633    0       0          0         0      | 18241197531 8222646    0      11     0      0       0          0
         return NetworkSample(
             interface  = interface,
             rx_bytes   = int(match.group(1)),  # bytes received
@@ -87,7 +84,7 @@ def get_network_throughput(interface: str=None):
     )
 
 @click.command(name='run', help='Get network throughput via /proc/net/dev')
-@click.option('--interface', required=True, help='The interface to check')
+@click.option('-i', '--interface', required=True, help='The interface to check')
 def main(interface):
     if not util.interface_exists(interface=interface):
         print(json.dumps({

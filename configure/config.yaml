@@ -16,11 +16,12 @@ static_modules:
     enabled: true
     interval: 5
     unit: auto
-  - name: plex-status
+  - name: plex-status # I'm broken
     enabled: false
     interval: 60
     ip: "{key:plex_ip}"
     port: "{key:plex_port}"
+    api_key: "{key:plex_api_token}"
   - name: speedtest
     enabled: true
     interval: 300

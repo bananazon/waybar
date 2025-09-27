@@ -3,6 +3,7 @@
     "position": "{{ position }}",
     "height": {{ height }},
     "spacing": {{ spacing }},
+    "exclusive": {{ ("true" if exclusive is not none) or "false" }},
 
     "font": "{{ font }}",
 
@@ -76,11 +77,11 @@
 
     {% for s in software_updates %}
     {% if s.enabled %}
-    "custom/software-updates-{{ s.type }}": {
+    "custom/software-updates-{{ s.package_type }}": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --type {{ s.type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}')"
+        "exec": "{{ scripts_path }}/software-updates.py --package-type {{ s.package_type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --package-type {{ s.package_type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}')"
     },
     {% endif %}
     {% endfor %}

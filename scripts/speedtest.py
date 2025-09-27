@@ -3,8 +3,7 @@
 from collections import namedtuple
 from pathlib import Path
 from typing import Optional, NamedTuple
-from urllib.parse import quote, urlunparse
-from waybar import glyphs, util
+from waybar import glyphs, http, util
 import json
 import logging
 import re
@@ -14,7 +13,6 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.request
 
 util.validate_requirements(required=['click', 'speedtest'])
 import click
@@ -70,8 +68,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-
-
 def get_icon(speed: int = 0) -> str:
     if speed < 100_000_000:
         return glyphs.md_speedometer_slow
@@ -102,7 +98,7 @@ def generate_tooltip(data):
 
     return '\n'.join(tooltip)
 
-def dict_to_namedtuple(name, obj):
+def dict_to_namedtuple(name: str=None, obj: dict=None):
     """
     Recursively convert a dict (possibly nested) into a namedtuple.
     """
@@ -117,25 +113,14 @@ def dict_to_namedtuple(name, obj):
 
 def ip_to_location(ip: str=None, name: str=None):
     url = f'https://ipinfo.io/{ip}/json'
+    response = http.request(url=url)
+    if response.status == 200:
+        return dict_to_namedtuple(name=name, obj=response.body)
 
-    try:
-        request = urllib.request.Request(url)
-        with urllib.request.urlopen(request, timeout=3) as response:
-            if response.status == 200:
-                body = response.read().decode('utf-8').strip()
-                try:
-                    json_data, err = util.parse_json_string(body)
-                    if not err:
-                        return dict_to_namedtuple(name, json_data)
-                    return None
-                except:
-                    return None
-        return None
-    except:
-        return None
+    return None
 
 def parse_speedtest_data(json_data=None):
-    speedtest_data = dict_to_namedtuple('SpeedtestData', json_data)
+    speedtest_data = dict_to_namedtuple( name='SpeedtestData', obj=json_data)
 
     client_data = speedtest_data.client
     server_data = speedtest_data.server
@@ -300,10 +285,13 @@ signal.signal(signal.SIGHUP, refresh_handler)
 
 @click.command(help='Run a network speed test and return the results', context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
-def main(interval):
-    # foo = run_speedtest()
-    # util.pprint(foo)
-    # exit()
+@click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
+def main(interval, test):
+    if test:
+        speedtest_data = run_speedtest()
+        util.pprint(speedtest_data)
+        sys.exit(0)
+
     logging.info('[main] entering')
 
     threading.Thread(target=worker, args=(), daemon=True).start()

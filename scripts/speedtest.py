@@ -69,8 +69,6 @@ logging.basicConfig(
 )
 
 def get_icon(speed: int = 0) -> str:
-    print(speed)
-
     if speed < 100_000_000:
         return glyphs.md_speedometer_slow
     elif speed < 500_000_000:

@@ -1,3 +1,8 @@
+*{
+    font-family: "Arimo Nerd Font", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 9.0pt;
+}
+
 window#waybar {
     /* background: transparent; */
     background: rgba(0, 0, 0, 0.3);
@@ -5,7 +10,6 @@ window#waybar {
 
 tooltip {
     background: rgba(0, 0, 0, 0.4);
-    min-width: 1000px;
 }
 
 tooltip label {
@@ -38,7 +42,6 @@ tooltip label {
     background: transparent;
     border-radius: 6px;
     color: #ffffff;
-    font-size: 8.5pt;
     padding: 4px 8px;
 }
 

@@ -5,8 +5,6 @@
     "spacing": {{ spacing }},
     "exclusive": {{ ("true" if exclusive is not none) or "false" }},
 
-    "font": "{{ font }}",
-
     "modules-right": {{ modules_right | tojson(indent=4) | indent(4) }},
 
     {% if cpu_usage.enabled == true %}

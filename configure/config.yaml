@@ -5,7 +5,6 @@ position: 'top'
 height: 31
 spacing: 5
 exclusive: true
-font: Arimo Nerd Font 12
 scripts_path: /home/gdanko/.config/waybar/scripts
 
 static_modules:

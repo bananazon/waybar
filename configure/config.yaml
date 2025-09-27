@@ -4,6 +4,7 @@ layer: 'bottom'
 position: 'top'
 height: 31
 spacing: 5
+exclusive: true
 font: Arimo Nerd Font 12
 scripts_path: /home/gdanko/.config/waybar/scripts
 
@@ -16,7 +17,7 @@ static_modules:
     interval: 5
     unit: auto
   - name: plex-status
-    enabled: true
+    enabled: false
     interval: 60
     ip: "{key:plex_ip}"
     port: "{key:plex_port}"
@@ -51,16 +52,16 @@ network_interfaces:
     interval: 2
 
 software_updates:
-  - type: brew
+  - package_type: brew
+    enabled: true
+    interval: 1800
+  - package_type: dnf
+    enabled: true
+    interval: 1800
+  - package_type: flatpak
     enabled: false
     interval: 1800
-  - type: dnf
-    enabled: true
-    interval: 1800
-  - type: flatpak
-    enabled: true
-    interval: 1800
-  - type: snap
+  - package_type: snap
     enabled: false
     interval: 1800
 

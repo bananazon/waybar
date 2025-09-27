@@ -2,8 +2,8 @@
 
 from pathlib import Path
 from typing import Optional, NamedTuple
-from urllib.parse import quote, urlunparse
-from waybar import glyphs, util
+from urllib.parse import quote
+from waybar import glyphs, http, util
 import json
 import logging
 import os
@@ -11,7 +11,6 @@ import signal
 import sys
 import threading
 import time
-import urllib.request
 
 util.validate_requirements(required=['click'])
 import click
@@ -181,97 +180,95 @@ def get_weather_icon(condition_code, is_day):
 
 def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
     weather_data = None
-    url_parts = (
-        'https',
-        'api.weatherapi.com',
-        f'v1/forecast.json?key={api_key}&q={quote(location)}&aqi=no&alerts=no',
-        '',
-        '',
-        '',
+    response = http.request(
+        url    = 'https://api.weatherapi.com/v1/forecast.json',
+        params = {
+            'key'    : api_key,
+            'q'      : quote(location),
+            'aqi'    : 'no',
+            'alerts' : 'no',
+        }
     )
-    url = urlunparse(url_parts)
 
-    with urllib.request.urlopen(url) as response:
-        body = response.read().decode('utf-8')
-        if response.status == 200:
-            json_data, err = util.parse_json_string(body)
-            if err:
-                weather_data = WeatherData(
-                    success        = False,
-                    error          = f'could not retrieve the weather for {location}: {err}',
-                    location_full  = location,
-                )
+    if response.status == 200:
+        if response.body:
+            json_data = response.body
+            if use_celsius:
+                distance = 'km'
+                height = 'mm'
+                speed = 'kph'
+                unit = 'C'
             else:
-                if use_celsius:
-                    distance = 'km'
-                    height = 'mm'
-                    speed = 'kph'
-                    unit = 'C'
-                else:
-                    distance = 'miles'
-                    height = 'in'
-                    speed = 'mph'
-                    unit = 'F'
-                
-                unit_lower = unit.lower()
+                distance = 'miles'
+                height = 'in'
+                speed = 'mph'
+                unit = 'F'
 
-                try:
-                    astro_data     = json_data['forecast']['forecastday'][0]['astro']
-                    condition_data = json_data['current']['condition']
-                    current_data   = json_data['current']
-                    forecast_data  = json_data['forecast']['forecastday'][0]['day']
-                    location_data  = json_data['location']
+            unit_lower = unit.lower()
 
+            try:
+                astro_data     = json_data['forecast']['forecastday'][0]['astro']
+                condition_data = json_data['current']['condition']
+                current_data   = json_data['current']
+                forecast_data  = json_data['forecast']['forecastday'][0]['day']
+                location_data  = json_data['location']
+
+                weather_data = WeatherData(
+                    success        = True,
+                    icon           = get_weather_icon(current_data['condition']['code'], current_data['is_day']),
+                    avg_humidity   = f'{forecast_data.get("avghumidity")}%' or 'Unknown',
+                    cloud_cover    = current_data.get('cloud') or 'Unknown',
+                    condition      = (current_data.get('condition') or {}).get('text') or 'Unknown',
+                    condition_code = (current_data.get('condition') or {}).get('code') or 'Unknown',
+                    country        = location_data.get('country') or 'Unknown',
+                    current_temp   = f'{current_data.get(f"temp_{unit_lower}")}°{unit}' or 'Unknown',
+                    dewpoint       = f'{current_data.get(f"dewpoint_{unit_lower}")}°{unit}' or 'Unknown',
+                    feels_like     = f'{current_data.get(f"feelslike_{unit_lower}")}°{unit}' or 'Unknown',
+                    gust           = f'{current_data.get(f"gust_{speed}")} {speed}' or 'Unknown',
+                    heat_index     = f'{current_data.get(f"heatindex_{unit_lower}")}°{unit}' or 'Unknown',
+                    humidity       = f'{current_data.get("humidity")}%' or 'Unknown',
+                    location_full  = location,
+                    location_short = location_data.get('name') or 'Unknown',
+                    moonrise       = astro_data.get('moonrise') or 'No moonrise',
+                    moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
+                    moonset        = astro_data.get('moonset') or 'No moonset',
+                    moonset_unix   = util.to_unix_time(astro_data.get('moonset')),
+                    moon_phase     = astro_data.get('moon_phase') or None,
+                    sunrise        = astro_data.get('sunrise') or 'No sunrise',
+                    sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
+                    sunset         = astro_data.get('sunset') or 'No sunset',
+                    sunset_unix    = util.to_unix_time(astro_data.get('sunset')),
+                    precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' or 'Unknown',
+                    region         = location_data.get('region') or 'Unknown',
+                    todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' or 'Unknown',
+                    todays_low     = f'{forecast_data.get(f"mintemp_{unit_lower}")}°{unit}' or 'Unknown',
+                    uv             = current_data.get('uv') or None,
+                    visibility     = f'{current_data.get(f"vis_{distance}")} {distance}' or 'Unknown',
+                    wind_chill     = f'{current_data.get(f"windchill_{unit_lower}")}°{unit}' or 'Unknown',
+                    wind_degree    = f'{current_data.get("wind_degree")}°' or 'Unknown',
+                    wind_dir       = current_data.get('wind_dir') or 'Unknown',
+                    wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or 'Unknown',
+                )
+            except Exception as e:
+                    print(e)
+                    exit()
                     weather_data = WeatherData(
-                        success        = True,
-                        icon           = get_weather_icon(current_data['condition']['code'], current_data['is_day']),
-                        avg_humidity   = f'{forecast_data.get("avghumidity")}%' or 'Unknown',
-                        cloud_cover    = current_data.get('cloud') or 'Unknown',
-                        condition      = (current_data.get('condition') or {}).get('text') or 'Unknown',
-                        condition_code = (current_data.get('condition') or {}).get('code') or 'Unknown',
-                        country        = location_data.get('country') or 'Unknown',
-                        current_temp   = f'{current_data.get(f"temp_{unit_lower}")}°{unit}' or 'Unknown',
-                        dewpoint       = f'{current_data.get(f"dewpoint_{unit_lower}")}°{unit}' or 'Unknown',
-                        feels_like     = f'{current_data.get(f"feelslike_{unit_lower}")}°{unit}' or 'Unknown',
-                        gust           = f'{current_data.get(f"gust_{speed}")} {speed}' or 'Unknown',
-                        heat_index     = f'{current_data.get(f"heatindex_{unit_lower}")}°{unit}' or 'Unknown',
-                        humidity       = f'{current_data.get("humidity")}%' or 'Unknown',
+                        success        = False,
+                        error          = f'could not retrieve the weather for {location}: {str(e)}',
                         location_full  = location,
-                        location_short = location_data.get('name') or 'Unknown',
-                        moonrise       = astro_data.get('moonrise') or 'No moonrise',
-                        moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
-                        moonset        = astro_data.get('moonset') or 'No moonset',
-                        moonset_unix   = util.to_unix_time(astro_data.get('moonset')),
-                        moon_phase     = astro_data.get('moon_phase') or None,
-                        sunrise        = astro_data.get('sunrise') or 'No sunrise',
-                        sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
-                        sunset         = astro_data.get('sunset') or 'No sunset',
-                        sunset_unix    = util.to_unix_time(astro_data.get('sunset')),
-                        precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' or 'Unknown',
-                        region         = location_data.get('region') or 'Unknown',
-                        todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' or 'Unknown',
-                        todays_low     = f'{forecast_data.get(f"mintemp_{unit_lower}")}°{unit}' or 'Unknown',
-                        uv             = current_data.get('uv') or None,
-                        visibility     = f'{current_data.get(f"vis_{distance}")} {distance}' or 'Unknown',
-                        wind_chill     = f'{current_data.get(f"windchill_{unit_lower}")}°{unit}' or 'Unknown',
-                        wind_degree    = f'{current_data.get("wind_degree")}°' or 'Unknown',
-                        wind_dir       = current_data.get('wind_dir') or 'Unknown',
-                        wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or 'Unknown',
                     )
-                except Exception as e:
-                        print(e)
-                        exit()
-                        weather_data = WeatherData(
-                            success        = False,
-                            error          = f'could not retrieve the weather for {location}: {str(e)}',
-                            location_full  = location,
-                        )
         else:
             weather_data = WeatherData(
                 success        = False,
-                error          = f'a non-200 ({response.status}) was received',
+                error          = f'empty response was received',
                 location_full  = location,
             )
+    else:
+        weather_data = WeatherData(
+            success        = False,
+            error          = f'a non-200 ({response.status}) was received',
+            location_full  = location,
+        )
 
     return weather_data
 
@@ -326,7 +323,13 @@ signal.signal(signal.SIGHUP, refresh_handler)
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
 @click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
-def main(api_key, location, use_celsius, label, interval):
+@click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
+def main(api_key, location, use_celsius, label, interval, test):
+    if test:
+        weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
+        util.pprint(weather_data)
+        sys.exit(0)
+
     threading.Thread(
         target = worker,
         args   = (api_key, location, use_celsius, label,),

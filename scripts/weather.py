@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from typing import Optional, NamedTuple
-from urllib.parse import quote
 from waybar import glyphs, http, util
 import json
 import logging
@@ -184,7 +183,7 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
         url    = 'https://api.weatherapi.com/v1/forecast.json',
         params = {
             'key'    : api_key,
-            'q'      : quote(location),
+            'q'      : location,
             'aqi'    : 'no',
             'alerts' : 'no',
         }

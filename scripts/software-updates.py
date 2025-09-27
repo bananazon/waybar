@@ -531,9 +531,15 @@ def refresh_handler(signum, frame):
 signal.signal(signal.SIGHUP, refresh_handler)
 
 @click.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
-@click.option('-t', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
+@click.option('-p', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
 @click.option('-i', '--interval', type=int, default=1800, help='The update interval (in seconds)')
-def main(package_type, interval):
+@click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
+def main(package_type, interval, test):
+    if test:
+        data = find_updates(package_type=package_type)
+        util.pprint(data)
+        sys.exit(0)
+
     logging.info('[main] entering')
     threading.Thread(target=worker, args=(package_type,), daemon=True).start()
     update_event.set()

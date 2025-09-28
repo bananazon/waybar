@@ -69,85 +69,68 @@ def format_time(timestamp: int=0) -> str:
     dt = datetime.fromtimestamp(ts)
     return dt.strftime("%Y-%m-%d %H:%M")
 
-# Start duplicated
-def dict_to_namedtuple(name: str=None, obj: dict=None):
-    """
-    Recursively convert a dict (possibly nested) into a namedtuple.
-    """
-    if isinstance(obj, dict):
-        fields = {k: dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
-        NT = namedtuple(name, fields.keys())
-        return NT(**fields)
-    elif isinstance(obj, list):
-        return [dict_to_namedtuple(name, i) for i in obj]
-    else:
-        return obj
-
-def ip_to_location(ip: str=None, name: str=None):
-    url = f'https://ipinfo.io/{ip}/json'
-    response = http.request(url=url)
-    if response.status == 200:
-        return dict_to_namedtuple(name=name, obj=response.body)
-
-    return None
-
-def find_public_ip():
-    url = 'https://ifconfig.io'
-    headers = {'User-Agent': 'curl/7.54.1'}
-    response = http.request(url=url, headers=headers)
-    if response.status == 200:
-        return response.body
-    return None
-# End duplicated
-
-def get_quake_data(location_data: namedtuple=None, radius: str=None, limit: int=None, magnitude: float=None):
+def get_quake_data(radius: str=None, limit: int=None, magnitude: float=None):
     now = int(time.time())
-    lat, lon = re.split(r'\s*,\s*', location_data.loc)
-    maxradiuskm = 0
+    ip = util.find_public_ip()
+    if ip:
+        location_data = util.ip_to_location(ip=ip, name='Location')
+        if location_data:
+            lat, lon = re.split(r'\s*,\s*', location_data.loc)
+            maxradiuskm = 0
 
-    match = re.search(r'^([\d]+)(m|km)$', radius)
-    if match:
-        if match.group(2) == 'km':
-            maxradiuskm = match.group(1)
-        elif match.group(2) == 'm':
-            maxradiuskm = miles_to_kilometers(miles=int(match.group(1)))
+            match = re.search(r'^([\d]+)(m|km)$', radius)
+            if match:
+                if match.group(2) == 'km':
+                    maxradiuskm = match.group(1)
+                elif match.group(2) == 'm':
+                    maxradiuskm = miles_to_kilometers(miles=int(match.group(1)))
 
-        response = http.request(
-            url    = 'https://earthquake.usgs.gov/fdsnws/event/1/query',
-            params = {
-                'format'       : 'geojson',
-                'starttime'    : datetime.fromtimestamp(now - 86400).isoformat('T', 'seconds'),
-                'endtime'      : datetime.fromtimestamp(now).isoformat('T', 'seconds'),
-                'latitude'     : lat,
-                'longitude'    : lon,
-                'limit'        : limit,
-                'maxradiuskm'  : maxradiuskm,
-                'minmagnitude' : magnitude,
-                'offset'       : 1,
-                'orderby'      : 'time',
-            }
-        )
-
-        if response.status == 200:
-            quakes = []
-            if 'features' in response.body:
-                for feature in response.body['features']:
-                    quakes.append(dict_to_namedtuple(name='Quake', obj=feature['properties']))
-
-                return QuakeData(
-                    success = True,
-                    quakes  = quakes,
+                response = http.request(
+                    url    = 'https://earthquake.usgs.gov/fdsnws/event/1/query',
+                    params = {
+                        'format'       : 'geojson',
+                        'starttime'    : datetime.fromtimestamp(now - 86400).isoformat('T', 'seconds'),
+                        'endtime'      : datetime.fromtimestamp(now).isoformat('T', 'seconds'),
+                        'latitude'     : lat,
+                        'longitude'    : lon,
+                        'limit'        : limit,
+                        'maxradiuskm'  : maxradiuskm,
+                        'minmagnitude' : magnitude,
+                        'offset'       : 1,
+                        'orderby'      : 'time',
+                    }
                 )
-            else:
-                return QuakeData(
-                    success = False,
-                    error   = f'No data was received',
-                )
+
+                if response.status == 200:
+                    quakes = []
+                    if 'features' in response.body:
+                        for feature in response.body['features']:
+                            quakes.append(util.dict_to_namedtuple(name='Quake', obj=feature['properties']))
+
+                        return QuakeData(
+                            success = True,
+                            quakes  = quakes,
+                        )
+                    else:
+                        return QuakeData(
+                            success = False,
+                            error   = f'No data was received',
+                        )
+                else:
+                    return QuakeData(
+                        success = False,
+                        error   = f'A non-200 {response.status} was received',
+                    )
         else:
             return QuakeData(
                 success = False,
-                error   = f'A non-200 {response.status} was received',
+                error  = 'failed to geolocate'
             )
+    else:
+        return QuakeData(
+            success = False,
+            error   = 'failed to determine IP',
+        )
 
 def worker(radius: str=None, limit: int=None, magnitude: float=None):
     while True:
@@ -162,34 +145,18 @@ def worker(radius: str=None, limit: int=None, magnitude: float=None):
             if util.network_is_reachable():
                 print(json.dumps(LOADING_DICT))
 
-                ip = find_public_ip()
-                if ip:
-                    location_data = ip_to_location(ip=ip, name='Location')
-                    if location_data:
-                        quake_data = get_quake_data(location_data=location_data, radius=radius, limit=limit, magnitude=magnitude)
-                        if quake_data.success:
-                            output = {
-                                'text': f'Earthquakes: {len(quake_data.quakes)}',
-                                'class': 'success',
-                                'tooltip': generate_tooltip(quake_data.quakes),
-                            }
-                        else:
-                            output = {
-                                'text': f'Earthquakes: {quake_data.error}',
-                                'class': 'error',
-                                'tooltip': 'Earthquakes error',
-                            }
-                    else:
-                        output = {
-                            'text'    : f'failed to geolocate',
-                            'class'   : 'error',
-                            'tooltip' : 'Earthquakes error',
-                        }
+                quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
+                if quake_data.success:
+                    output = {
+                        'text': f'Earthquakes: {len(quake_data.quakes)}',
+                        'class': 'success',
+                        'tooltip': generate_tooltip(quake_data.quakes),
+                    }
                 else:
                     output = {
-                        'text'    : f'failed to determine IP',
-                        'class'   : 'error',
-                        'tooltip' : 'Earthquakes error',
+                        'text': f'Earthquakes: {quake_data.error}',
+                        'class': 'error',
+                        'tooltip': 'Earthquakes error',
                     }
             else:
                 output = {

@@ -128,9 +128,9 @@ def main(mountpoint, unit, label, toggle):
         mode = state.current_state(statefile=statefile)
 
     disk_info = get_disk_usage(mountpoint)
-    tooltip = generate_tooltip(disk_info)
 
     if disk_info.success:
+        tooltip   = generate_tooltip(disk_info)
         pct_total = disk_info.pct_total
         pct_used  = disk_info.pct_used
         pct_free  = disk_info.pct_free

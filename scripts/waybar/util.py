@@ -342,14 +342,14 @@ def interface_is_connected(interface: str=None) -> bool:
 #  Formatting and conversion
 #==========================================================
 
-def pad_float(number: int=0) -> str:
+def pad_float(number: int=0, round_int: bool=True) -> str:
     """
     Pad a float to two decimal places.
     """
     if type(number) == str:
         number = float(number)
 
-    if number.is_integer():
+    if number.is_integer() and round_int:
         return str(int(number))
     else:
         return f'{number:.2f}'

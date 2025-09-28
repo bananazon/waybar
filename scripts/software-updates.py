@@ -419,7 +419,7 @@ def find_yum_updates(package_type: str=None):
     if rc != 0:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
-    command = f'sudo {binary} check-update'
+    command = f'sudo yum check-update'
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
@@ -432,7 +432,10 @@ def find_yum_updates(package_type: str=None):
 
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(bits[0])
+            packages.append(Package(
+                name              = bits[0],
+                available_version = bits[1],
+            ))
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
@@ -440,17 +443,14 @@ def find_yum_updates(package_type: str=None):
     # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
     #     packages = []
-    #     match = re.search(r':: Checking for updates...\n([\s\S]*)', stdout)
-    #     if match:
-    #         for line in match.group(1).split('\n'):
-    #             bits = re.split(r'\s+', line)
-    #             packages.append(Package(
-    #                 name              = bits[0],
-    #                 available_version = bits[3],
-    #                 installed_version = bits[1]
-    #             ))
-    #     else:
-    #         return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+    #     _, after = stdout.split('Repositories loaded.', 1)
+    #     after = after.lstrip().rstrip()
+    #     for line in after.split('\n'):
+    #         bits = re.split(r'\s+', line)
+    #         packages.append(Package(
+    #             name              = bits[0],
+    #             available_version = bits[1],
+    #         ))
 
     logging.info(f'[find_yum_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)

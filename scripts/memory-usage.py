@@ -224,9 +224,9 @@ def main(unit, toggle):
         mode = state.current_state(statefile=statefile)
 
     memory_info = get_memory_usage()
-    tooltip = generate_tooltip(memory_info)
 
     if memory_info.success:
+        tooltip   = generate_tooltip(memory_info)
         pct_total = memory_info.pct_total
         pct_used  = memory_info.pct_used
         pct_free  = memory_info.pct_free

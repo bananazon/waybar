@@ -72,13 +72,6 @@ def get_cpu_info() -> CpuInfo:
     """
     global CPU_INFO
 
-    if platform.machine() == 'x86':
-        icon = glyphs.md_cpu_32_bit
-    elif platform.machine() == 'x86_64':
-        icon = glyphs.md_cpu_64_bit
-    else:
-        icon = glyphs.oct_cpu
-
     # make sure mpstat is installed
     rc, stdout, stderr = util.run_piped_command(f'mpstat -A -o JSON')
     if rc == 0:

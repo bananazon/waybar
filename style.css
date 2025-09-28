@@ -95,9 +95,6 @@ tooltip label {
 }
 
 #custom-quakes.loading {
-    background-image: url("/home/gdanko/.config/waybar/images/quake-loading.png");
-    background-position: left center;
-    background-repeat: no-repeat;
-    background-size: 16px;
-    padding-left: 20px;
+    background-image: none;
+    padding-left: 12px;
 }

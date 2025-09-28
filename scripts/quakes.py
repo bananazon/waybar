@@ -18,7 +18,7 @@ import click
 
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'Checking USGS...'
+LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking USGS...'
 LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Checking USGS...'}
 LOGFILE = CACHE_DIR / 'waybar-earthquakes.log'
 

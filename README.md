@@ -18,10 +18,17 @@ The following binaries are required and may not be installed by default
 What I do is pretty straight forward:
 1. `cd ~/.config`
 2. `git clone https://github.com/gdanko/waybar.git`
+3. `systemctl --user daemon-reload`
+4. `systemctl --user enable waybar.service`
+5. `systemctl --user start waybar.service`
 
 But if you're already using Waybar and have your setup in ~/.config/waybar`, do the following:
 1. Clone the repository.
 2. Copy the scripts directory to your Waybar directory. There are some common files in `./scripts/waybar` so you kind of need it all.
+
+## Installing the User System Unit File (optional)
+1. `mkdir -p ~/.config/systemctl/user`
+2. `copy waybar.service ~/.config/systemctl/user`
 
 There is a `configure` directory in the repository that has a means to generate a config.jsonc file from a template file. It has its own README.md so go take a look at that when you have a moment.
 
@@ -31,11 +38,31 @@ Each module has a `--help` option, so you can see available options.
 ### CPU Usage
 This module shows CPU information with four available output formats that can be toggled by clicking the item in the bar.
 
-#### Output Formats
-1. `user 0.99%, sys 0.46%, idle 98.43%`
-2. `load 0.20,  0.27,  0.44`
-3. `8C/16T x AMD Ryzen 7 5700U`
-4. `current: 3.29 GHz, min: 400 Mhz, max: 4.37 GHz`
+#### Output Format
+`user 0.99%, sys 0.46%, idle 98.43%`
+
+#### Tooltip
+```
+AMD Ryzen 7 5700U with Radeon Graphics
+Physical cores: 8, Threads/core: 2, Logical cores: 16
+Frequency: 411.66 MHz > 4.37 GHz
+core 00 user 1.40%, sys 0.88%, idle 96.45%
+core 01 user 0.94%, sys 0.66%, idle 97.52%
+core 02 user 1.39%, sys 0.90%, idle 96.73%
+core 03 user 0.91%, sys 0.64%, idle 97.62%
+core 04 user 1.38%, sys 0.87%, idle 96.83%
+core 05 user 0.88%, sys 0.65%, idle 97.61%
+core 06 user 1.38%, sys 0.87%, idle 96.82%
+core 07 user 0.89%, sys 0.66%, idle 97.58%
+core 08 user 1.56%, sys 1.00%, idle 96.45%
+core 09 user 1.00%, sys 0.73%, idle 97.40%
+core 10 user 1.46%, sys 1.00%, idle 96.50%
+core 11 user 0.97%, sys 0.72%, idle 97.42%
+core 12 user 1.53%, sys 0.96%, idle 96.55%
+core 13 user 0.95%, sys 0.70%, idle 97.45%
+core 14 user 1.54%, sys 0.97%, idle 96.51%
+core 15 user 1.12%, sys 0.79%, idle 97.22%
+```
 
 ### Filesystem Usage
 This module shows filesystem usage information with three available output formats that can be toggled by clicking the item in the bar.
@@ -45,32 +72,120 @@ This module shows filesystem usage information with three available output forma
 2. `/foo 22% used`
 3. `/foo 779.41 GiB used / 2.64 TiB free`
 
+#### Tooltip
+```
+Device         : /dev/mapper/luks-c7e5b1d9-cbce-4419-8982-0175169c92de
+Mountpoint     : /
+Type           : btrfs
+Kernel name    : dm-0
+Removable      : no
+Read-only      : no
+```
+
 ### Memory Usage
-This module shows memory usage information with four available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
+This module shows memory usage information with three available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
 
 #### Output Formats
 1. `8.04 GiB / 59.75 GiB`
 2. `13% used`
 3. `8.03 GiB used / 51.72 GiB free`
-4. `2 x 32GB SODMIMM @ 3200 MT/s`
+
+#### Tooltip
+```
+Total     = 64.14 GB
+Used      = 9.95 GB
+Free      = 54.18 GB
+Shared    = 0.49 GB
+Buffers   = 0.01 GB
+Cache     = 17.73 GB
+Available = 54.18 GB
+
+DIMM 00 - 32 GB DDR4 SODIMM @ 3200 MT/s
+DIMM 01 - 32 GB DDR4 SODIMM @ 3200 MT/s
+```
 
 ### Network Throughput
 This module shows network throughtput, received and sent.
 
-#### Output Formats
-1. `wlo1 9.65 Kbit/s ↑8.42 Kbit/s`
+#### Output Format
+`wlo1 9.65 Kbit/s ↑8.42 Kbit/s`
+
+### Quakes
+This module shows recent earthquakes near you. It uses your IP to geolocate you.
+
+#### Output Format
+`<icon> Earthquakes: 19`
+
+#### Tooltip
+```
+2025-09-28 07:01 - mag 1.37 16 km NW of Ocotillo, CA
+2025-09-28 06:53 - mag 0.89 27 km SSW of Ocotillo Wells, CA
+2025-09-28 06:25 - mag 0.82 7 km ENE of Yucaipa, CA
+2025-09-28 05:39 - mag 1.14 10 km NW of Calipatria, CA
+2025-09-28 05:13 - mag 1.32 1 km NE of Colton, CA
+2025-09-28 04:01 - mag 0.61 3 km E of Moreno Valley, CA
+2025-09-28 01:55 - mag 1.13 5 km SW of Palomar Observatory, CA
+2025-09-28 01:10 - mag 0.43 7 km NW of Anza, CA
+2025-09-28 00:12 - mag 0.69 25 km SSW of Ocotillo Wells, CA
+2025-09-28 00:09 - mag 0.86 6 km WNW of Borrego Springs, CA
+```
+
+### Software Updates
+This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, `yum`. Please see the [`permissions`](#permissions) section before implementing this module.
+
+#### Output Format
+`dnf 801 outdated packages`
+
+#### Tooltip
+```
+aardvark-dns              => 2:1.16.0-1.fc42
+alsa-lib                  => 1.2.14-3.fc42
+alsa-sof-firmware         => 2025.05.1-1.fc42
+alsa-ucm                  => 1.2.14-3.fc42
+alsa-utils                => 1.2.14-1.fc42
+alternatives              => 1.33-1.fc42
+amd-gpu-firmware          => 20250808-1.fc42
+amd-ucode-firmware        => 20250808-1.fc42
+anaconda                  => 42.27.13-1.fc42
+anaconda-core             => 42.27.13-1.fc42
+anaconda-gui              => 42.27.13-1.fc42
+anaconda-install-env-deps => 42.27.13-1.fc42
+anaconda-live             => 42.27.13-1.fc42
+anaconda-tui              => 42.27.13-1.fc42
+anaconda-widgets          => 42.27.13-1.fc42
+apr                       => 1.7.6-3.fc42
+at                        => 3.2.5-16.fc42
+at-spi2-atk               => 2.56.3-1.fc42
+at-spi2-core              => 2.56.3-1.fc42
+atheros-firmware.noarch   => 20250808-1.fc42 
+and 764 more...
+```
 
 ### Speedtest
 This module connects to [speedtest.net](https://speedtest.net) and gathers download and/or upload speeds. You can left click on it to refresh its output.
 
-#### Output Formats
-1. `<icon> ↓403.13 Mbit/s ↑493.98 Mbit/s`
+#### Output Format
+`<icon> ↓403.13 Mbit/s ↑493.98 Mbit/s`
 
-#### Notes
-The speedometer icon is dynamic. It shows slow, medium, or fast depending on the following:
-- If only the download test is enabled, the icon is based on download speed.
-- If only the upload test is enabled, the icon is based on the upload speed.
-- If both download and upload tests are enabled, the icon is based on and average of both speeds.
+#### Tooltip
+```
+Bytes sent     : 144.50 MiB
+Bytes received : 390.41 MiB
+Upload speed   : 550.77 Mbit/s
+Download speed : 380.33 Mbit/s
+Ping           : 10.45 ms
+
+Server
+IP       : 195.206.104.222
+Location : Los Angeles, California, US
+Hostname : lax.mega.host.speedtest.net
+Sponsor  : OneProvider
+
+Client
+IP       : 136.26.86.207
+Location : San Diego, California, US
+ISP      : AS19165 Webpass Inc.
+```
 
 ### Swap Usage
 This module shows swap usage information with three available output formats that can be toggled by clicking the item in the bar.
@@ -80,22 +195,30 @@ This module shows swap usage information with three available output formats tha
 2. `0% used`
 3. `0.00 B used / 1.91 GiB free`
 
-### Software Updates
-This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, `yum`. Please see the [`permissions`](#permissions) section before implementing this module.
-
-#### Output Formats
-1. `apt 0 outdated packages`
-
 ### Weather
-This module retrieves weather from [weatherapi.com](https://www.weatherapi.com) and has six available output formats.
+This module retrieves weather from [weatherapi.com](https://www.weatherapi.com).
 
-#### Output Formats
-1. `San Diego 73.0°F`
-2. `San Diego ↑76.5°F ↓64.6°F`
-3. `San Diego <wind icon> 9.6 mph @ 267°`
-4. `San Diego <sunrise icon> 06:32 <sunset icon> 18:55`
-5. `San Diego <moonrise icon> 23:06 <moonset icon> 14:25`
-6. `San Diego humidity 52%`
+#### Output Format
+`San Diego 73.0°F`
+
+#### Tooltip
+```
+Location    : San Diego, CA, US
+Condition   : Partly Cloudy
+Feels like  : 78.0°F
+High / Low  : 76.8°F / 62.2°F
+Wind        : 8.7 mph @ 255°
+Cloud Cover : 25%
+Humidity    : 60%
+Dew Point   : 63.4°F
+UV Index    : 2.8 of 11
+Visibility  : 9.0 miles
+Sunrise     : 06:41
+Sunset      : 18:36
+Moonrise    : 13:08
+Moonset     : 22:43
+Moon Phase  : Waxing Crescent
+```
 
 ### Wi-Fi Status
 This module displays the signal strength in dBm for the specified interface and has two available output formats.

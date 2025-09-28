@@ -1,0 +1,13 @@
+[Unit]
+Description=Highly customizable Wayland bar for Sway and Wlroots based compositors
+After=graphical-session.target
+
+[Service]
+Type=forking
+ExecStart=%h/.config/waybar/launch.py start
+ExecStop=%h/.config/waybar/launch.py stop
+ExecRestart=%h/.config/waybar/launch.py restart
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

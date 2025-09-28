@@ -1,4 +1,4 @@
-from . import glyphs, http
+from . import http
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path

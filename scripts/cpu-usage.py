@@ -133,7 +133,7 @@ def generate_tooltip(cpu_info):
     for core in cpu_info.cpu_load:
         if core.cpu != 'all':
             tooltip.append(
-                f'core {int(core.cpu):02} user {util.pad_float(core.usr)}%, sys {util.pad_float(core.sys)}%, idle {util.pad_float(core.idle)}%'
+                f'core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
 
             )
 

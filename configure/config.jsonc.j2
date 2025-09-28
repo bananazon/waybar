@@ -12,7 +12,7 @@
         "exec": "{{ scripts_path }}/cpu-usage.py",
         "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }},
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/cpu-usage.py --toggle"
+        "on-click": "{{ scripts_path }}/cpu-usage.py"
     },
     {% endif %}
 

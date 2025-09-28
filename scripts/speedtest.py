@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from collections import namedtuple
 from pathlib import Path
 from typing import Optional, NamedTuple
 from waybar import glyphs, http, util
@@ -98,29 +97,8 @@ def generate_tooltip(data):
 
     return '\n'.join(tooltip)
 
-def dict_to_namedtuple(name: str=None, obj: dict=None):
-    """
-    Recursively convert a dict (possibly nested) into a namedtuple.
-    """
-    if isinstance(obj, dict):
-        fields = {k: dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
-        NT = namedtuple(name, fields.keys())
-        return NT(**fields)
-    elif isinstance(obj, list):
-        return [dict_to_namedtuple(name, i) for i in obj]
-    else:
-        return obj
-
-def ip_to_location(ip: str=None, name: str=None):
-    url = f'https://ipinfo.io/{ip}/json'
-    response = http.request(url=url)
-    if response.status == 200:
-        return dict_to_namedtuple(name=name, obj=response.body)
-
-    return None
-
 def parse_speedtest_data(json_data=None):
-    speedtest_data = dict_to_namedtuple( name='SpeedtestData', obj=json_data)
+    speedtest_data = util.dict_to_namedtuple( name='SpeedtestData', obj=json_data)
 
     client_data = speedtest_data.client
     server_data = speedtest_data.server
@@ -129,7 +107,7 @@ def parse_speedtest_data(json_data=None):
     icon        = get_icon((speed_rx + speed_tx) / 2)
 
     if client_data.ip:
-        client_location = ip_to_location(ip=client_data.ip, name='ClientLocation')
+        client_location = util.ip_to_location(ip=client_data.ip, name='ClientLocation')
 
     if server_data.host:
         hostname = server_data.host.split(':')[0]
@@ -139,7 +117,7 @@ def parse_speedtest_data(json_data=None):
             server_ip = None
     
     if server_ip:
-        server_location = ip_to_location(ip=server_ip, name='ServerLocation')
+        server_location = util.ip_to_location(ip=server_ip, name='ServerLocation')
     
     if not client_data or not server_data or not client_location or not server_location:
         return SpeedtestResults(

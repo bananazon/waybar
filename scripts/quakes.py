@@ -6,13 +6,24 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, NamedTuple
 from waybar import glyphs, http, util
 import json
+import logging
 import re
+import signal
+import sys
+import threading
 import time
 
 util.validate_requirements(required=['click'])
 import click
 
+CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LOADING = f'Checking USGS...'
+LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Checking USGS...'}
+LOGFILE = CACHE_DIR / 'waybar-earthquakes.log'
+
+update_event = threading.Event()
+sys.stdout.reconfigure(line_buffering=True)
 
 # class Quake(NamedTuple):
 #     alert        : Optional[str]   = None   # Alert level (e.g. “green”, “yellow”, “red”) in USGS’s alerting system
@@ -36,9 +47,27 @@ class QuakeData(NamedTuple):
     error   : Optional[str]  = None
     quakes  : Optional[list] = None
 
+def generate_tooltip(quakes):
+    tooltip = []
+    max_header_len = 0
+    for quake in quakes:
+        header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
+        max_header_len = len(header) if len(header) > max_header_len else max_header_len
+
+    for quake in quakes:
+        header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
+        tooltip.append(f'{header:{max_header_len}} {quake.place}')
+
+    return '\n'.join(tooltip)
+
 def miles_to_kilometers(miles: int=0) -> float:
     """ Convert miles to kilometers """
     return miles * 1.609344
+
+def format_time(timestamp: int=0) -> str:
+    ts = timestamp / 1000
+    dt = datetime.fromtimestamp(ts)
+    return dt.strftime("%Y-%m-%d %H:%M")
 
 # Start duplicated
 def dict_to_namedtuple(name: str=None, obj: dict=None):
@@ -120,46 +149,81 @@ def get_quake_data(location_data: namedtuple=None, radius: str=None, limit: int=
                 error   = f'A non-200 {response.status} was received',
             )
 
-def format_time(timestamp: int=0) -> str:
-    ts = timestamp / 1000
-    dt = datetime.fromtimestamp(ts)
-    return dt.strftime("%Y-%m-%d %H:%M")
+def worker(radius: str=None, limit: int=None, magnitude: float=None):
+    while True:
+        update_event.wait()
+        update_event.clear()
 
-def generate_tooltip(quakes):
-    tooltip = []
-    max_header_len = 0
-    for quake in quakes:
-        header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
-        max_header_len = len(header) if len(header) > max_header_len else max_header_len
-    
-    for quake in quakes:
-        header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
-        tooltip.append(f'{header:{max_header_len}} {quake.place}')
-    
-    return '\n'.join(tooltip)
+        logging.info('[worker] entering main loop')
+        if not util.waybar_is_running():
+            logging.info('[worker] waybar not running')
+            sys.exit(0)
+        else:
+            if util.network_is_reachable():
+                print(json.dumps(LOADING_DICT))
+
+                ip = find_public_ip()
+                if ip:
+                    location_data = ip_to_location(ip=ip, name='Location')
+                    if location_data:
+                        quake_data = get_quake_data(location_data=location_data, radius=radius, limit=limit, magnitude=magnitude)
+                        if quake_data.success:
+                            output = {
+                                'text': f'Earthquakes: {len(quake_data.quakes)}',
+                                'class': 'success',
+                                'tooltip': generate_tooltip(quake_data.quakes),
+                            }
+                        else:
+                            output = {
+                                'text': f'Earthquakes: {quake_data.error}',
+                                'class': 'error',
+                                'tooltip': 'Earthquakes error',
+                            }
+                    else:
+                        output = {
+                            'text'    : f'failed to geolocate',
+                            'class'   : 'error',
+                            'tooltip' : 'Earthquakes error',
+                        }
+                else:
+                    output = {
+                        'text'    : f'failed to determine IP',
+                        'class'   : 'error',
+                        'tooltip' : 'Earthquakes error',
+                    }
+            else:
+                output = {
+                    'text'    : f'the network is unreachable',
+                    'class'   : 'error',
+                    'tooltip' : 'Earthquakes error',
+                }
+
+        print(json.dumps(output))
+
+def refresh_handler(signum, frame):
+    logging.info('Received SIGHUP — triggering speedtest')
+    update_event.set()
+
+signal.signal(signal.SIGHUP, refresh_handler)
 
 @click.command(help='Show recent earthquakes near you', context_settings=CONTEXT_SETTINGS)
-@click.option('-r', '--radius', default='50m', help='The radius, e.g., 50m (or 50km)')
-@click.option('-l', '--limit', type=int, default=10, show_default=True, help='Maximum number of results to display')
+@click.option('-r', '--radius', default='100m', help='The radius, e.g., 50m (or 50km)')
+@click.option('-l', '--limit', type=int, default=20, show_default=True, help='Maximum number of results to display')
 @click.option('-m', '--magnitude', type=float, default=0.1, show_default=True, help='Minimum magnitude')
-def main(radius, limit, magnitude):
-    ip = find_public_ip()
-    if ip:
-        location_data = ip_to_location(ip=ip, name='Location')
+@click.option('-i', '--interval', type=int, default=900, help='The update interval (in seconds)')
+@click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
+def main(radius, limit, magnitude, interval, test):
+    if test:
+        quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
+        util.pprint(quake_data)
+        sys.exit(0)
     
-    quake_data = get_quake_data(location_data=location_data, radius=radius, limit=limit, magnitude=magnitude)
-    if quake_data.success:
-        output = {
-            'text': f'Earthquakes: {len(quake_data.quakes)}',
-            'class': 'success',
-            'tooltip': generate_tooltip(quake_data.quakes),
-        }
-    else:
-        output = {
-            'text': f'Earthquakes: {quake_data.error}',
-            'class': 'error',
-            'tooltip': 'Earthquakes; Error',
-        }       
+    threading.Thread(target=worker, args=(radius, limit, magnitude,), daemon=True).start()
+    update_event.set()
+
+    while True:
+        time.sleep(interval)
+        update_event.set()
 
     print(json.dumps(output))
 

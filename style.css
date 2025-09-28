@@ -50,16 +50,8 @@ tooltip label {
     padding: 4px 6px; /* top right bottom left */
 }
 
-/* Display the quakes icon to the left of the text */
-#custom-quakes {
-    background-image: url("/home/gdanko/.config/waybar/images/quake.png");
-    background-position: left center;
-    background-repeat: no-repeat;
-    background-size: 16px;
-    padding-left: 20px;
-}
-
 /* Common style for loading */
+#custom-quakes.loading,
 #custom-speedtest.loading,
 #custom-software-updates-apt.loading,
 #custom-software-updates-brew.loading,
@@ -91,4 +83,21 @@ tooltip label {
 #custom-weather-san-diego.error,
 #custom-wifi-status-wlo1.error {
     color: #ffb8b8;
+}
+
+/* Display the quakes icon to the left of the text */
+#custom-quakes {
+    background-image: url("/home/gdanko/.config/waybar/images/quake.png");
+    background-position: left center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-left: 20px;
+}
+
+#custom-quakes.loading {
+    background-image: url("/home/gdanko/.config/waybar/images/quake-loading.png");
+    background-position: left center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-left: 20px;
 }

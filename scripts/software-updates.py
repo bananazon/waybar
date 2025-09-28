@@ -483,9 +483,9 @@ def worker(package_type: str=None):
         update_event.wait()
         update_event.clear()
 
-        logging.info('[main] entering main loop')
+        logging.info('[worker] entering main loop')
         if not util.waybar_is_running():
-            logging.info('[main] waybar not running')
+            logging.info('[worker] waybar not running')
             sys.exit(0)
         else:
             if util.network_is_reachable():

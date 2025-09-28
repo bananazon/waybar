@@ -33,6 +33,7 @@ tooltip label {
 #custom-network-throughput-enp1s0,
 #custom-network-throughput-wlo1,
 #custom-plex-status,
+#custom-quakes,
 #custom-speedtest,
 #custom-swap-usage,
 #custom-software-updates-apt,
@@ -47,6 +48,15 @@ tooltip label {
     border-radius: 6px;
     color: #ffffff;
     padding: 4px 6px; /* top right bottom left */
+}
+
+/* Display the quakes icon to the left of the text */
+#custom-quakes {
+    background-image: url("/home/gdanko/.config/waybar/images/quake.png");
+    background-position: left center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-left: 20px;
 }
 
 /* Common style for loading */
@@ -69,6 +79,7 @@ tooltip label {
 #custom-network-throughput-enp1s0.error,
 #custom-network-throughput-wlo1.error,
 #custom-plex-status.error,
+#custom.quakes.error,
 #custom-speedtest.error,
 #custom-swap-usage.error,
 #custom-software-updates-apt.error,

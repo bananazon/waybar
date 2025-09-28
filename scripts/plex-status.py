@@ -8,24 +8,25 @@ import click
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-def find_public_ip():
-    url = 'https://ifconfig.io'
-    headers = {'User-Agent': 'curl/7.54.1'}
-    response = http.request(url=url, headers=headers)
-    if response.status == 200:
-        return response.body
-    return None
-
 def get_plex_status(ip: str=None, port: int=0, token: str=None):
-    url = f'http://localhost:{port}/identity'
-    response = http.request(url=url)
+    response = http.request(
+        url = f'http://localhost:{port}/identity',
+    )
     process = True if response.status == 200 else False
+
+    response = http.request(
+        url    = 'https://api.plex.tv/api/resources',
+        params = {
+            'includeHttps' : 1,
+            'X-Plex-Token' : token,
+        }
+    )
     available = True if response.status == 200 else False
 
     return process, available
 
 @click.command(help='Show the status of your Plex Media Server', context_settings=CONTEXT_SETTINGS)
-@click.option('-i', '--ip', required=False, default=find_public_ip(), show_default=True, help=f'The public IP of the Plex media server')
+@click.option('-i', '--ip', required=False, default=util.find_public_ip(), show_default=True, help=f'The public IP of the Plex media server')
 @click.option('-p', '--port', required=False, default=32400, show_default=True, help=f'The port of the Plex media server')
 @click.option('-t', '--token', required=True, help=f'Plex Server API token; stored in \"/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Preferences.xml\"')
 def main(ip, port, token):

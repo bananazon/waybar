@@ -1,3 +1,5 @@
+from . import glyphs, http
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint as pp
@@ -156,7 +158,20 @@ def convert_value(value: str):
         else:
             return int(value)
     except ValueError:
-        return value   
+        return value
+
+def dict_to_namedtuple(name: str=None, obj: dict=None):
+    """
+    Recursively convert a dict (possibly nested) into a namedtuple.
+    """
+    if isinstance(obj, dict):
+        fields = {k: dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
+        NT = namedtuple(name, fields.keys())
+        return NT(**fields)
+    elif isinstance(obj, list):
+        return [dict_to_namedtuple(name, i) for i in obj]
+    else:
+        return obj
 
 #==========================================================
 #  Time functions
@@ -375,3 +390,20 @@ def called_by():
         return os.path.splitext(os.path.basename(caller.filename))[0]
     except:
         return None
+
+def ip_to_location(ip: str=None, name: str=None):
+    url = f'https://ipinfo.io/{ip}/json'
+    response = http.request(url=url)
+    if response.status == 200:
+        return dict_to_namedtuple(name=name, obj=response.body)
+
+    return None
+
+def find_public_ip():
+    url = 'https://ifconfig.io'
+    headers = {'User-Agent': 'curl/7.54.1'}
+    response = http.request(url=url, headers=headers)
+    if response.status == 200:
+        return response.body
+
+    return None

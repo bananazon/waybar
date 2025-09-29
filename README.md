@@ -46,22 +46,23 @@ This module shows CPU information with four available output formats that can be
 AMD Ryzen 7 5700U with Radeon Graphics
 Physical cores: 8, Threads/core: 2, Logical cores: 16
 Frequency: 411.66 MHz > 4.37 GHz
-core 00 user 1.40%, sys 0.88%, idle 96.45%
-core 01 user 0.94%, sys 0.66%, idle 97.52%
-core 02 user 1.39%, sys 0.90%, idle 96.73%
-core 03 user 0.91%, sys 0.64%, idle 97.62%
-core 04 user 1.38%, sys 0.87%, idle 96.83%
-core 05 user 0.88%, sys 0.65%, idle 97.61%
-core 06 user 1.38%, sys 0.87%, idle 96.82%
-core 07 user 0.89%, sys 0.66%, idle 97.58%
-core 08 user 1.56%, sys 1.00%, idle 96.45%
-core 09 user 1.00%, sys 0.73%, idle 97.40%
-core 10 user 1.46%, sys 1.00%, idle 96.50%
-core 11 user 0.97%, sys 0.72%, idle 97.42%
-core 12 user 1.53%, sys 0.96%, idle 96.55%
-core 13 user 0.95%, sys 0.70%, idle 97.45%
-core 14 user 1.54%, sys 0.97%, idle 96.51%
-core 15 user 1.12%, sys 0.79%, idle 97.22%
+CPU Load:
+  core 00 user 1.40%, sys 0.88%, idle 96.45%
+  core 01 user 0.94%, sys 0.66%, idle 97.52%
+  core 02 user 1.39%, sys 0.90%, idle 96.73%
+  core 03 user 0.91%, sys 0.64%, idle 97.62%
+  core 04 user 1.38%, sys 0.87%, idle 96.83%
+  core 05 user 0.88%, sys 0.65%, idle 97.61%
+  core 06 user 1.38%, sys 0.87%, idle 96.82%
+  core 07 user 0.89%, sys 0.66%, idle 97.58%
+  core 08 user 1.56%, sys 1.00%, idle 96.45%
+  core 09 user 1.00%, sys 0.73%, idle 97.40%
+  core 10 user 1.46%, sys 1.00%, idle 96.50%
+  core 11 user 0.97%, sys 0.72%, idle 97.42%
+  core 12 user 1.53%, sys 0.96%, idle 96.55%
+  core 13 user 0.95%, sys 0.70%, idle 97.45%
+  core 14 user 1.54%, sys 0.97%, idle 96.51%
+  core 15 user 1.12%, sys 0.79%, idle 97.22%
 ```
 
 ### Filesystem Usage

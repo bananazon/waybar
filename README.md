@@ -228,7 +228,7 @@ This module displays the signal strength in dBm for the specified interface.
 
 #### Tooltip
 ```
-SSID              : <ssid> (xx:xx:xx:xx:xx:xx)
+Connected To      : <ssid> (xx:xx:xx:xx:xx:xx)
 Connection Time   : 15h 27m 11s
 Channel           : 48 (5240 MHz) 160 MHz width
 Authenticated     : Yes

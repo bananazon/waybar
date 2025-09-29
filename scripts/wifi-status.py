@@ -36,7 +36,7 @@ def generate_tooltip(wifi_status):
     tooltip_od = OrderedDict()
 
     if wifi_status.ssid_name and wifi_status.ssid_mac:
-        tooltip_od['SSID'] = f'{wifi_status.ssid_name} ({wifi_status.ssid_mac})'
+        tooltip_od['Connected To'] = f'{wifi_status.ssid_name} ({wifi_status.ssid_mac})'
 
     if wifi_status.connected_time:
         tooltip_od['Connection Time'] = util.get_duration(seconds=wifi_status.connected_time)

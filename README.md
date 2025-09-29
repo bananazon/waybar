@@ -74,12 +74,12 @@ This module shows filesystem usage information with three available output forma
 
 #### Tooltip
 ```
-Device         : /dev/mapper/luks-c7e5b1d9-cbce-4419-8982-0175169c92de
-Mountpoint     : /
-Type           : btrfs
-Kernel name    : dm-0
-Removable      : no
-Read-only      : no
+Device      : /dev/mapper/luks-c7e5b1d9-cbce-4419-8982-0175169c92de
+Mountpoint  : /
+Type        : btrfs
+Kernel name : dm-0
+Removable   : no
+Read-only   : no
 ```
 
 ### Memory Usage
@@ -221,12 +221,30 @@ Moon Phase  : Waxing Crescent
 ```
 
 ### Wi-Fi Status
-This module displays the signal strength in dBm for the specified interface and has two available output formats.
+This module displays the signal strength in dBm for the specified interface.
 
-#### Output Formats
-1. `wlo1 -48 dBm`
-2. `wlo1 channel 48 (5240 MHz) 160 MHz width`
-   
+#### Output Format
+`wlo1 -48 dBm`
+
+#### Tooltip
+```
+SSID              : <ssid> (xx:xx:xx:xx:xx:xx)
+Connection Time   : 15h 27m 11s
+Channel           : 48 (5240 MHz) 160 MHz width
+Authenticated     : Yes
+Authorized        : Yes
+Available Ciphers :
+   CCMP-128
+   CMAC
+   GCMP-128
+   GCMP-256
+   GMAC-128
+   GMAC-256
+   TKIP
+   WEP104
+   WEP40
+```
+
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
 

@@ -1,4 +1,4 @@
-from . import http
+from waybar import glyphs, http
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -221,9 +221,6 @@ def duration(seconds: int=0):
 def file_exists(filename: str='') -> bool:
     return True if (os.path.exists(filename) and os.path.isfile(filename)) else False
 
-def file_is_executable(filename: str='') -> bool:
-    return True if os.access(filename, os.X_OK) else False
-
 def get_config_directory() -> str:
     return os.path.join(
         Path.home(),
@@ -249,7 +246,7 @@ def get_cache_directory():
             os.mkdir(cache_dir, mode=0o700)
         except:
             error_exit(
-                icon = surrogatepass('\udb80\udc26'),
+                icon = glyphs.md_alert,
                 message = f'Couldn\'t create "{cache_dir}"'
             )
 
@@ -259,29 +256,6 @@ def get_cache_directory():
 #  Dependencies and validation
 #==========================================================
 
-def parse_config_file(filename: str='', required_keys: list=[]):
-    # Does the file exist?
-    if not file_exists(filename):
-        return {}, f'{filename} does not exist'
-
-    # Can we parse the JSON?
-    try:
-        with open(filename, 'r') as f:
-            config = json.load(f)
-    except Exception as e:
-        return {}, e
-
-    # Check for missing required keys
-    if len(required_keys) > 0:
-        missing = []
-        for required_key in required_keys:
-            if not required_key in config:
-                missing.append(required_key)
-        if len(missing) > 0:
-            return {}, f'required keys missing from config: {','.join(missing)}'
-
-    return config, ''
-
 def parse_json_string(input: str=''):
     try:
         json_data = json.loads(input)
@@ -289,13 +263,13 @@ def parse_json_string(input: str=''):
     except Exception as err:
         return None, err, 
 
-def is_binary_installed(binary_name: str) -> bool:
+def which(binary_name: str) -> bool:
     return shutil.which(binary_name)
 
 def missing_binaries(binaries: list=[]):
     missing = []
     for binary in binaries:
-        if not is_binary_installed(binary):
+        if not which(binary):
             missing.append(binary)
     return missing
 
@@ -307,7 +281,7 @@ def validate_requirements(required: list=[]):
             missing.append(module)
 
     if missing:
-        icon = surrogatepass('\udb80\udc26')
+        icon = glyphs.md_alert
         error_exit(
             icon    = icon,
             message = f'Please install via pip: {", ".join(missing)}',
@@ -368,8 +342,7 @@ def to_snake_case(s: str) -> str:
 #  Other
 #==========================================================
 
-def surrogatepass(code):
-    return code.encode('utf-16', 'surrogatepass').decode('utf-16')
+
 
 def get_valid_units() -> list:
     """

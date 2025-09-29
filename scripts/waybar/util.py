@@ -1,4 +1,4 @@
-from waybar import glyphs, http
+from . import glyphs, http
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -266,13 +266,6 @@ def parse_json_string(input: str=''):
 def which(binary_name: str) -> bool:
     return shutil.which(binary_name)
 
-def missing_binaries(binaries: list=[]):
-    missing = []
-    for binary in binaries:
-        if not which(binary):
-            missing.append(binary)
-    return missing
-
 def validate_requirements(required: list=[]):
     missing = []
 
@@ -341,8 +334,6 @@ def to_snake_case(s: str) -> str:
 #==========================================================
 #  Other
 #==========================================================
-
-
 
 def get_valid_units() -> list:
     """

@@ -36,7 +36,7 @@ There is a `configure` directory in the repository that has a means to generate 
 Each module has a `--help` option, so you can see available options.
 
 ### CPU Usage
-This module shows CPU information with four available output formats that can be toggled by clicking the item in the bar.
+This module shows CPU load.
 
 #### Output Format
 `user 0.99%, sys 0.46%, idle 98.43%`

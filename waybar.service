@@ -1,13 +1,29 @@
 [Unit]
-Description=Highly customizable Wayland bar for Sway and Wlroots based compositors
+Description=Waybar for KDE Plasma (Wayland)
 After=graphical-session.target
+PartOf=graphical-session.target
+Wants=graphical-session.target
+
+# Wait until the user environment is ready
+# (especially WAYLAND_DISPLAY and XDG_RUNTIME_DIR)
+# ConditionPathExists=/run/user/%U
+# ConditionEnvironment=WAYLAND_DISPLAY=wayland-0
 
 [Service]
-Type=forking
+Type=simple
 ExecStart=%h/.config/waybar/launch.py start
 ExecStop=%h/.config/waybar/launch.py stop
-ExecRestart=%h/.config/waybar/launch.py restart
+RemainAfterExit=yes
 Restart=on-failure
+RestartSec=2
+
+# Inherit all session environment (critical!)
+EnvironmentFile=-/etc/environment
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_SESSION_TYPE=wayland
+
+# Optional: set display for XWayland fallback
+Environment=DISPLAY=:0
 
 [Install]
 WantedBy=default.target

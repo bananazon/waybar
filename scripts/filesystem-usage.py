@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
 from waybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
@@ -27,6 +28,38 @@ class FilesystemInfo(NamedTuple):
     pct_used   : Optional[int]  = 0
     total      : Optional[int]  = 0
     used       : Optional[int]  = 0
+
+def generate_tooltip(disk_info):
+    tooltip = []
+    tooltip_od = OrderedDict()
+
+    if disk_info.filesystem:
+        tooltip_od['Filesystem'] = disk_info.filesystem
+
+    if disk_info.mountpoint:
+        tooltip_od['Mountpoint'] = disk_info.mountpoint
+
+    if disk_info.fstype:
+        tooltip_od['Type'] = disk_info.fstype
+
+    if disk_info.lsblk:
+        if disk_info.lsblk.get('kname'):
+            tooltip_od['Kernel Name'] = disk_info.lsblk.get('kname')
+
+        if disk_info.lsblk.get('rm')is not None:
+            tooltip_od['Removable'] = 'yes' if disk_info.lsblk.get('rm') else 'no'
+
+        if disk_info.lsblk.get('ro') is not None:
+            tooltip_od['Read-only'] = 'yes' if disk_info.lsblk.get('ro') else 'no'
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    return '\n'.join(tooltip)
 
 def parse_lsblk(filesystem: str=None):
     command = f'lsblk -O --json {filesystem}'
@@ -93,25 +126,6 @@ def get_disk_usage(mountpoint: str) -> list:
         )
 
     return filesystem_info
-
-def generate_tooltip(disk_info):
-    tooltip = [
-        f'Device         : {disk_info.filesystem}',
-        f'Mountpoint     : {disk_info.mountpoint}',
-        f'Type           : {disk_info.fstype}',
-        # f'Options        : {disk_info.fsopts}',
-    ]
-
-    lsblk = disk_info.lsblk
-    if lsblk:
-        if lsblk.get('kname') is not None:
-            tooltip.append(f'Kernel name    : {disk_info.lsblk.get("kname")}')
-        if lsblk.get('rm') is not None:
-            tooltip.append(f'Removable      : {"yes" if disk_info.lsblk.get("rm") else "no"}')
-        if lsblk.get('ro') is not None:
-            tooltip.append(f'Read-only      : {"yes" if disk_info.lsblk.get("ro") else "no"}')
-        
-    return '\n'.join(tooltip)
 
 @click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)
 @click.option('-m', '--mountpoint', required=True, help=f'The mountpoint to check')

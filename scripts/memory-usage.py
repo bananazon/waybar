@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, NamedTuple
 from waybar import glyphs, state, util
@@ -47,6 +48,49 @@ class MemoryInfo(NamedTuple):
     pct_used    : Optional[int]  = 0
     pct_free    : Optional[int]  = 0
     memory_type : Optional[List[MemoryType]] = None
+
+def generate_tooltip(memory_info):
+    unit = 'G'
+    tooltip = []
+    tooltip_od = OrderedDict()
+
+    if memory_info.total:
+        tooltip_od['Total'] = util.byte_converter(number=memory_info.total, unit=unit)
+
+    if memory_info.used:
+        tooltip_od['Used'] = util.byte_converter(number=memory_info.used, unit=unit)
+
+    if memory_info.free:
+        tooltip_od['Free'] = util.byte_converter(number=memory_info.free, unit=unit)
+
+    if memory_info.shared:
+        tooltip_od['Shared'] = util.byte_converter(number=memory_info.shared, unit=unit)
+
+    if memory_info.buffers:
+        tooltip_od['Buffers'] = util.byte_converter(number=memory_info.buffers, unit=unit)
+
+    if memory_info.cache:
+        tooltip_od['Cache'] = util.byte_converter(number=memory_info.total, unit=unit)
+
+    if memory_info.total:
+        tooltip_od['Availale'] = util.byte_converter(number=memory_info.cache, unit=unit)
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    if len(tooltip) > 0:
+        tooltip.append('')
+
+    if memory_info.memory_type.info and type(memory_info.memory_type.info) == list:
+        for idx, dimm in enumerate(memory_info.memory_type.info):
+            if dimm.size and dimm.type and dimm.form_factor and dimm.speed:
+                tooltip.append(f'DIMM {idx:02d} - {util.byte_converter(number=dimm.size, unit='G')} {dimm.type} {dimm.form_factor} @ {dimm.speed}')
+
+    return '\n'.join(tooltip)
 
 def get_memory_type():
     command = 'sudo dmidecode -t memory'
@@ -191,25 +235,6 @@ def get_memory_usage():
         )
 
     return mem_info
-
-def generate_tooltip(memory_info):
-    unit = 'G'
-
-    tooltip = [
-        f'Total     = {util.byte_converter(number=memory_info.total, unit=unit)}',
-        f'Used      = {util.byte_converter(number=memory_info.used, unit=unit)}',
-        f'Free      = {util.byte_converter(number=memory_info.free, unit=unit)}',
-        f'Shared    = {util.byte_converter(number=memory_info.shared, unit=unit)}',
-        f'Buffers   = {util.byte_converter(number=memory_info.buffers, unit=unit)}',
-        f'Cache     = {util.byte_converter(number=memory_info.cache, unit=unit)}',
-        f'Available = {util.byte_converter(number=memory_info.available, unit=unit)}',
-        '',
-    ]
-
-    for idx, dimm in enumerate(memory_info.memory_type.info):
-        tooltip.append(f'DIMM {idx:02d} - {util.byte_converter(number=dimm.size, unit='G')} {dimm.type} {dimm.form_factor} @ {dimm.speed}')
-
-    return '\n'.join(tooltip)
 
 @click.command(help='Get memory usage from free(1) and dmidecode(8)', context_settings=CONTEXT_SETTINGS)
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')

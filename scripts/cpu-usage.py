@@ -27,6 +27,31 @@ class CpuInfo(NamedTuple):
     freq_min       : Optional[str]   = 0
     model          : Optional[str]   = None
 
+def generate_tooltip(cpu_info):
+    global CPU_INFO
+    tooltip = []
+
+    if cpu_info.model:
+        tooltip.append(cpu_info.model)
+
+    if cpu_info.cores_physical and cpu_info.cores_logical:
+        pc = cpu_info.cores_physical
+        lc = cpu_info.cores_logical
+        tpc = int(lc / pc)
+        tooltip.append(f'Physical cores: {pc}, Threads/core: {tpc}, Logical cores: {lc}')
+
+    if cpu_info.freq_min and cpu_info.freq_max:
+        tooltip.append(f'Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}')
+
+    if cpu_info.cpu_load and type(cpu_info.cpu_load) == list:
+        for core in cpu_info.cpu_load:
+            if core.cpu != 'all':
+                tooltip.append(
+                    f'core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
+                )
+
+    return '\n'.join(tooltip)
+
 def get_icon():
     if platform.machine() == 'x86':
         return glyphs.md_cpu_32_bit
@@ -116,28 +141,6 @@ def get_cpu_info() -> CpuInfo:
         )
 
     return cpu_info
-
-def generate_tooltip(cpu_info):
-    global CPU_INFO
-
-    pc = cpu_info.cores_physical
-    lc = cpu_info.cores_logical
-    tpc = int(lc / pc)
-
-    tooltip = [
-        cpu_info.model,
-        f'Physical cores: {pc}, Threads/core: {tpc}, Logical cores: {lc}',
-        f'Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}'
-    ]
-
-    for core in cpu_info.cpu_load:
-        if core.cpu != 'all':
-            tooltip.append(
-                f'core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
-
-            )
-
-    return '\n'.join(tooltip)
 
 @click.command(help='Get CPU usage from using mpstat(1) and /proc/cpuinfo', context_settings=CONTEXT_SETTINGS)
 def main():

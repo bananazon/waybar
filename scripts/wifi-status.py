@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, NamedTuple
 from waybar import glyphs, state, util
@@ -16,14 +17,64 @@ CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 class WifiStatus(NamedTuple):
-    success   : Optional[bool] = False
-    error     : Optional[str]  = None
-    bandwidth : Optional[int]  = 0
-    channel   : Optional[str]  = None
-    frequency : Optional[int]  = 0
-    interface : Optional[str]  = None
-    signal    : Optional[int]  = 0
-    ssid      : Optional[str]  = None
+    success        : Optional[bool] = False
+    error          : Optional[str]  = None
+    authenticated  : Optional[bool] = False
+    authorized     : Optional[bool] = False
+    bandwidth      : Optional[int]  = 0
+    channel        : Optional[str]  = None
+    ciphers        : Optional[list] = None
+    connected_time : Optional[int]  = 0
+    frequency      : Optional[int]  = 0
+    interface      : Optional[str]  = None
+    signal         : Optional[int]  = 0
+    ssid_mac       : Optional[str]  = None
+    ssid_name      : Optional[str]  = None
+
+def generate_tooltip(wifi_status):
+    tooltip = []
+    tooltip_od = OrderedDict()
+
+    if wifi_status.ssid_name and wifi_status.ssid_mac:
+        tooltip_od['SSID'] = f'{wifi_status.ssid_name} ({wifi_status.ssid_mac})'
+
+    if wifi_status.connected_time:
+        tooltip_od['Connection Time'] = util.get_duration(seconds=wifi_status.connected_time)
+
+    if wifi_status.channel:
+        channel_info = []
+        channel_info.append(f'{wifi_status.channel}')
+
+        if wifi_status.frequency:
+            channel_info.append(f'({wifi_status.frequency} MHz)')
+
+        if wifi_status.bandwidth:
+            channel_info.append(f'{wifi_status.bandwidth} MHz width')
+
+        tooltip_od['Channel'] = ' '.join(channel_info)
+
+    if wifi_status.authenticated:
+        tooltip_od['Authenticated'] = 'Yes' if wifi_status.authorized else 'No'
+
+    if wifi_status.authorized:
+        tooltip_od['Authorized'] = 'Yes' if wifi_status.authorized else 'No'
+
+    if wifi_status.ciphers:
+        tooltip_od['Available Ciphers'] = wifi_status.ciphers
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        if key == 'Available Ciphers':
+            tooltip.append(f'{key:{max_key_length}} :')
+            for cipher in wifi_status.ciphers:
+                tooltip.append(f'   {cipher[0]}')
+        else:
+            tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    return '\n'.join(tooltip)
 
 def get_status_icon(signal):
     """
@@ -49,18 +100,10 @@ def get_status_icon(signal):
     else:  # signal_dbm <= -90
         return glyphs.md_wifi_strength_alert_outline
 
-def get_ssid():
-    command = f'iwgetid -r'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        return stdout
-    
-    return None
-
 def get_wifi_status(interface: str=None):
+    wiphy = -1
     command = f'iw dev {interface} link'
     rc, stdout, stderr = util.run_piped_command(command)
-    
     if rc == 0:
         if stdout != '':
             match = re.search(r'signal:\s+(-\d+)', stdout, re.MULTILINE)
@@ -92,7 +135,11 @@ def get_wifi_status(interface: str=None):
             
             match = re.search(r'ssid\s+(.*)$', stdout, re.MULTILINE)
             if match:
-                ssid = match.group(1)
+                ssid_name = match.group(1)
+            
+            match = re.search(r'wiphy\s+([\d]+)', stdout, re.MULTILINE)
+            if match:
+                wiphy = int(match.group(1))
         else:
             wifi_status = WifiStatus(
                 success   = False,
@@ -106,29 +153,56 @@ def get_wifi_status(interface: str=None):
             error     = stderr or f'failed to execute "{command}"',
         )
 
+    command = f'iw dev {interface} station dump'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0:
+        if stdout != '':
+            match = re.search(r'Station\s+([a-z0-9:]+)\s+', stdout, re.MULTILINE)
+            if match:
+                ssid_mac = match.group(1)
+
+            match = re.search(r'\s+connected time:\s+([\d]+)\s+seconds', stdout, re.MULTILINE)
+            if match:
+                connected_time = match.group(1)
+
+            match = re.search(r'\s+authenticated:\s+(yes|no)', stdout, re.MULTILINE)
+            if match:
+                authenticated = True if match.group(1) == 'yes' else False
+
+            match = re.search(r'\s+authorized:\s+(yes|no)', stdout, re.MULTILINE)
+            if match:
+                authorized = True if match.group(1) == 'yes' else False
+    
+    if wiphy >= 0:
+        ciphers = None
+        command = f'iw phy phy{wiphy} info'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            block_match = re.search(r'Supported Ciphers:\s*((?:\s+\*.*\n)+)', stdout)
+            if block_match:
+                block = block_match.group(1)
+                ciphers = re.findall(r"\*\s+([A-Z0-9-]+)\s+\(([^)]+)\)", block)
+
     wifi_status = WifiStatus(
-        success   = True,
-        bandwidth = channel_bandwidth,
-        channel   = channel,
-        frequency = frequency,
-        interface = interface,
-        signal    = signal,
-        ssid      = ssid,
+        success        = True,
+        authenticated  = authenticated,
+        authorized     = authorized,
+        bandwidth      = channel_bandwidth,
+        channel        = channel,
+        ciphers        = sorted(ciphers),
+        connected_time = int(connected_time),
+        frequency      = frequency,
+        interface      = interface,
+        signal         = signal,
+        ssid_mac       = ssid_mac,
+        ssid_name      = ssid_name,
     )
 
     return wifi_status
 
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    """
-    WiFi Status script
-    """
-    pass
-
-@cli.command(name='run', help='Get WiFi status using iw(8)')
-@click.option('--interface', required=True, help='The interface to check')
-@click.option('--toggle', is_flag=True, help='Toggle the output format')
-def run(interface, toggle):
+@click.command(help='Get WiFi status using iw(8)')
+@click.option('-i', '--interface', required=True, help='The interface to check')
+def main(interface):
     if not util.interface_exists(interface=interface):
         print(json.dumps({
             'text'  : f'{glyphs.md_alert} {interface} does not exist',
@@ -136,28 +210,14 @@ def run(interface, toggle):
         }))
     else:
         if util.interface_is_connected(interface=interface):
-            mode_count = 2
-            statefile = CACHE_DIR / f'waybar-{util.called_by() or "wifi-status"}-{interface}-state'
-
-            if toggle:
-                mode = state.next_state(statefile=statefile, mode_count=mode_count)
-            else:
-                mode = state.current_state(statefile=statefile)
-
             wifi_status = get_wifi_status(interface=interface)
-
             if wifi_status.success:
                 wifi_icon = get_status_icon(wifi_status.signal)
-                if mode == 0:
-                    output = {
-                        'text'  : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} {wifi_status.signal} dBm',
-                        'class' : 'success',
-                    }
-                elif mode == 1:
-                    output = {
-                        'text'  : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} channel {wifi_status.channel} ({wifi_status.frequency} MHz) {wifi_status.bandwidth} MHz width',
-                        'class' : 'success',
-                    }
+                output = {
+                    'text'    : f'{wifi_icon}{glyphs.icon_spacer}{wifi_status.interface} {wifi_status.signal} dBm',
+                    'class'   : 'success',
+                    'tooltip' : generate_tooltip(wifi_status)
+                }
             else:
                 wifi_icon = glyphs.md_wifi_strength_alert_outline
                 output = {
@@ -174,4 +234,4 @@ def run(interface, toggle):
         print(json.dumps(output))
 
 if __name__ == '__main__':
-    cli()
+    main()

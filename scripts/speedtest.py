@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, NamedTuple
 from waybar import glyphs, http, util
@@ -67,6 +68,77 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+def generate_tooltip(data):
+    tooltip = []
+
+    tooltip_od = OrderedDict()
+    if data.bytes_tx and data.bytes_rx:
+        tooltip_od['Bytes sent'] = util.byte_converter(number=data.bytes_tx, unit='auto')
+        tooltip_od['Bytes receives'] = util.byte_converter(number=data.bytes_rx, unit='auto')
+
+    if data.speed_tx and data.speed_rx:
+        tooltip_od['Upload speed'] = util.network_speed(number=data.speed_tx)
+        tooltip_od['Download speed'] = util.network_speed(number=data.speed_rx)
+
+    if data.ping:
+        tooltip_od['Ping'] = f'{data.ping} ms'
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    if len(tooltip) > 0:
+        tooltip.append('')
+
+    if data.server:
+        tooltip.append('Server')
+        tooltip_od = OrderedDict()
+        if data.server.ip:
+            tooltip_od['IP'] = data.server.ip
+
+        if data.server.city and data.server.region and data.server.country:
+            tooltip_od['Location'] = f'{data.server.city}, {data.server.region}, {data.server.country}'
+
+        if data.server.hostname:
+            tooltip_od['Hostname'] = data.server.hostname.split(':')[0]
+
+        if data.server.sponsor:
+            tooltip_od['Sponsor'] = data.server.sponsor
+
+        max_key_length = 0
+        for key in tooltip_od.keys():
+            max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+        for key, value in tooltip_od.items():
+            tooltip.append(f'{key:{max_key_length}} : {value}')
+
+        if len(tooltip) > 0:
+            tooltip.append('')
+
+    if data.client:
+        tooltip.append('Client')
+        tooltip_od = OrderedDict()
+        if data.client.ip:
+            tooltip_od['IP'] = data.client.ip
+
+        if data.client.city and data.client.region and data.client.country:
+            tooltip_od['Location'] = f'{data.client.city}, {data.client.region}, {data.client.country}'
+
+        if data.client.isp:
+            tooltip_od['ISP'] = data.client.isp
+
+        max_key_length = 0
+        for key in tooltip_od.keys():
+            max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+        for key, value in tooltip_od.items():
+            tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    return '\n'.join(tooltip)
+
 def get_icon(speed: int = 0) -> str:
     if speed < 100_000_000:
         return glyphs.md_speedometer_slow
@@ -74,28 +146,6 @@ def get_icon(speed: int = 0) -> str:
         return glyphs.md_speedometer_medium
     else:
         return glyphs.md_speedometer_fast
-
-def generate_tooltip(data):
-    tooltip = [
-        f'Bytes sent     : {util.byte_converter(number=data.bytes_tx, unit='auto')}',
-        f'Bytes received : {util.byte_converter(number=data.bytes_rx, unit='auto')}',
-        f'Upload speed   : {util.network_speed(number=data.speed_tx)}',
-        f'Download speed : {util.network_speed(number=data.speed_rx)}',
-        f'Ping           : {data.ping} ms',
-        '',
-        'Server',
-        f'IP       : {data.server.ip}',
-        f'Location : {data.server.city}, {data.server.region}, {data.server.country}',
-        f'Hostname : {data.server.hostname.split(':')[0]}',
-        f'Sponsor  : {data.server.sponsor}',
-        '',
-        'Client',
-        f'IP       : {data.client.ip}',
-        f'Location : {data.client.city}, {data.client.region}, {data.client.country}',
-        f'ISP      : {data.client.isp}',
-    ]
-
-    return '\n'.join(tooltip)
 
 def parse_speedtest_data(json_data=None):
     speedtest_data = util.dict_to_namedtuple( name='SpeedtestData', obj=json_data)
@@ -221,7 +271,6 @@ def worker():
                 speedtest_data = run_speedtest()
 
                 if speedtest_data.success:
-                    tooltip = generate_tooltip(speedtest_data)
                     parts = []
                     if speedtest_data.speed_rx:
                         parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
@@ -232,7 +281,7 @@ def worker():
                         output = {
                             'text'    : f'{speedtest_data.icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}',
                             'class'   : 'success',
-                            'tooltip' : tooltip,
+                            'tooltip' : generate_tooltip(speedtest_data),
                         }
                     elif len(parts) == 0:
                         output = {
@@ -268,6 +317,7 @@ def main(interval, test):
     if test:
         speedtest_data = run_speedtest()
         util.pprint(speedtest_data)
+        print(generate_tooltip(speedtest_data))
         sys.exit(0)
 
     logging.info('[main] entering')

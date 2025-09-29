@@ -214,6 +214,13 @@ def duration(seconds: int=0):
 
     return days, hours, minutes, secs
 
+def get_duration(seconds: int=0) -> str:
+    d, h, m, s = duration(seconds)
+    if d > 0:
+        return f'{d:02d}d {h:02d}h {m:02d}m {s:02d}s'
+    else:
+        return f'{h:02d}h {m:02d}m {s:02d}s'
+
 #==========================================================
 #  File and directory
 #==========================================================

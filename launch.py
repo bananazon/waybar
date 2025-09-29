@@ -32,13 +32,6 @@ class RightPadFormatter(logging.Formatter):
 #----------------------------
 # Common helpers
 #----------------------------
-def get_duration(created: int=0) -> str:
-    d, h, m, s = util.duration(int(time.time()) - created)
-    if d > 0:
-        return f'[{d:02d}d {h:02d}h {m:02d}m {s:02d}s]'
-    else:
-        return f'[{h:02d}h {m:02d}m {s:02d}s]'
-
 def get_background_scripts(waybar_pid: int=0):
     processes = []
     for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'ppid', 'username']):
@@ -261,12 +254,13 @@ def status(debug):
 
         longest_duration = 0
         longest_pid = 0
+        now = int(time.time())
         for process in modules:
-            process['duration'] = get_duration(created=process['created'])
+            process['duration'] = util.get_duration(seconds=(now - process['created']))
             longest_duration = len(process['duration']) if len(process['duration']) > longest_duration else longest_duration
 
         for process in modules:
-            print(f'{process["pid"]:{longest_pid}} {process["duration"]:<{longest_duration}} {process["cmd_short"]}')
+            print(f'{process["pid"]:{longest_pid}} [{process["duration"]:<{longest_duration}}] {process["cmd_short"]}')
     else:
         print('waybar isn\'t running')
 

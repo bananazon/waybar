@@ -44,10 +44,11 @@ def generate_tooltip(cpu_info):
         tooltip.append(f'Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}')
 
     if cpu_info.cpu_load and type(cpu_info.cpu_load) == list:
+        tooltip.append('CPU Load:')
         for core in cpu_info.cpu_load:
             if core.cpu != 'all':
                 tooltip.append(
-                    f'core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
+                    f'  core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
                 )
 
     return '\n'.join(tooltip)

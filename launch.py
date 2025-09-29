@@ -4,6 +4,7 @@ from pathlib import Path, PurePosixPath
 from scripts.waybar import util
 import click
 import getpass
+import glob
 import logging
 import os
 import psutil
@@ -95,7 +96,7 @@ def configure_logging(debug: bool=False):
 def setup(debug: bool=False):
     """ Run some quick checks  """
     for binary in ['waybar']:
-        if not util.is_binary_installed(binary):
+        if not util.which(binary):
             logging.error(f'{binary} is not installed')
             sys.exit(1)
 
@@ -104,6 +105,52 @@ def setup(debug: bool=False):
 #----------------------------
 # Start functions
 #----------------------------
+def setup_gui_env():
+    env = os.environ.copy()
+
+    uid = os.getuid()
+    xdg_runtime = f'/run/user/{uid}'
+
+    # Always set XDG_RUNTIME_DIR (critical for Wayland)
+    env['XDG_RUNTIME_DIR'] = xdg_runtime
+
+    # Detect session type
+    display_server = os.environ.get('XDG_SESSION_TYPE', '').lower()
+
+    if display_server == 'wayland':
+        # Prefer existing WAYLAND_DISPLAY, fallback to wayland-0
+        wayland_display = os.environ.get('WAYLAND_DISPLAY')
+        if not wayland_display:
+            wayland_display = 'wayland-0'
+        env['WAYLAND_DISPLAY'] = wayland_display
+
+        # DISPLAY may still be needed for XWayland apps (like some GTK apps)
+        if 'DISPLAY' not in env:
+            env['DISPLAY'] = ':0'
+
+    elif display_server == 'x11':
+        # X11 requires DISPLAY and XAUTHORITY
+        if 'DISPLAY' not in env:
+            env['DISPLAY'] = ':0'
+
+        # Try to set XAUTHORITY
+        if 'XAUTHORITY' in env and os.path.exists(env['XAUTHORITY']):
+            pass  # Already set and valid
+        else:
+            # Fallback: ~/.Xauthority
+            xauth_path = os.path.expanduser('~/.Xauthority')
+            if os.path.exists(xauth_path):
+                env['XAUTHORITY'] = xauth_path
+
+    # Ensure DBUS_SESSION_BUS_ADDRESS is set (critical for many GUI apps)
+    if 'DBUS_SESSION_BUS_ADDRESS' not in env:
+        # Try to get it from the runtime environment
+        dbus_address_path = os.path.join(xdg_runtime, 'bus')
+        if os.path.exists(dbus_address_path):
+            env['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path={dbus_address_path}'
+
+    return env
+
 def start_waybar():
     """ A simple wrapper for starting waybar """
     proc = waybar_is_running()
@@ -111,6 +158,8 @@ def start_waybar():
         print(f'waybar is running with PID {proc.get("pid")}; please use stop or restart')
 
     print('starting waybar')
+    # Get the env before starting so we can start via systemctl
+    env = setup_gui_env()
 
     # Here we'll simulate what's done in launch.sh
     # Step 1: Append '---' to the log file
@@ -131,11 +180,13 @@ def start_waybar():
     ]
     try:
         with open(LOGFILE, 'a') as f:
-            proc = subprocess.Popen(command,
+            proc = subprocess.Popen(
+                command,
                 stdout     = f,
                 stderr     = subprocess.STDOUT,
                 preexec_fn = os.setpgrp,  # Detach like 'disown'
                 shell      = True,
+                env        = env,
             )
             print(f'successfully launched waybar with PID {proc.pid}')
             return proc.pid

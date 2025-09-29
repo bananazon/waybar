@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, NamedTuple
 from waybar import glyphs, http, util
@@ -69,23 +70,56 @@ logging.basicConfig(
 )
 
 def generate_tooltip(weather_data):
-    tooltip = [
-        f'Location    : {weather_data.location_full}',
-        f'Condition   : {weather_data.condition}',
-        f'Feels like  : {weather_data.feels_like}',
-        f'High / Low  : {weather_data.todays_high} / {weather_data.todays_low}',
-        f'Wind        : {weather_data.wind_speed} @ {weather_data.wind_degree}',
-        f'Cloud Cover : {weather_data.cloud_cover}%',
-        f'Humidity    : {weather_data.humidity}',
-        f'Dew Point   : {weather_data.dewpoint}',
-        f'UV Index    : {weather_data.uv} of 11',
-        f'Visibility  : {weather_data.visibility}',
-        f'Sunrise     : {util.to_24hour_time(weather_data.sunrise_unix)}',
-        f'Sunset      : {util.to_24hour_time(weather_data.sunset_unix)}',
-        f'Moonrise    : {util.to_24hour_time(weather_data.moonrise_unix)}',
-        f'Moonset     : {util.to_24hour_time(weather_data.moonset_unix)}',
-        f'Moon Phase  : {weather_data.moon_phase}',
-    ]
+    tooltip = []
+    tooltip_od = OrderedDict()
+
+    if weather_data.location_full:
+        tooltip_od['Location'] = weather_data.location_full
+
+    if weather_data.condition:
+        tooltip_od['Condition'] = weather_data.condition
+
+    if weather_data.feels_like:
+        tooltip_od['Feels Like'] = weather_data.feels_like
+
+    if weather_data.todays_high and weather_data.todays_low:
+        tooltip_od['High / Low'] = f'{weather_data.todays_high} / {weather_data.todays_low}'
+
+    if weather_data.wind_speed and weather_data.wind_degree:
+        tooltip_od['Wind'] = f'{weather_data.wind_speed} @ {weather_data.wind_degree}'
+
+    if weather_data.cloud_cover:
+        tooltip_od['Cloud Cover'] = weather_data.cloud_cover
+
+    if weather_data.humidity:
+        tooltip_od['Humidity'] = weather_data.humidity
+
+    if weather_data.dewpoint:
+        tooltip_od['Dew Point'] = weather_data.dewpoint
+
+    if weather_data.uv:
+        tooltip_od['UV Index'] = f'{weather_data.uv} of 11'
+
+    if weather_data.visibility:
+        tooltip_od['Visibility'] = weather_data.visibility
+
+    if weather_data.sunrise_unix and weather_data.sunset_unix:
+        tooltip_od['Sunrise'] = util.to_24hour_time(weather_data.sunrise_unix)
+        tooltip_od['Sunset'] = util.to_24hour_time(weather_data.sunset_unix)
+
+    if weather_data.moonrise_unix and weather_data.moonset_unix:
+        tooltip_od['Moonrise'] = util.to_24hour_time(weather_data.moonrise_unix)
+        tooltip_od['Moonset'] = util.to_24hour_time(weather_data.moonset_unix)
+
+    if weather_data.moon_phase:
+        tooltip_od['Moon Phase'] = weather_data.moon_phase
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f'{key:{max_key_length}} : {value}')
 
     return '\n'.join(tooltip)
 

@@ -15,7 +15,7 @@ static_modules:
     enabled: true
     interval: 5
     unit: auto
-  - name: plex-status # I'm broken
+  - name: plex-status
     enabled: false
     interval: 60
     ip: "{key:plex_ip}"
@@ -49,7 +49,7 @@ network_interfaces:
   - name: enp1s0
     enabled: false
     type: network
-    interval: 2
+    interval: 5
 
 software_updates:
   - package_type: brew

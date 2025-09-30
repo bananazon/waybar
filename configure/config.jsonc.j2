@@ -41,7 +41,8 @@
     "custom/network-throughput-{{ iface.name }}": {
         "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
         "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
-        "return-type": "json"
+        "return-type": "json",
+        "on-click": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}"
     },
     {% endif %}
     {% endfor %}

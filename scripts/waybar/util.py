@@ -378,3 +378,22 @@ def find_public_ip():
         return response.body
 
     return None
+
+def find_private_ip_and_mac(interface: str=None):
+    ip = None
+    mac = None
+    command = f'ip -4 addr show dev {interface}'
+    rc, stdout, _ = run_piped_command(command)
+    if rc == 0 and stdout != '':
+        match = re.search(r'inet\s+(\d+\.\d+\.\d+\.\d+)', stdout)
+        if match:
+            ip = match.group(1)
+
+    command = f'ip -4 link show dev {interface}'
+    rc, stdout, _ = run_piped_command(command)
+    if rc == 0 and stdout != '':
+        match = re.search(r'ether\s+([a-z0-9:]+)', stdout)
+        if match:
+            mac = match.group(1)
+
+    return ip, mac

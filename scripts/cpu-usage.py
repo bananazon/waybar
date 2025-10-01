@@ -19,6 +19,7 @@ CPU_INFO : dict | None=None
 class CpuInfo(NamedTuple):
     success        : Optional[bool]  = False
     error          : Optional[str]   = None
+    caches         : Optional[list]  = None
     cores_logical  : Optional[int]   = 0
     cores_physical : Optional[int]   = 0
     cpu_load       : Optional[dict]  = None
@@ -50,6 +51,16 @@ def generate_tooltip(cpu_info):
                 tooltip.append(
                     f'  core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
                 )
+    
+    if cpu_info.caches and type(cpu_info.caches) == list and len(cpu_info.caches) > 0:
+        tooltip.append('Caches:')
+        max_key_length = 0
+        for cache in cpu_info.caches:
+            max_key_length = len(cache.installed_size) if len(cache.installed_size) > max_key_length else max_key_length
+        
+        for cache in cpu_info.caches:
+            if cache.socket_designation and cache.installed_size and cache.speed:
+                tooltip.append(f'  {cache.socket_designation} - {cache.installed_size:{max_key_length}} @ {cache.speed}')
 
     return '\n'.join(tooltip)
 
@@ -60,6 +71,21 @@ def get_icon():
         return glyphs.md_cpu_64_bit
     else:
         return glyphs.oct_cpu
+
+
+def get_cache_info():
+    command = 'sudo dmidecode -t cache | jc --dmidecode'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        json_data, err = util.parse_json_string(stdout)
+        if not err:
+            caches = []
+            for cache in json_data:
+                caches.append(util.dict_to_namedtuple(name='CpuCache', obj=cache['values']))
+
+            return caches if len(caches) > 0 else None
+
+    return None
 
 def get_cpu_freq():
     rc, stdout, _ = util.run_piped_command('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq')
@@ -80,6 +106,8 @@ def parse_proc_cpuinfo(path='/proc/cpuinfo'):
     global CPU_INFO
 
     text = Path(path).read_text()
+    # to-do
+    # cat /proc/cpuinfo | jc --pretty /proc/cpuinfo
     blocks = re.split(r'\n\s*\n', text.strip())
 
     def parse_block(block: str):
@@ -112,6 +140,7 @@ def get_cpu_info() -> CpuInfo:
 
                     cpu_info = CpuInfo(
                         success        = True,
+                        caches         = get_cache_info(),
                         cores_logical  = len(CPU_INFO) or -1,
                         cores_physical = CPU_INFO[0].get('cpu_cores') or -1,
                         cpu_load       = cpu_load,

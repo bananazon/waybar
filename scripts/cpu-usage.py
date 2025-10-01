@@ -8,13 +8,13 @@ import platform
 import re
 import sys
 
-util.validate_requirements(required=['click'])
+util.validate_requirements(modules=['click'])
 import click
 
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-CPU_INFO : dict | None=None
+CPU_INFO : list | None=None
 
 class CpuInfo(NamedTuple):
     success        : Optional[bool]  = False
@@ -104,21 +104,16 @@ def parse_proc_cpuinfo(path='/proc/cpuinfo'):
     Read /proc/cpuinfo and return a list of CPU blocks as dicts
     """
     global CPU_INFO
+    command = f'jc --pretty {path}'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        json_data, err = util.parse_json_string(stdout)
+        cores = []
+        for core in json_data:
+            core_tuple = util.dict_to_namedtuple(name='Core', obj=core)
+            cores.append(core_tuple)
 
-    text = Path(path).read_text()
-    # to-do
-    # cat /proc/cpuinfo | jc --pretty /proc/cpuinfo
-    blocks = re.split(r'\n\s*\n', text.strip())
-
-    def parse_block(block: str):
-        data = {}
-        for line in block.splitlines():
-            if ":" in line:
-                key, value = line.split(":", 1)
-                data[util.to_snake_case(key.strip())] = util.convert_value(value)
-        return data
-
-    CPU_INFO = [parse_block(block) for block in blocks]
+    CPU_INFO = cores
 
 def get_cpu_info() -> CpuInfo:
     """
@@ -142,12 +137,12 @@ def get_cpu_info() -> CpuInfo:
                         success        = True,
                         caches         = get_cache_info(),
                         cores_logical  = len(CPU_INFO) or -1,
-                        cores_physical = CPU_INFO[0].get('cpu_cores') or -1,
+                        cores_physical = CPU_INFO[0].cpu_cores or -1,
                         cpu_load       = cpu_load,
                         freq_cur       = freq_cur,
                         freq_max       = freq_max,
                         freq_min       = freq_min,
-                        model          = CPU_INFO[0].get('model_name') or 'Unknown',
+                        model          = CPU_INFO[0].model_name or 'Unknown',
                     )
                 except Exception as e:
                     cpu_info = CpuInfo(

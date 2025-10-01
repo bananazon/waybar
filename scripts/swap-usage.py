@@ -6,7 +6,7 @@ from waybar import glyphs, state, util
 import json
 import re
 
-util.validate_requirements(required=['click'])
+util.validate_requirements(modules=['click'])
 import click
 
 CACHE_DIR = util.get_cache_directory()

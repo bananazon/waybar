@@ -12,7 +12,7 @@ import sys
 import threading
 import time
 
-util.validate_requirements(required=['click'])
+util.validate_requirements(modules=['click'])
 import click
 
 update_event = threading.Event()

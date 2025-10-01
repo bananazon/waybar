@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 
-util.validate_requirements(required=['click', 'speedtest'])
+util.validate_requirements(modules=['click', 'speedtest'])
 import click
 import speedtest
 

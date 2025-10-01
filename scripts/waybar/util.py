@@ -273,19 +273,32 @@ def parse_json_string(input: str=''):
 def which(binary_name: str) -> bool:
     return shutil.which(binary_name)
 
-def validate_requirements(required: list=[]):
-    missing = []
+def validate_requirements(modules: list=[], binaries: list=[]):
+    if len(modules) > 0:
+        missing = []
+        for module in modules:
+            if importlib.util.find_spec(module) is None:
+                missing.append(module)
 
-    for module in required:
-        if importlib.util.find_spec(module) is None:
-            missing.append(module)
+        if missing:
+            icon = glyphs.md_alert
+            error_exit(
+                icon    = icon,
+                message = f'Please install via pip: {", ".join(missing)}',
+            )
 
-    if missing:
-        icon = glyphs.md_alert
-        error_exit(
-            icon    = icon,
-            message = f'Please install via pip: {", ".join(missing)}',
-        )
+    if len(binaries) > 0:
+        missing = []
+        for binary in binaries:
+            if not which(binary_name=binary):
+                missing.append(binary)
+        
+        if missing:
+            icon = glyphs.md_alert
+            error_exit(
+                icon    = icon,
+                message = f'Please install: {", ".join(missing)}',
+            )
 
 def network_is_reachable():
     host = '8.8.8.8'

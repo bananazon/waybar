@@ -3,7 +3,7 @@
 from waybar import glyphs, http, util
 import json
 
-util.validate_requirements(required=['click'])
+util.validate_requirements(modules=['click'])
 import click
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])

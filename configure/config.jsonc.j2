@@ -88,10 +88,10 @@
     {% for iface in network_interfaces %}
     {% if iface.type == 'wifi' and iface.enabled %}
     "custom/wifi-status-{{ iface.name }}": {
-        "exec": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }}",
+        "exec": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }}",
         "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/wifi-status.py run --interface {{ iface.name }} --toggle"
+        "on-click": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }} --toggle"
     },
     {% endif %}
     {% endfor %}

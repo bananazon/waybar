@@ -11,6 +11,8 @@ import sys
 util.validate_requirements(modules=['click'])
 import click
 
+util.validate_requirements(binaries=['dmidecode', 'jc', 'mpstat'])
+
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 

@@ -366,7 +366,6 @@ def error_exit(icon, message):
         'text'  : f'{icon} {message}',
         'class' : 'error',
     }))
-    sys.exit(1)
 
 def called_by():
     caller = inspect.stack()[1]

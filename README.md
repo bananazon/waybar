@@ -260,6 +260,17 @@ Available Ciphers :
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
 
+I did this on my system:
+```
+% mkdir /work/sudoers.d
+% touch /work/sudoers.d/sudoers
+% sudo chown -R 0:0 /work/sudoers
+```
+I put my entries in `/work/sudoers.d/sudoers` and at the end of `/etc/sudoers`, add this line
+```
+#includedir /work/sudoers.d
+```
+
 ### For Software Updates
 ```
 # mint has a wrapper in /usr/local/bin

@@ -70,7 +70,7 @@ def generate_tooltip(wifi_status):
         if key == 'Available Ciphers':
             tooltip.append(f'{key:{max_key_length}} :')
             for cipher in wifi_status.ciphers:
-                tooltip.append(f'   {cipher[0]}')
+                tooltip.append(f'  {cipher[0]}')
         else:
             tooltip.append(f'{key:{max_key_length}} : {value}')
 

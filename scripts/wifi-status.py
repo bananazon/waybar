@@ -200,7 +200,7 @@ def get_wifi_status(interface: str=None):
 
     return wifi_status
 
-@click.command(help='Get WiFi status using iw(8)')
+@click.command(help='Get WiFi status using iw(8)', context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--interface', required=True, help='The interface to check')
 def main(interface):
     if not util.interface_exists(interface=interface):

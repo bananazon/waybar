@@ -165,7 +165,7 @@ def dict_to_namedtuple(name: str=None, obj: dict=None):
     Recursively convert a dict (possibly nested) into a namedtuple.
     """
     if isinstance(obj, dict):
-        fields = {k: dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
+        fields = {to_snake_case(k): dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
         NT = namedtuple(name, fields.keys())
         return NT(**fields)
     elif isinstance(obj, list):

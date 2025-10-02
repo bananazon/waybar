@@ -19,10 +19,9 @@
     {% for fs in filesystems %}
     {% if fs.enabled == true %}
     "custom/filesystem-usage-{{ fs.label }}": {
-        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit {{ (fs.unit if fs.unit else none) or auto }}",
+        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --format '{{ (fs.format if fs.format else "^used / ^total") or "^used / ^total" }}' --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}",
         "interval": {{ fs.get("interval", 10) if fs is defined else 10 }},
-        "return-type": "json",
-        "on-click": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --unit {{ (fs.unit if fs.unit else none) or auto }} --toggle"
+        "return-type": "json"
     },
     {% endif %}
     {% endfor %}
@@ -90,8 +89,7 @@
     "custom/wifi-status-{{ iface.name }}": {
         "exec": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }}",
         "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
-        "return-type": "json",
-        "on-click": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }} --toggle"
+        "return-type": "json"
     },
     {% endif %}
     {% endfor %}

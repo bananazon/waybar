@@ -149,6 +149,7 @@ def start_waybar():
     proc = waybar_is_running()
     if proc:
         print(f'waybar is running with PID {proc.get("pid")}; please use stop or restart')
+        sys.exit(0)
 
     print('starting waybar')
     # Get the env before starting so we can start via systemctl

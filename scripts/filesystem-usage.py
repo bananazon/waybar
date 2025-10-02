@@ -2,33 +2,39 @@
 
 from collections import OrderedDict
 from pathlib import Path
-from waybar import glyphs, state, util
+from waybar import glyphs, util
 from typing import Any, Dict, List, Optional, NamedTuple
 import json
+import re
+import time
 
 util.validate_requirements(modules=['click'])
 import click
 
 util.validate_requirements(binaries=['jc'])
 
-CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+VALID_TOKENS = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
 
 class FilesystemInfo(NamedTuple):
-    success    : Optional[bool] = False
-    error      : Optional[str]  = None
-    device     : Optional[str]  = None
-    filesystem : Optional[str]  = None
-    free       : Optional[int]  = 0
-    fsopts     : Optional[str]  = None   
-    fstype     : Optional[str]  = None
-    lsblk      : Optional[dict] = None
-    mountpoint : Optional[str]  = None
-    pct_free   : Optional[int]  = 0
-    pct_total  : Optional[int]  = 0
-    pct_used   : Optional[int]  = 0
-    total      : Optional[int]  = 0
-    used       : Optional[int]  = 0
+    success             : Optional[bool] = False
+    error               : Optional[str]  = None
+    device              : Optional[str]  = None
+    filesystem          : Optional[str]  = None
+    free                : Optional[int]  = 0
+    fsopts              : Optional[str]  = None
+    fstype              : Optional[str]  = None
+    lsblk               : Optional[dict] = None
+    mountpoint          : Optional[str]  = None
+    pct_free            : Optional[int]  = 0
+    pct_total           : Optional[int]  = 0
+    pct_used            : Optional[int]  = 0
+    total               : Optional[int]  = 0
+    used                : Optional[int]  = 0
+    reads_per_sec       : Optional[int]  = 0
+    writes_per_sec      : Optional[int]  = 0
+    bytes_read_per_sec  : Optional[int]  = 0
+    bytes_write_per_sec : Optional[int]  = 0
 
 def generate_tooltip(disk_info):
     tooltip = []
@@ -53,6 +59,14 @@ def generate_tooltip(disk_info):
         if disk_info.lsblk.ro in [True, False]:
             tooltip_od['Read-only'] = 'yes' if disk_info.lsblk.ro else 'no'
 
+    if disk_info.reads_per_sec >= 0 and disk_info.writes_per_sec >= 0:
+        tooltip_od['Reads/sec'] = disk_info.reads_per_sec
+        tooltip_od['Writes/sec'] = disk_info.writes_per_sec
+
+    if disk_info.bytes_read_per_sec >= 0 and disk_info.bytes_write_per_sec >= 0:
+        tooltip_od['Read/sec'] = util.byte_converter(number=disk_info.bytes_read_per_sec, unit='auto')
+        tooltip_od['Written/sec'] = util.byte_converter(number=disk_info.bytes_write_per_sec, unit='auto')
+
     max_key_length = 0
     for key in tooltip_od.keys():
         max_key_length = len(key) if len(key) > max_key_length else max_key_length
@@ -66,6 +80,36 @@ def filesystem_exists(mountpoint: str = None):
     command = f'jc findmnt {mountpoint}'
     rc, _, _ = util.run_piped_command(command)
     return True if rc == 0 else False
+
+def get_sample(filesystem: str=None):
+    command = f'cat /proc/diskstats| jc --pretty --proc-diskstats'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        json_data, err = util.parse_json_string(stdout)
+        if not err:
+            for entry in json_data:
+                if entry['device'] == filesystem:
+                    sample = util.dict_to_namedtuple(name='DiskStatsSample', obj=entry)
+                    return sample
+
+    return None
+
+def get_disk_stats(filesystem: str=None):
+    first = get_sample(filesystem=filesystem)
+    time.sleep(1)
+    second = get_sample(filesystem=filesystem)
+
+    if not first or not second:
+        return DiskStats(
+            success = False,
+            error   = 'failed to get disk stats'
+        )
+
+    return DiskStats(
+        success        = True,
+        reads_per_sec  = (second.reads_completed - first.reads_completed),
+        writes_per_sec = (second.writes_completed - first.writes_completed),
+    )
 
 def parse_lsblk(filesystem: str=None):
     if filesystem:
@@ -111,75 +155,93 @@ def get_disk_usage(mountpoint: str) -> list:
         except:
             return FilesystemInfo(success = False, error   = stderr or f'failed to execute {command}')
 
+        lsblk_data = parse_lsblk(filesystem=df_item['filesystem'])
+        if lsblk_data:
+            first = get_sample(filesystem=lsblk_data.kname)
+            time.sleep(1)
+            second = get_sample(filesystem=lsblk_data.kname)
+
+            if first and second:
+                reads_per_sec = second.reads_completed - first.reads_completed
+                writes_per_sec = second.writes_completed - first.writes_completed
+                if lsblk_data.log_sec:
+                    log_sec = lsblk_data.log_sec
+                    bytes_read_per_sec = ((second.sectors_read * log_sec) - (first.sectors_read * log_sec))
+                    bytes_write_per_sec = ((second.sectors_written * log_sec) - (first.sectors_written * log_sec))
+
     if df_item and findmnt_item:
         return FilesystemInfo(
-            success    = True,
-            filesystem = df_item['filesystem'],
-            mountpoint = mountpoint,
-            total      = df_item['1k_blocks'] * 1024,
-            used       = df_item['used'] * 1024,
-            free       = df_item['available'] * 1024,
-            pct_total  = 100,
-            pct_used   = df_item['use_percent'],
-            pct_free   = 100 - df_item['use_percent'],
-            fsopts     = findmnt_item.get('options') or None,
-            fstype     = findmnt_item.get('fstype') or None,
-            lsblk      = parse_lsblk(filesystem=df_item['filesystem']),
+            success             = True,
+            filesystem          = df_item['filesystem'],
+            mountpoint          = mountpoint,
+            total               = df_item['1k_blocks'] * 1024,
+            used                = df_item['used'] * 1024,
+            free                = df_item['available'] * 1024,
+            pct_total           = 100,
+            pct_used            = df_item['use_percent'],
+            pct_free            = 100 - df_item['use_percent'],
+            fsopts              = findmnt_item.get('options') or None,
+            fstype              = findmnt_item.get('fstype') or None,
+            lsblk               = lsblk_data,
+            reads_per_sec       = reads_per_sec,
+            writes_per_sec      = writes_per_sec,
+            bytes_read_per_sec  = bytes_read_per_sec,
+            bytes_write_per_sec = bytes_write_per_sec,
         )
 
 @click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)
 @click.option('-m', '--mountpoint', required=True, help=f'The mountpoint to check')
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
 @click.option('-l', '--label', required=True, help=f'A unique label to use')
-@click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
-def main(mountpoint, unit, label, toggle):
-    mode_count = 3
-    statefile = CACHE_DIR / f'waybar-{util.called_by() or "filesystem-usage"}-{label}-state'
-
+@click.option('-f', '--format', help=f'Output format, e.g., "^free / ^total"; valid tokens are: {', '.join(VALID_TOKENS)} ', required=False, default='^used / ^total', show_default=True)
+def main(mountpoint, unit, label, format):
     if filesystem_exists(mountpoint=mountpoint):
-        if toggle:
-            mode = state.next_state(statefile=statefile, mode_count=mode_count)
-        else:
-            mode = state.current_state(statefile=statefile)
-
         disk_info = get_disk_usage(mountpoint)
         if disk_info.success:
-            tooltip   = generate_tooltip(disk_info)
-            pct_total = disk_info.pct_total
-            pct_used  = disk_info.pct_used
-            pct_free  = disk_info.pct_free
-            total     = util.byte_converter(number=disk_info.total, unit=unit)
-            used      = util.byte_converter(number=disk_info.used, unit=unit)
-            free      = util.byte_converter(number=disk_info.free, unit=unit)
+            token_map = {
+                '^pct_total' : disk_info.pct_total,
+                '^pct_used'  : disk_info.pct_used,
+                '^pct_free'  : disk_info.pct_free,
+                '^total'     : util.byte_converter(number=disk_info.total, unit=unit),
+                '^used'      : util.byte_converter(number=disk_info.used, unit=unit),
+                '^free'      : util.byte_converter(number=disk_info.free, unit=unit),
+            }
 
-            if pct_free < 20:
+            if disk_info.pct_free < 20:
                 output_class = 'critical'
-            elif pct_free >= 20 and pct_free < 50:
+            elif disk_info.pct_free < 50:
                 output_class = 'warning'
-            elif pct_free >= 50:
+            elif disk_info.pct_free >= 50:
                 output_class = 'good'
 
-            if mode == 0:
+            filesystem_output = format.replace('{','').replace('}', '')
+            valid = []
+            invalid = []
+            tokens = re.findall(r"\^\w+", format)
+            for token in tokens:
+                if token in VALID_TOKENS:
+                    valid.append(token)
+                else:
+                    invalid.append(token)
+
+            if len(invalid) == 0 and len(valid) > 0:
+                for idx, token in enumerate(valid):
+                    filesystem_output = filesystem_output.replace(token, str(token_map[token]))
+
                 output = {
-                    'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used} / {total}',
-                    'class'   : output_class,
-                    'tooltip' : tooltip,
+                    'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {filesystem_output}',
+                    'tooltip' : generate_tooltip(disk_info),
+                    'class'   : 'success',
                 }
-            elif mode == 1:
+            else:
                 output = {
-                    'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {pct_used}% used',
-                    'class'   : output_class,
-                    'tooltip' : tooltip,
-                }
-            elif mode == 2:
-                output = {
-                    'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used}% used / {free}% free',
-                    'class'   : output_class,
-                    'tooltip' : tooltip,
+                    'text'    :  f'Invalid format: {format}',
+                    'class'   : 'error',
+                    'tooltip' : 'Filesystem Usage',
                 }
         else:
             output = {
-                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {disk_info.error or "Unknown error"}',
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {disk_info.error}',
                 'class'   : 'error',
                 'tooltip' : 'Filesystem Usage',
             }

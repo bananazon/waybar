@@ -101,12 +101,12 @@ def get_cpu_freq():
 
     return int(freq_cur) * 1000, int(freq_min) * 1000, int(freq_max) * 1000
 
-def parse_proc_cpuinfo(path='/proc/cpuinfo'):
+def parse_proc_cpuinfo():
     """
     Read /proc/cpuinfo and return a list of CPU blocks as dicts
     """
     global CPU_INFO
-    command = f'jc --pretty {path}'
+    command = f'jc --pretty /proc/cpuinfo'
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0 and stdout != '':
         json_data, err = util.parse_json_string(stdout)

@@ -13,6 +13,8 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
+util.validate_requirements(binaries=['udevadm'])
+
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -98,7 +100,8 @@ def get_network_throughput(interface: str=None):
     model       = None
     vendor      = None
 
-    rc, stdout, stderr = util.run_piped_command(f'udevadm info --query=all --path=/sys/class/net/{interface}')
+    command = f'udevadm info --query=all --path=/sys/class/net/{interface}'
+    rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0 and stdout != '':
         match = re.search(r'SYSTEMD_ALIAS=(.*)', stdout, re.MULTILINE)
         if match:

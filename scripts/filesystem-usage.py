@@ -231,7 +231,7 @@ def main(mountpoint, unit, label, format):
                 output = {
                     'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {filesystem_output}',
                     'tooltip' : generate_tooltip(disk_info),
-                    'class'   : 'success',
+                    'class'   : output_class,
                 }
             else:
                 output = {

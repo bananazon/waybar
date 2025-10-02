@@ -82,7 +82,6 @@ def get_sample(interface: str=None):
                     sample = util.dict_to_namedtuple(name='NetworkSample', obj=entry)
                     return sample
 
-    util.pprint(sample)
     return None
 
 def get_network_throughput(interface: str=None):

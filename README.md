@@ -48,22 +48,26 @@ AMD Ryzen 7 5700U with Radeon Graphics
 Physical cores: 8, Threads/core: 2, Logical cores: 16
 Frequency: 411.66 MHz > 4.37 GHz
 CPU Load:
-  core 00 user 1.40%, sys 0.88%, idle 96.45%
-  core 01 user 0.94%, sys 0.66%, idle 97.52%
-  core 02 user 1.39%, sys 0.90%, idle 96.73%
-  core 03 user 0.91%, sys 0.64%, idle 97.62%
-  core 04 user 1.38%, sys 0.87%, idle 96.83%
-  core 05 user 0.88%, sys 0.65%, idle 97.61%
-  core 06 user 1.38%, sys 0.87%, idle 96.82%
-  core 07 user 0.89%, sys 0.66%, idle 97.58%
-  core 08 user 1.56%, sys 1.00%, idle 96.45%
-  core 09 user 1.00%, sys 0.73%, idle 97.40%
-  core 10 user 1.46%, sys 1.00%, idle 96.50%
-  core 11 user 0.97%, sys 0.72%, idle 97.42%
-  core 12 user 1.53%, sys 0.96%, idle 96.55%
-  core 13 user 0.95%, sys 0.70%, idle 97.45%
-  core 14 user 1.54%, sys 0.97%, idle 96.51%
-  core 15 user 1.12%, sys 0.79%, idle 97.22%
+  core 00 user 3.48%, sys 1.98%, idle 92.10% (4.34 GHz)
+  core 01 user 2.23%, sys 1.55%, idle 94.67% (2.35 GHz)
+  core 02 user 3.41%, sys 1.97%, idle 93.17% (1.93 GHz)
+  core 03 user 2.21%, sys 1.47%, idle 94.99% (1.93 GHz)
+  core 04 user 3.39%, sys 1.95%, idle 93.29% (4.34 GHz)
+  core 05 user 2.11%, sys 1.42%, idle 95.14% (4.34 GHz)
+  core 06 user 3.39%, sys 1.98%, idle 93.29% (1.11 GHz)
+  core 07 user 2.18%, sys 1.45%, idle 95.04% (1.93 GHz)
+  core 08 user 3.64%, sys 2.15%, idle 92.61% (4.33 GHz)
+  core 09 user 2.31%, sys 1.56%, idle 94.81% (4.34 GHz)
+  core 10 user 3.47%, sys 2.08%, idle 93.09% (1.93 GHz)
+  core 11 user 2.31%, sys 1.59%, idle 94.69% (1.93 GHz)
+  core 12 user 3.49%, sys 2.08%, idle 93.09% (1.93 GHz)
+  core 13 user 2.32%, sys 1.54%, idle 94.81% (1.11 GHz)
+  core 14 user 3.55%, sys 2.07%, idle 93.03% (2.88 GHz)
+  core 15 user 2.29%, sys 1.53%, idle 94.84% (2.08 GHz)
+Caches:
+  L1 - Cache - 512 kB @ 1 ns
+  L2 - Cache - 4 MB   @ 1 ns
+  L3 - Cache - 8 MB   @ 1 ns
 ```
 
 ### Filesystem Usage

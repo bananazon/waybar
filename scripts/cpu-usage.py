@@ -50,8 +50,10 @@ def generate_tooltip(cpu_info):
         tooltip.append('CPU Load:')
         for core in cpu_info.cpu_load:
             if core.cpu != 'all':
+                core_number = int(core.cpu)
+                core_freq = CPU_INFO[core_number].cpu_frequency
                 tooltip.append(
-                    f'  core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}%'
+                    f'  core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}% ({util.processor_speed(core_freq)})'
                 )
     
     if cpu_info.caches and type(cpu_info.caches) == list and len(cpu_info.caches) > 0:
@@ -112,6 +114,8 @@ def parse_proc_cpuinfo():
         json_data, err = util.parse_json_string(stdout)
         cores = []
         for core in json_data:
+            core['cpu_frequency'] = core.get('cpu MHz') * 1000000
+            core.pop('cpu MHz')
             core_tuple = util.dict_to_namedtuple(name='Core', obj=core)
             cores.append(core_tuple)
 

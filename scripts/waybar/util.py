@@ -409,3 +409,22 @@ def find_private_ip_and_mac(interface: str=None):
             mac = match.group(1)
 
     return ip, mac
+
+def get_disk_info(mountpoint: str=None):
+    output = {}
+    command = f'jc --pretty df {mountpoint}'
+    rc, stdout, stderr = run_piped_command(command)
+    if rc == 0:
+        json_data, err = parse_json_string(stdout)
+        if not err:
+            filesystem = json_data[0]['filesystem']
+            output['mountpoint'] = mountpoint
+            output['filesystem'] = filesystem
+
+            command = f'lsblk -O --json {filesystem}'
+            rc, stdout, stderr = run_piped_command(command)
+            if rc == 0:
+                json_data, err = parse_json_string(stdout)
+                if not err:
+                    output['kname'] = json_data['blockdevices'][0]['kname']
+                    return output

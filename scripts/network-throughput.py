@@ -4,7 +4,6 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, NamedTuple
 from waybar import glyphs, util
-import glob
 import json
 import os
 import re
@@ -13,7 +12,7 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
-util.validate_requirements(binaries=['udevadm'])
+util.validate_requirements(binaries=['jc', 'udevadm'])
 
 CACHE_DIR = util.get_cache_directory()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -73,13 +72,18 @@ def get_icon(interface: str=None, connected: bool=True):
         return glyphs.md_network if connected else glyphs.md_network_off
 
 def get_sample(interface: str=None):
-    statistics = {'interface': interface}
-    base_dir = f'/sys/class/net/{interface}/statistics'
-    wanted = glob.glob(f'{base_dir}/tx_*') + glob.glob(f'{base_dir}/rx_*')
-    for filename in wanted:
-        statistics[os.path.basename(filename)] = util.convert_value(Path(filename).read_text().strip())
+    command = f'jc --pretty /proc/net/dev'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        json_data, err = util.parse_json_string(stdout)
+        if not err:
+            for entry in json_data:
+                if entry['interface'] == interface:
+                    sample = util.dict_to_namedtuple(name='NetworkSample', obj=entry)
+                    return sample
 
-    return util.dict_to_namedtuple(name='NetworkSample', obj=statistics)
+    util.pprint(sample)
+    return None
 
 def get_network_throughput(interface: str=None):
     first = get_sample(interface=interface)
@@ -132,8 +136,8 @@ def get_network_throughput(interface: str=None):
         ip_public   = public_ip,
         mac_address = mac_address,
         model       = model,
-        received    = util.network_speed(second.rx_bytes - first.rx_bytes),
-        transmitted = util.network_speed(second.tx_bytes - first.tx_bytes),
+        received    = util.network_speed(second.r_bytes - first.r_bytes),
+        transmitted = util.network_speed(second.t_bytes - first.t_bytes),
         vendor      = vendor,
     )
 

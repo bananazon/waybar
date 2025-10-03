@@ -34,12 +34,14 @@ filesystems:
     enabled: true
     mountpoint: /
     format: "^used / ^total"
+    show_stats: false
     interval: 3
     unit: auto
   - label: work
     enabled: true
     mountpoint: /work
     format: "^used / ^total"
+    show_stats: false
     interval: 3
     unit: auto
 

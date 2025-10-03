@@ -19,7 +19,7 @@
     {% for fs in filesystems %}
     {% if fs.enabled == true %}
     "custom/filesystem-usage-{{ fs.label }}": {
-        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --format '{{ (fs.format if fs.format else "^used / ^total") or "^used / ^total" }}' --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}",
+        "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --format '{{ (fs.format if fs.format else "^used / ^total") or "^used / ^total" }}' --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}",
         "interval": {{ fs.get("interval", 10) if fs is defined else 10 }},
         "return-type": "json"
     },

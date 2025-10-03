@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from collections import OrderedDict
+from collections import namedtuple, OrderedDict
 from pathlib import Path
 from typing import Optional, NamedTuple
 from waybar import glyphs, http, util
@@ -18,11 +18,12 @@ util.validate_requirements(modules=['click', 'speedtest'])
 import click
 import speedtest
 
-cache_dir = util.get_cache_directory()
+cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
-loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running...'
-loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Speedtest is running'}
-logfile = cache_dir / 'waybar-speedtest.log'
+loading          = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running...'
+loading_dict     = { 'text': loading, 'class': 'loading', 'tooltip': 'Speedtest is running'}
+logfile          = cache_dir / 'waybar-speedtest.log'
+speedtest_data   = None
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -68,7 +69,7 @@ logging.basicConfig(
     level    = logging.INFO
 )
 
-def generate_tooltip(data):
+def generate_tooltip(data: namedtuple=None):
     tooltip = []
 
     tooltip_od = OrderedDict()
@@ -256,7 +257,27 @@ def run_speedtest():
     speedtest_results = parse_speedtest_data(json_data)
     return speedtest_results
 
+def render_output(speedtest_data: namedtuple=None, icon: str=None):
+    parts = []
+    if speedtest_data.speed_rx:
+        parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
+    if speedtest_data.speed_tx:
+        parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
+    
+    if len(parts) == 2:
+        text = f'{icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}'
+        output_class = 'success'
+        tooltip = generate_tooltip(data=speedtest_data)
+    else:
+        text = f'{icon}{glyphs.icon_spacer}{speedtest_data.error}'
+        output_class = 'error'
+        tooltip = 'Speedtest error'
+    
+    return text, output_class, tooltip
+
 def worker():
+    global speedtest_data
+
     while True:
         update_event.wait()
         update_event.clear()
@@ -266,29 +287,21 @@ def worker():
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                print(json.dumps(loading_dict))
+                if speedtest_data:
+                    text, _, tooltip = render_output(speedtest_data=speedtest_data, icon=glyphs.md_timer_outline)
+                    print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                else:
+                    print(json.dumps(loading_dict))
 
                 speedtest_data = run_speedtest()
 
                 if speedtest_data.success:
-                    parts = []
-                    if speedtest_data.speed_rx:
-                        parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
-                    if speedtest_data.speed_tx:
-                        parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
-
-                    if len(parts) == 2:
-                        output = {
-                            'text'    : f'{speedtest_data.icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}',
-                            'class'   : 'success',
-                            'tooltip' : generate_tooltip(speedtest_data),
-                        }
-                    elif len(parts) == 0:
-                        output = {
-                            'text'  : f'{glyphs.md_alert}{glyphs.icon_spacer}all tests failed',
-                            'class' : 'error',
-                            'tooltip' : 'Speedtest error',
-                        }
+                    text, output_class, tooltip = render_output(speedtest_data=speedtest_data, icon=speedtest_data.icon)
+                    output = {
+                        'text'    : text,
+                        'class'   : output_class,
+                        'tooltip' : tooltip,
+                    }
                 else:
                     output = {
                         'text'  : f'{speedtest_data.icon}{glyphs.icon_spacer}{speedtest_data.error}',

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from collections import OrderedDict
+from collections import namedtuple, OrderedDict
 from pathlib import Path
 from waybar import glyphs, util
 from typing import Any, Dict, List, Optional, NamedTuple
@@ -17,30 +17,24 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 VALID_TOKENS = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
 
 class FilesystemInfo(NamedTuple):
-    success             : Optional[bool] = False
-    error               : Optional[str]  = None
-    device              : Optional[str]  = None
-    filesystem          : Optional[str]  = None
-    free                : Optional[int]  = 0
-    fsopts              : Optional[str]  = None
-    fstype              : Optional[str]  = None
-    lsblk               : Optional[dict] = None
-    mountpoint          : Optional[str]  = None
-    pct_free            : Optional[int]  = 0
-    pct_total           : Optional[int]  = 0
-    pct_used            : Optional[int]  = 0
-    total               : Optional[int]  = 0
-    used                : Optional[int]  = 0
-    reads_per_sec       : Optional[int]  = 0
-    read_bytes_per_sec  : Optional[int]  = 0
-    read_time_per_sec   : Optional[int]  = 0
-    read_latency_avg    : Optional[int]  = 0
-    writes_per_sec      : Optional[int]  = 0
-    write_bytes_per_sec : Optional[int]  = 0
-    write_time_per_sec  : Optional[int]  = 0
-    write_latency_avg   : Optional[int]  = 0
+    success    : Optional[bool] = False
+    error      : Optional[str]  = None
+    device     : Optional[str]  = None
+    filesystem : Optional[str]  = None
+    free       : Optional[int]  = 0
+    fsopts     : Optional[str]  = None
+    fstype     : Optional[str]  = None
+    lsblk      : Optional[dict] = None
+    mountpoint : Optional[str]  = None
+    pct_free   : Optional[int]  = 0
+    pct_total  : Optional[int]  = 0
+    pct_used   : Optional[int]  = 0
+    total      : Optional[int]  = 0
+    used       : Optional[int]  = 0
+    sample1    : Optional[namedtuple] = None
+    sample2    : Optional[namedtuple] = None
 
-def generate_tooltip(disk_info):
+def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
     tooltip = []
     tooltip_od = OrderedDict()
     if disk_info.filesystem:
@@ -62,40 +56,19 @@ def generate_tooltip(disk_info):
         if disk_info.lsblk.ro in [True, False]:
             tooltip_od['Read-only'] = 'yes' if disk_info.lsblk.ro else 'no'
 
+
+    if show_stats and (disk_info.sample1 and disk_info.sample2):
+        tooltip_od['Reads/sec'] = (disk_info.sample2.reads_completed - disk_info.sample1.reads_completed)
+        tooltip_od['Writes/sec'] = (disk_info.sample2.writes_completed - disk_info.sample1.writes_completed)
+        tooltip_od['Read Time/sec'] = (disk_info.sample2.read_time_ms - disk_info.sample1.read_time_ms)
+        tooltip_od['Write Time/sec'] = (disk_info.sample2.write_time_ms - disk_info.sample1.write_time_ms)
+
     max_key_length = 0
     for key in tooltip_od.keys():
         max_key_length = len(key) if len(key) > max_key_length else max_key_length
 
     for key, value in tooltip_od.items():
         tooltip.append(f'{key:{max_key_length}} : {value}')
-
-    if len(tooltip) > 0:
-        tooltip.append('')
-
-    tooltip.append('Stats')
-    tooltip_od = OrderedDict()
-    if disk_info.reads_per_sec >= 0 and disk_info.writes_per_sec >= 0:
-        tooltip_od['Reads/sec'] = disk_info.reads_per_sec
-        tooltip_od['Writes/sec'] = disk_info.writes_per_sec
-
-    if disk_info.read_bytes_per_sec >= 0 and disk_info.write_bytes_per_sec >= 0:
-        tooltip_od['Read/sec'] = util.byte_converter(number=disk_info.read_bytes_per_sec, unit='auto')
-        tooltip_od['Written/sec'] = util.byte_converter(number=disk_info.write_bytes_per_sec, unit='auto')
-
-    if disk_info.read_time_per_sec >= 0 and disk_info.write_time_per_sec >= 0:
-        tooltip_od['Read Time/sec'] = f'{disk_info.read_time_per_sec} ms'
-        tooltip_od['Write Time/sec'] = f'{disk_info.write_time_per_sec} ms'
-
-    if disk_info.read_latency_avg >= 0 and disk_info.write_latency_avg >= 0:
-        tooltip_od['Average Read latency'] = f'{util.pad_float(disk_info.read_latency_avg)} ms'
-        tooltip_od['Average Write latency'] = f'{util.pad_float(disk_info.write_latency_avg)} ms' 
-
-    max_key_length = 0
-    for key in tooltip_od.keys():
-        max_key_length = len(key) if len(key) > max_key_length else max_key_length
-
-    for key, value in tooltip_od.items():
-        tooltip.append(f'  {key:{max_key_length}} : {value}')
 
     return '\n'.join(tooltip)
 
@@ -146,12 +119,14 @@ def parse_lsblk(filesystem: str=None):
 
     return None
 
-def get_disk_usage(mountpoint: str) -> list:
+def get_disk_usage(mountpoint: str, show_stats: bool=False) -> list:
     """
     Execute df -B 1 against a mount point and return a namedtuple with its values
     """
     df_item = None
     findmnt_item = None
+    first = None
+    second = None
 
     command = f'jc --pretty df {mountpoint}'
     try:
@@ -179,44 +154,27 @@ def get_disk_usage(mountpoint: str) -> list:
             return FilesystemInfo(success = False, error   = stderr or f'failed to execute {command}')
 
         lsblk_data = parse_lsblk(filesystem=df_item['filesystem'])
-        if lsblk_data:
+        if lsblk_data and show_stats:
             first = get_sample(filesystem=lsblk_data.kname)
             time.sleep(1)
             second = get_sample(filesystem=lsblk_data.kname)
 
-            if first and second:
-                reads_per_sec = second.reads_completed - first.reads_completed
-                writes_per_sec = second.writes_completed - first.writes_completed
-                if lsblk_data.log_sec:
-                    log_sec = lsblk_data.log_sec
-                    read_bytes_per_sec = ((second.sectors_read * log_sec) - (first.sectors_read * log_sec))
-                    write_bytes_per_sec = ((second.sectors_written * log_sec) - (first.sectors_written * log_sec))
-
-                read_time_per_sec = (second.read_time_ms - first.read_time_ms)
-                write_time_per_sec = (second.write_time_ms - first.write_time_ms)
-
     if df_item and findmnt_item:
         return FilesystemInfo(
-            success             = True,
-            filesystem          = df_item['filesystem'],
-            mountpoint          = mountpoint,
-            total               = df_item['1k_blocks'] * 1024,
-            used                = df_item['used'] * 1024,
-            free                = df_item['available'] * 1024,
-            pct_total           = 100,
-            pct_used            = df_item['use_percent'],
-            pct_free            = 100 - df_item['use_percent'],
-            fsopts              = findmnt_item.get('options') or None,
-            fstype              = findmnt_item.get('fstype') or None,
-            lsblk               = lsblk_data,
-            reads_per_sec       = reads_per_sec,
-            read_bytes_per_sec  = read_bytes_per_sec,
-            read_time_per_sec   = read_time_per_sec,
-            read_latency_avg    = second.read_time_ms / second.reads_completed,
-            writes_per_sec      = writes_per_sec,
-            write_bytes_per_sec = write_bytes_per_sec,
-            write_time_per_sec  = write_time_per_sec,
-            write_latency_avg   = second.write_time_ms / second.writes_completed,
+            success    = True,
+            filesystem = df_item['filesystem'],
+            mountpoint = mountpoint,
+            total      = df_item['1k_blocks'] * 1024,
+            used       = df_item['used'] * 1024,
+            free       = df_item['available'] * 1024,
+            pct_total  = 100,
+            pct_used   = df_item['use_percent'],
+            pct_free   = 100 - df_item['use_percent'],
+            fsopts     = findmnt_item.get('options') or None,
+            fstype     = findmnt_item.get('fstype') or None,
+            lsblk      = lsblk_data,
+            sample1    = first,
+            sample2    = second,
         )
 
 @click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)
@@ -224,9 +182,10 @@ def get_disk_usage(mountpoint: str) -> list:
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
 @click.option('-l', '--label', required=True, help=f'A unique label to use')
 @click.option('-f', '--format', help=f'Output format, e.g., "^free / ^total"; valid tokens are: {', '.join(VALID_TOKENS)} ', required=False, default='^used / ^total', show_default=True)
-def main(mountpoint, unit, label, format):
+@click.option('-s', '--show-stats', is_flag=True, help=f'Gather disk statistics and display them in the tooltip')
+def main(mountpoint, unit, label, format, show_stats):
     if filesystem_exists(mountpoint=mountpoint):
-        disk_info = get_disk_usage(mountpoint)
+        disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)
         if disk_info.success:
             token_map = {
                 '^pct_total' : disk_info.pct_total,
@@ -260,7 +219,7 @@ def main(mountpoint, unit, label, format):
 
                 output = {
                     'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {filesystem_output}',
-                    'tooltip' : generate_tooltip(disk_info),
+                    'tooltip' : generate_tooltip(disk_info=disk_info, show_stats=show_stats),
                     'class'   : output_class,
                 }
             else:

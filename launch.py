@@ -13,9 +13,9 @@ import subprocess
 import sys
 import time
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOGFILE = CACHE_DIR / f'waybar.log'
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
+logfile = cache_dir / f'waybar.log'
 
 class RightPadFormatter(logging.Formatter):
     def __init__(self, levelnames):
@@ -159,10 +159,10 @@ def start_waybar():
     # Step 1: Append '---' to the log file
     # echo "---" | tee -a /tmp/waybar.log
     try:
-        with open(LOGFILE, 'a') as f:
+        with open(logfile, 'a') as f:
             f.write('---\n')
     except Exception as e:
-        logging.error(f'failed to append the log file {LOGFILE}: {e}')
+        logging.error(f'failed to append the log file {logfile}: {e}')
         sys.exit(1)
 
     # Step 2: Start waybar, redirect output, and run it in the background detached
@@ -173,7 +173,7 @@ def start_waybar():
         'info',
     ]
     try:
-        with open(LOGFILE, 'a') as f:
+        with open(logfile, 'a') as f:
             proc = subprocess.Popen(
                 command,
                 stdout     = f,
@@ -213,7 +213,7 @@ def stop_waybar(pid: str=None):
     except:
         print('waybar isn\'t running!')
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.group(context_settings=context_settings)
 def cli():
     pass
 

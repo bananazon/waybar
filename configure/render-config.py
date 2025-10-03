@@ -21,7 +21,7 @@ YAML_FILE     = CONFIG_DIR / 'config.yaml'
 DEFAULT_DB    = Path.home() / '.local/share/secure_keystore.db'
 DEFAULT_KEY   = Path.home() / '.local/share/secure_keystore.key'
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+context_settings = dict(help_option_names=['-h', '--help'])
 
 # Globals
 keystore : SecureKeyStore | None = None
@@ -191,7 +191,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
         print(f'The output directory "{os.path.dirname(output_file)}" isn\'t writable')
         sys.exit(1)
 
-@click.command(help='Render a waybar config file from a jinja template', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Render a waybar config file from a jinja template', context_settings=context_settings)
 @click.option('-t', '--template', default=TEMPLATE_FILE, show_default=True, help='Specify an alternate template file (not recommended)')
 @click.option('-y', '--yaml', default=YAML_FILE, show_default=True, help='Specify an alternate yaml file (not recommended)')
 @click.option('-o', '--output', default=OUTPUT_FILE, show_default=True, help='Specify an output file')

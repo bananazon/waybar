@@ -51,6 +51,8 @@ tooltip label {
 }
 
 /* Common style for loading */
+#custom-filesystem-usage-root.loading,
+#custom-filesystem-usage-work.loading,
 #custom-quakes.loading,
 #custom-speedtest.loading,
 #custom-software-updates-apt.loading,

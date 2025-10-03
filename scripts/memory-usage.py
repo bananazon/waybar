@@ -12,8 +12,8 @@ import click
 
 util.validate_requirements(binaries=['dmidecode', 'jc'])
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
 
 class MemoryInfo(NamedTuple):
     success   : Optional[bool] = False
@@ -147,12 +147,12 @@ def get_memory_usage():
 
     return mem_info
 
-@click.command(help='Get memory usage from free(1) and dmidecode(8)', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get memory usage from free(1) and dmidecode(8)', context_settings=context_settings)
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
 @click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
 def main(unit, toggle):
     mode_count = 3
-    statefile = Path(CACHE_DIR) / f'waybar-{util.called_by() or "memory-usage"}-state'
+    statefile = Path(cache_dir) / f'waybar-{util.called_by() or "memory-usage"}-state'
 
     if toggle:
         mode = state.next_state(statefile=statefile, mode_count=mode_count)

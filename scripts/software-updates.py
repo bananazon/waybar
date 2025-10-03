@@ -18,10 +18,10 @@ import click
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOGFILE = CACHE_DIR / 'waybar-software-updates.log'
-VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
+logfile = cache_dir / 'waybar-software-updates.log'
+valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 class Package(NamedTuple):
     available_version : Optional[str]  = None
@@ -36,7 +36,7 @@ class SystemUpdates(NamedTuple):
     packages     : Optional[List[str]] = None
 
 logging.basicConfig(
-    filename=LOGFILE,
+    filename=logfile,
     filemode='a',  # 'a' = append, 'w' = overwrite
     format='%(asctime)s [%(levelname)-5s] - %(message)s',
     level=logging.INFO
@@ -530,8 +530,8 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-@click.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
-@click.option('-p', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
+@click.command(help='Check available system updates from different sources', context_settings=context_settings)
+@click.option('-p', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(valid_types)}')
 @click.option('-i', '--interval', type=int, default=1800, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
 def main(package_type, interval, test):

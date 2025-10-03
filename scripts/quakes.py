@@ -16,11 +16,11 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking USGS...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Checking USGS...'}
-LOGFILE = CACHE_DIR / 'waybar-earthquakes.log'
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
+loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking USGS...'
+loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Checking USGS...'}
+logfile = cache_dir / 'waybar-earthquakes.log'
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -143,7 +143,7 @@ def worker(radius: str=None, limit: int=None, magnitude: float=None):
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                print(json.dumps(LOADING_DICT))
+                print(json.dumps(loading_dict))
 
                 quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
                 if quake_data.success:
@@ -173,7 +173,7 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-@click.command(help='Show recent earthquakes near you', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Show recent earthquakes near you', context_settings=context_settings)
 @click.option('-r', '--radius', default='100m', help='The radius, e.g., 50m (or 50km)')
 @click.option('-l', '--limit', type=int, default=20, show_default=True, help='Maximum number of results to display')
 @click.option('-m', '--magnitude', type=float, default=0.1, show_default=True, help='Minimum magnitude')

@@ -159,10 +159,10 @@ def start_waybar():
     # Step 1: Append '---' to the log file
     # echo "---" | tee -a /tmp/waybar.log
     try:
-        with open(logfile, 'a') as f:
+        with open(logfile, 'w') as f:
             f.write('---\n')
     except Exception as e:
-        logging.error(f'failed to append the log file {logfile}: {e}')
+        logging.error(f'failed to write the log file {logfile}: {e}')
         sys.exit(1)
 
     # Step 2: Start waybar, redirect output, and run it in the background detached

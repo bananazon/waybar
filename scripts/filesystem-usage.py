@@ -50,10 +50,10 @@ class FilesystemInfo(NamedTuple):
     sample2    : Optional[namedtuple] = None
 
 logging.basicConfig(
-    filename=logfile,
-    filemode='a',  # 'a' = append, 'w' = overwrite
-    format='%(asctime)s [%(levelname)-5s] - %(message)s',
-    level=logging.INFO
+    filename = logfile,
+    filemode = 'w',  # 'a' = append, 'w' = overwrite
+    format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
+    level    = logging.INFO
 )
 
 def refresh_handler(signum, frame):

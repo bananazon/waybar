@@ -62,10 +62,10 @@ class SpeedtestResults(NamedTuple):
     speed_tx : Optional[int]    = -1
 
 logging.basicConfig(
-    filename=logfile,
-    filemode='a',  # 'a' = append, 'w' = overwrite
-    format='%(asctime)s [%(levelname)-5s] - %(message)s',
-    level=logging.INFO
+    filename = logfile,
+    filemode = 'w',  # 'a' = append, 'w' = overwrite
+    format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
+    level    = logging.INFO
 )
 
 def generate_tooltip(data):

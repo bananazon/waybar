@@ -32,14 +32,17 @@ class FilesystemInfo(NamedTuple):
     total               : Optional[int]  = 0
     used                : Optional[int]  = 0
     reads_per_sec       : Optional[int]  = 0
+    read_bytes_per_sec  : Optional[int]  = 0
+    read_time_per_sec   : Optional[int]  = 0
+    read_latency_avg    : Optional[int]  = 0
     writes_per_sec      : Optional[int]  = 0
-    bytes_read_per_sec  : Optional[int]  = 0
-    bytes_write_per_sec : Optional[int]  = 0
+    write_bytes_per_sec : Optional[int]  = 0
+    write_time_per_sec  : Optional[int]  = 0
+    write_latency_avg   : Optional[int]  = 0
 
 def generate_tooltip(disk_info):
     tooltip = []
     tooltip_od = OrderedDict()
-
     if disk_info.filesystem:
         tooltip_od['Filesystem'] = disk_info.filesystem
 
@@ -59,20 +62,40 @@ def generate_tooltip(disk_info):
         if disk_info.lsblk.ro in [True, False]:
             tooltip_od['Read-only'] = 'yes' if disk_info.lsblk.ro else 'no'
 
-    if disk_info.reads_per_sec >= 0 and disk_info.writes_per_sec >= 0:
-        tooltip_od['Reads/sec'] = disk_info.reads_per_sec
-        tooltip_od['Writes/sec'] = disk_info.writes_per_sec
-
-    if disk_info.bytes_read_per_sec >= 0 and disk_info.bytes_write_per_sec >= 0:
-        tooltip_od['Read/sec'] = util.byte_converter(number=disk_info.bytes_read_per_sec, unit='auto')
-        tooltip_od['Written/sec'] = util.byte_converter(number=disk_info.bytes_write_per_sec, unit='auto')
-
     max_key_length = 0
     for key in tooltip_od.keys():
         max_key_length = len(key) if len(key) > max_key_length else max_key_length
 
     for key, value in tooltip_od.items():
         tooltip.append(f'{key:{max_key_length}} : {value}')
+
+    if len(tooltip) > 0:
+        tooltip.append('')
+
+    tooltip.append('Stats')
+    tooltip_od = OrderedDict()
+    if disk_info.reads_per_sec >= 0 and disk_info.writes_per_sec >= 0:
+        tooltip_od['Reads/sec'] = disk_info.reads_per_sec
+        tooltip_od['Writes/sec'] = disk_info.writes_per_sec
+
+    if disk_info.read_bytes_per_sec >= 0 and disk_info.write_bytes_per_sec >= 0:
+        tooltip_od['Read/sec'] = util.byte_converter(number=disk_info.read_bytes_per_sec, unit='auto')
+        tooltip_od['Written/sec'] = util.byte_converter(number=disk_info.write_bytes_per_sec, unit='auto')
+
+    if disk_info.read_time_per_sec >= 0 and disk_info.write_time_per_sec >= 0:
+        tooltip_od['Read Time/sec'] = f'{disk_info.read_time_per_sec} ms'
+        tooltip_od['Write Time/sec'] = f'{disk_info.write_time_per_sec} ms'
+
+    if disk_info.read_latency_avg >= 0 and disk_info.write_latency_avg >= 0:
+        tooltip_od['Average Read latency'] = f'{util.pad_float(disk_info.read_latency_avg)} ms'
+        tooltip_od['Average Write latency'] = f'{util.pad_float(disk_info.write_latency_avg)} ms' 
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f'  {key:{max_key_length}} : {value}')
 
     return '\n'.join(tooltip)
 
@@ -166,8 +189,11 @@ def get_disk_usage(mountpoint: str) -> list:
                 writes_per_sec = second.writes_completed - first.writes_completed
                 if lsblk_data.log_sec:
                     log_sec = lsblk_data.log_sec
-                    bytes_read_per_sec = ((second.sectors_read * log_sec) - (first.sectors_read * log_sec))
-                    bytes_write_per_sec = ((second.sectors_written * log_sec) - (first.sectors_written * log_sec))
+                    read_bytes_per_sec = ((second.sectors_read * log_sec) - (first.sectors_read * log_sec))
+                    write_bytes_per_sec = ((second.sectors_written * log_sec) - (first.sectors_written * log_sec))
+
+                read_time_per_sec = (second.read_time_ms - first.read_time_ms)
+                write_time_per_sec = (second.write_time_ms - first.write_time_ms)
 
     if df_item and findmnt_item:
         return FilesystemInfo(
@@ -184,9 +210,13 @@ def get_disk_usage(mountpoint: str) -> list:
             fstype              = findmnt_item.get('fstype') or None,
             lsblk               = lsblk_data,
             reads_per_sec       = reads_per_sec,
+            read_bytes_per_sec  = read_bytes_per_sec,
+            read_time_per_sec   = read_time_per_sec,
+            read_latency_avg    = second.read_time_ms / second.reads_completed,
             writes_per_sec      = writes_per_sec,
-            bytes_read_per_sec  = bytes_read_per_sec,
-            bytes_write_per_sec = bytes_write_per_sec,
+            write_bytes_per_sec = write_bytes_per_sec,
+            write_time_per_sec  = write_time_per_sec,
+            write_latency_avg   = second.write_time_ms / second.writes_completed,
         )
 
 @click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)

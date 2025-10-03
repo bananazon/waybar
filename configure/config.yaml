@@ -36,12 +36,14 @@ filesystems:
     show_stats: true
     interval: 5
     unit: auto
+    debug: false
   - label: work
     enabled: true
     mountpoint: /work
     show_stats: true
     interval: 5
     unit: auto
+    debug: false
 
 network_interfaces:
   - name: wlo1

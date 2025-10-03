@@ -243,7 +243,7 @@ def render_output(disk_info: namedtuple=None, unit: str=None, icon: str=None):
     elif format_index == 1:
         text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {pct_used}% used'
     elif format_index == 2:
-        text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {used}% used / {free}% free'
+        text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {used} used / {free} free'
 
     return text, output_class
 

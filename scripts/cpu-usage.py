@@ -13,8 +13,8 @@ import click
 
 util.validate_requirements(binaries=['dmidecode', 'jc', 'mpstat'])
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
 
 CPU_INFO : list | None=None
 
@@ -173,7 +173,7 @@ def get_cpu_info() -> CpuInfo:
 
     return cpu_info
 
-@click.command(help='Get CPU usage from using mpstat(1) and /proc/cpuinfo', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get CPU usage from using mpstat(1) and /proc/cpuinfo', context_settings=context_settings)
 def main():
     global CPU_INFO
 

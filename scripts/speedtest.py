@@ -18,11 +18,11 @@ util.validate_requirements(modules=['click', 'speedtest'])
 import click
 import speedtest
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Speedtest is running'}
-LOGFILE = CACHE_DIR / 'waybar-speedtest.log'
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
+loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running...'
+loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Speedtest is running'}
+logfile = cache_dir / 'waybar-speedtest.log'
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -62,7 +62,7 @@ class SpeedtestResults(NamedTuple):
     speed_tx : Optional[int]    = -1
 
 logging.basicConfig(
-    filename=LOGFILE,
+    filename=logfile,
     filemode='a',  # 'a' = append, 'w' = overwrite
     format='%(asctime)s [%(levelname)-5s] - %(message)s',
     level=logging.INFO
@@ -262,11 +262,11 @@ def worker():
         update_event.clear()
 
         if not util.waybar_is_running():
-            logging.info('[main] waybar not running')
+            logging.info('[worker] waybar not running')
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                print(json.dumps(LOADING_DICT))
+                print(json.dumps(loading_dict))
 
                 speedtest_data = run_speedtest()
 
@@ -310,7 +310,7 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-@click.command(help='Run a network speed test and return the results', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Run a network speed test and return the results', context_settings=context_settings)
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
 def main(interval, test):

@@ -33,16 +33,14 @@ filesystems:
   - label: root
     enabled: true
     mountpoint: /
-    format: "^used / ^total"
-    show_stats: false
-    interval: 3
+    show_stats: true
+    interval: 5
     unit: auto
   - label: work
     enabled: true
     mountpoint: /work
-    format: "^used / ^total"
-    show_stats: false
-    interval: 3
+    show_stats: true
+    interval: 5
     unit: auto
 
 network_interfaces:

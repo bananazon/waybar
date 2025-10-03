@@ -7,7 +7,6 @@ from waybar import glyphs, state, util
 import json
 import os
 import re
-import sys
 import time
 
 util.validate_requirements(modules=['click'])

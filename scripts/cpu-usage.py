@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, NamedTuple
 import json
 import platform
 import re
-import sys
 
 util.validate_requirements(modules=['click'])
 import click

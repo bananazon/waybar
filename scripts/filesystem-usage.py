@@ -2,10 +2,14 @@
 
 from collections import namedtuple, OrderedDict
 from pathlib import Path
-from waybar import glyphs, util
+from waybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
 import json
+import logging
 import re
+import signal
+import sys
+import threading
 import time
 
 util.validate_requirements(modules=['click'])
@@ -13,8 +17,19 @@ import click
 
 util.validate_requirements(binaries=['jc'])
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-VALID_TOKENS = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
+cache_dir        = util.get_cache_directory()
+condition        = threading.Condition()
+context_settings = dict(help_option_names=['-h', '--help'])
+disk_info        = None
+format_index     = 0
+formats          = [0, 1, 2]
+loading          = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Working...'
+loading_dict     = { 'text': loading, 'class': 'loading', 'tooltip': 'Gathering disk statistics'}
+logfile          = cache_dir / 'waybar-filesystem-usage.log'
+needs_fetch      = False
+needs_redraw     = False
+
+sys.stdout.reconfigure(line_buffering=True)
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool] = False
@@ -34,7 +49,34 @@ class FilesystemInfo(NamedTuple):
     sample1    : Optional[namedtuple] = None
     sample2    : Optional[namedtuple] = None
 
+logging.basicConfig(
+    filename=logfile,
+    filemode='a',  # 'a' = append, 'w' = overwrite
+    format='%(asctime)s [%(levelname)-5s] - %(message)s',
+    level=logging.INFO
+)
+
+def refresh_handler(signum, frame):
+    global needs_fetch, needs_redraw
+    logging.info('[refresh_handler] - received SIGHUP — re-fetching data')
+    with condition:
+        needs_fetch = True
+        needs_redraw = True
+        condition.notify()
+
+def toggle_format(signum, frame):
+    global format_index, needs_redraw
+    format_index = (format_index + 1) % len(formats)
+    logging.info(f'[toggle_format] - received SIGUSR1 - switching output format to {format_index + 1}')
+    with condition:
+        needs_redraw = True
+        condition.notify()
+
+signal.signal(signal.SIGHUP, refresh_handler)
+signal.signal(signal.SIGUSR1, toggle_format)  
+
 def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
+    logging.info(f'[generate_tooltip] - entering with mountpoint={disk_info.mountpoint}')
     tooltip = []
     tooltip_od = OrderedDict()
     if disk_info.filesystem:
@@ -55,7 +97,6 @@ def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
 
         if disk_info.lsblk.ro in [True, False]:
             tooltip_od['Read-only'] = 'yes' if disk_info.lsblk.ro else 'no'
-
 
     if show_stats and (disk_info.sample1 and disk_info.sample2):
         tooltip_od['Reads/sec'] = (disk_info.sample2.reads_completed - disk_info.sample1.reads_completed)
@@ -78,6 +119,7 @@ def filesystem_exists(mountpoint: str = None):
     return True if rc == 0 else False
 
 def get_sample(filesystem: str=None):
+    logging.info(f'[get_sample] - entering with filesystem={filesystem}')
     command = f'cat /proc/diskstats| jc --pretty --proc-diskstats'
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0 and stdout != '':
@@ -91,6 +133,7 @@ def get_sample(filesystem: str=None):
     return None
 
 def get_disk_stats(filesystem: str=None):
+    logging.info(f'[get_disk_stats] - entering with filesystem={filesystem}')
     first = get_sample(filesystem=filesystem)
     time.sleep(1)
     second = get_sample(filesystem=filesystem)
@@ -108,6 +151,7 @@ def get_disk_stats(filesystem: str=None):
     )
 
 def parse_lsblk(filesystem: str=None):
+    logging.info(f'[parse_lsblk] - entering with filesystem={filesystem}')
     if filesystem:
         command = f'lsblk -O --json {filesystem}'
         rc, stdout, stderr = util.run_piped_command(command)
@@ -123,6 +167,7 @@ def get_disk_usage(mountpoint: str, show_stats: bool=False) -> list:
     """
     Execute df -B 1 against a mount point and return a namedtuple with its values
     """
+    logging.info(f'[get_disk_usage] - entering with mountpoint={mountpoint}')
     df_item = None
     findmnt_item = None
     first = None
@@ -177,71 +222,106 @@ def get_disk_usage(mountpoint: str, show_stats: bool=False) -> list:
             sample2    = second,
         )
 
-@click.command(help='Get disk informatiopn from df(1)', context_settings=CONTEXT_SETTINGS)
-@click.option('-m', '--mountpoint', required=True, help=f'The mountpoint to check')
-@click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
-@click.option('-l', '--label', required=True, help=f'A unique label to use')
-@click.option('-f', '--format', help=f'Output format, e.g., "^free / ^total"; valid tokens are: {', '.join(VALID_TOKENS)} ', required=False, default='^used / ^total', show_default=True)
-@click.option('-s', '--show-stats', is_flag=True, help=f'Gather disk statistics and display them in the tooltip')
-def main(mountpoint, unit, label, format, show_stats):
-    if filesystem_exists(mountpoint=mountpoint):
-        disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)
-        if disk_info.success:
-            token_map = {
-                '^pct_total' : disk_info.pct_total,
-                '^pct_used'  : disk_info.pct_used,
-                '^pct_free'  : disk_info.pct_free,
-                '^total'     : util.byte_converter(number=disk_info.total, unit=unit),
-                '^used'      : util.byte_converter(number=disk_info.used, unit=unit),
-                '^free'      : util.byte_converter(number=disk_info.free, unit=unit),
+def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
+    global disk_info, needs_fetch, needs_redraw, format_index
+
+    while True:
+        with condition:
+            while not (needs_fetch or needs_redraw):
+                condition.wait()
+
+            fetch        = needs_fetch
+            redraw       = needs_redraw
+            needs_fetch  = False
+            needs_redraw = False
+
+        if not filesystem_exists(mountpoint=mountpoint):
+            output = {
+                'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} doesn\'t exist',
+                'class'   : 'error',
+                'tooltip' : 'Filesystem error',
             }
+            print(json.dumps(output))
+            disk_info = None
+            continue    
 
-            if disk_info.pct_free < 20:
-                output_class = 'critical'
-            elif disk_info.pct_free < 50:
-                output_class = 'warning'
-            elif disk_info.pct_free >= 50:
-                output_class = 'good'
+        if fetch:
+            print(json.dumps(loading_dict))
+            disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)
 
-            filesystem_output = format.replace('{','').replace('}', '')
-            valid = []
-            invalid = []
-            tokens = re.findall(r"\^\w+", format)
-            for token in tokens:
-                if token in VALID_TOKENS:
-                    valid.append(token)
+        if disk_info is None:
+            continue
+
+        if disk_info.success:
+            if redraw:
+                logging.info(f'[worker] - successfully retrieved data for mountpoint {mountpoint}')
+                pct_total = disk_info.pct_total
+                pct_used  = disk_info.pct_used
+                pct_free  = disk_info.pct_free
+                total     = util.byte_converter(number=disk_info.total, unit=unit)
+                used      = util.byte_converter(number=disk_info.used, unit=unit)
+                free      = util.byte_converter(number=disk_info.free, unit=unit)
+
+                if pct_free < 20:
+                    output_class = 'critical'
+                elif pct_free < 50:
+                    output_class = 'warning'
                 else:
-                    invalid.append(token)
+                    output_class = 'good'
 
-            if len(invalid) == 0 and len(valid) > 0:
-                for idx, token in enumerate(valid):
-                    filesystem_output = filesystem_output.replace(token, str(token_map[token]))
+                if format_index == 0:
+                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used} / {total}'
+                elif format_index == 1:
+                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {pct_used}% used'
+                elif format_index == 2:
+                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used}% used / {free}% free'
 
                 output = {
-                    'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {filesystem_output}',
-                    'tooltip' : generate_tooltip(disk_info=disk_info, show_stats=show_stats),
+                    'text'    : text,
                     'class'   : output_class,
-                }
-            else:
-                output = {
-                    'text'    :  f'Invalid format: {format}',
-                    'class'   : 'error',
-                    'tooltip' : 'Filesystem Usage',
+                    'tooltip' : generate_tooltip(disk_info=disk_info, show_stats=show_stats),
                 }
         else:
             output = {
                 'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {disk_info.error}',
                 'class'   : 'error',
-                'tooltip' : 'Filesystem Usage',
+                'tooltip' : generate_tooltip(disk_info=disk_info, show_stats=show_stats),
             }
-    else:
-        output = {
-            'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} doesn\'t exist',
-            'class'   : 'error',
-            'tooltip' : 'Filesystem Usage',
-        }
-    
-    print(json.dumps(output))
+
+        print(json.dumps(output))
+
+@click.command(help='Get disk informatiopn from df(1)', context_settings=context_settings)
+@click.option('-m', '--mountpoint', required=True, help=f'The mountpoint to check')
+@click.option('-u', '--unit', required=False, default='auto', type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
+@click.option('-l', '--label', required=True, help=f'A unique label to use')
+@click.option('-s', '--show-stats', is_flag=True, help=f'Gather disk statistics and display them in the tooltip')
+@click.option('-i', '--interval', type=int, default=5, help='The update interval (in seconds)')
+@click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
+def main(mountpoint, unit, label, show_stats, interval, test):
+    global needs_fetch, needs_redraw
+
+    if test:
+        disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)
+        util.pprint(disk_info)
+        print()
+        print(generate_tooltip(disk_info=disk_info, show_stats=show_stats))
+        return
+
+    logging.info('[main] - entering')
+
+    threading.Thread(target=worker, args=(mountpoint, unit, show_stats), daemon=True).start()
+
+    with condition:
+        needs_fetch = True
+        needs_redraw = True
+        condition.notify()
+
+    while True:
+        time.sleep(interval)
+        with condition:
+            needs_fetch = True
+            needs_redraw = True
+            condition.notify()
 
 if __name__ == "__main__":
     main()

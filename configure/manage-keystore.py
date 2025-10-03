@@ -7,7 +7,7 @@ import click
 import os
 import tarfile
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+context_settings = dict(help_option_names=['-h', '--help'])
 DEFAULT_DB = Path.home() / '.local/share/secure_keystore.db'
 DEFAULT_KEY = Path.home() / '.local/share/secure_keystore.key'
 
@@ -22,7 +22,7 @@ def get_store(db_path, key_path):
     """ Lazy-load the keystore only when needed """
     return SecureKeyStore(db_path=db_path, key_path=key_path)
 
-@click.group(invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
+@click.group(invoke_without_command=True, context_settings=context_settings)
 @click.option('-d', '--database', default=DEFAULT_DB, type=click.Path(), help="Path to the database")
 @click.option('-k', '--key', default=DEFAULT_KEY, type=click.Path(), help="Path to the encryption key")
 @click.pass_context

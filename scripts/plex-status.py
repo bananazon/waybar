@@ -6,7 +6,7 @@ import json
 util.validate_requirements(modules=['click'])
 import click
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+context_settings = dict(help_option_names=['-h', '--help'])
 
 def get_plex_status(ip: str=None, port: int=0, token: str=None):
     response = http.request(
@@ -25,7 +25,7 @@ def get_plex_status(ip: str=None, port: int=0, token: str=None):
 
     return process, available
 
-@click.command(help='Show the status of your Plex Media Server', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Show the status of your Plex Media Server', context_settings=context_settings)
 @click.option('-i', '--ip', required=False, default=util.find_public_ip(), show_default=True, help=f'The public IP of the Plex media server')
 @click.option('-p', '--port', required=False, default=32400, show_default=True, help=f'The port of the Plex media server')
 @click.option('-t', '--token', required=True, help=f'Plex Server API token; stored in \"/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Preferences.xml\"')

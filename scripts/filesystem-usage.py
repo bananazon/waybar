@@ -223,6 +223,30 @@ def get_disk_usage(mountpoint: str, show_stats: bool=False) -> list:
             sample2    = second,
         )
 
+def render_output(disk_info: namedtuple=None, unit: str=None, icon: str=None):
+    pct_total = disk_info.pct_total
+    pct_used  = disk_info.pct_used
+    pct_free  = disk_info.pct_free
+    total     = util.byte_converter(number=disk_info.total, unit=unit)
+    used      = util.byte_converter(number=disk_info.used, unit=unit)
+    free      = util.byte_converter(number=disk_info.free, unit=unit)
+
+    if pct_free < 20:
+        output_class = 'critical'
+    elif pct_free < 50:
+        output_class = 'warning'
+    else:
+        output_class = 'good'
+
+    if format_index == 0:
+        text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {used} / {total}'
+    elif format_index == 1:
+        text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {pct_used}% used'
+    elif format_index == 2:
+        text = f'{icon}{glyphs.icon_spacer}{disk_info.mountpoint} {used}% used / {free}% free'
+
+    return text, output_class
+
 def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
     global disk_info, needs_fetch, needs_redraw, format_index
 
@@ -247,7 +271,11 @@ def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
             continue    
 
         if fetch:
-            print(json.dumps(loading_dict))
+            if disk_info:
+                text, _ = render_output(disk_info=disk_info, unit=unit, icon=glyphs.md_timer_outline)
+                print(json.dumps({'text': text, 'class': 'loading'}))
+            else:
+                print(json.dumps(loading_dict))
             disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)
 
         if disk_info is None:
@@ -256,26 +284,7 @@ def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
         if disk_info.success:
             if redraw:
                 logging.debug(f'[worker] - successfully retrieved data for mountpoint {mountpoint}')
-                pct_total = disk_info.pct_total
-                pct_used  = disk_info.pct_used
-                pct_free  = disk_info.pct_free
-                total     = util.byte_converter(number=disk_info.total, unit=unit)
-                used      = util.byte_converter(number=disk_info.used, unit=unit)
-                free      = util.byte_converter(number=disk_info.free, unit=unit)
-
-                if pct_free < 20:
-                    output_class = 'critical'
-                elif pct_free < 50:
-                    output_class = 'warning'
-                else:
-                    output_class = 'good'
-
-                if format_index == 0:
-                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used} / {total}'
-                elif format_index == 1:
-                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {pct_used}% used'
-                elif format_index == 2:
-                    text = f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} {used}% used / {free}% free'
+                text, output_class = render_output(disk_info=disk_info, unit=unit, icon=glyphs.md_harddisk)
 
                 output = {
                     'text'    : text,

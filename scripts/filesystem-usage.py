@@ -25,7 +25,7 @@ format_index     = 0
 formats          = [0, 1, 2]
 loading          = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Working...'
 loading_dict     = { 'text': loading, 'class': 'loading', 'tooltip': 'Gathering disk statistics'}
-logfile          = cache_dir / 'waybar-filesystem-usage.log'
+mountpoint_name  = None
 needs_fetch      = False
 needs_redraw     = False
 
@@ -49,16 +49,17 @@ class FilesystemInfo(NamedTuple):
     sample1    : Optional[namedtuple] = None
     sample2    : Optional[namedtuple] = None
 
-logging.basicConfig(
-    filename = logfile,
-    filemode = 'w',  # 'a' = append, 'w' = overwrite
-    format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
-    level    = logging.INFO
-)
+def configure_logging(debug: bool=False, logfile: str=None):
+    logging.basicConfig(
+        filename = logfile,
+        filemode = 'w',  # 'a' = append, 'w' = overwrite
+        format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
+        level    = logging.DEBUG if debug else logging.INFO
+    )
 
 def refresh_handler(signum, frame):
     global needs_fetch, needs_redraw
-    logging.info('[refresh_handler] - received SIGHUP — re-fetching data')
+    logging.info(f'[refresh_handler] - received SIGHUP — re-fetching data for mountpoint {mountpoint_name}')
     with condition:
         needs_fetch = True
         needs_redraw = True
@@ -67,7 +68,7 @@ def refresh_handler(signum, frame):
 def toggle_format(signum, frame):
     global format_index, needs_redraw
     format_index = (format_index + 1) % len(formats)
-    logging.info(f'[toggle_format] - received SIGUSR1 - switching output format to {format_index + 1}')
+    logging.info(f'[toggle_format] - received SIGUSR1 - switching output format to {format_index + 1} for mountpoint {mountpoint_name}')
     with condition:
         needs_redraw = True
         condition.notify()
@@ -76,7 +77,7 @@ signal.signal(signal.SIGHUP, refresh_handler)
 signal.signal(signal.SIGUSR1, toggle_format)  
 
 def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
-    logging.info(f'[generate_tooltip] - entering with mountpoint={disk_info.mountpoint}')
+    logging.debug(f'[generate_tooltip] - entering with mountpoint={disk_info.mountpoint}')
     tooltip = []
     tooltip_od = OrderedDict()
     if disk_info.filesystem:
@@ -119,7 +120,7 @@ def filesystem_exists(mountpoint: str = None):
     return True if rc == 0 else False
 
 def get_sample(filesystem: str=None):
-    logging.info(f'[get_sample] - entering with filesystem={filesystem}')
+    logging.debug(f'[get_sample] - entering with filesystem={filesystem}')
     command = f'cat /proc/diskstats| jc --pretty --proc-diskstats'
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0 and stdout != '':
@@ -133,7 +134,7 @@ def get_sample(filesystem: str=None):
     return None
 
 def get_disk_stats(filesystem: str=None):
-    logging.info(f'[get_disk_stats] - entering with filesystem={filesystem}')
+    logging.debug(f'[get_disk_stats] - entering with filesystem={filesystem}')
     first = get_sample(filesystem=filesystem)
     time.sleep(1)
     second = get_sample(filesystem=filesystem)
@@ -151,7 +152,7 @@ def get_disk_stats(filesystem: str=None):
     )
 
 def parse_lsblk(filesystem: str=None):
-    logging.info(f'[parse_lsblk] - entering with filesystem={filesystem}')
+    logging.debug(f'[parse_lsblk] - entering with filesystem={filesystem}')
     if filesystem:
         command = f'lsblk -O --json {filesystem}'
         rc, stdout, stderr = util.run_piped_command(command)
@@ -167,7 +168,7 @@ def get_disk_usage(mountpoint: str, show_stats: bool=False) -> list:
     """
     Execute df -B 1 against a mount point and return a namedtuple with its values
     """
-    logging.info(f'[get_disk_usage] - entering with mountpoint={mountpoint}')
+    logging.debug(f'[get_disk_usage] - entering with mountpoint={mountpoint}')
     df_item = None
     findmnt_item = None
     first = None
@@ -254,7 +255,7 @@ def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
 
         if disk_info.success:
             if redraw:
-                logging.info(f'[worker] - successfully retrieved data for mountpoint {mountpoint}')
+                logging.debug(f'[worker] - successfully retrieved data for mountpoint {mountpoint}')
                 pct_total = disk_info.pct_total
                 pct_used  = disk_info.pct_used
                 pct_free  = disk_info.pct_free
@@ -297,8 +298,13 @@ def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
 @click.option('-s', '--show-stats', is_flag=True, help=f'Gather disk statistics and display them in the tooltip')
 @click.option('-i', '--interval', type=int, default=5, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
-def main(mountpoint, unit, label, show_stats, interval, test):
-    global needs_fetch, needs_redraw
+@click.option('-d', '--debug', default=False, is_flag=True, help='Enable debug logging')
+def main(mountpoint, unit, label, show_stats, interval, test, debug):
+    global mountpoint_name, needs_fetch, needs_redraw
+
+    logfile = cache_dir / f'waybar-filesystem-usage-{label}.log'
+    configure_logging(debug=debug, logfile=logfile)
+    mountpoint_name = mountpoint
 
     if test:
         disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)

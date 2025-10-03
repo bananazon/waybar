@@ -15,8 +15,8 @@ import click
 
 util.validate_requirements(binaries=['iw'])
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
 
 class WifiStatus(NamedTuple):
     success        : Optional[bool] = False
@@ -202,7 +202,7 @@ def get_wifi_status(interface: str=None):
 
     return wifi_status
 
-@click.command(help='Get WiFi status using iw(8)', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get WiFi status using iw(8)', context_settings=context_settings)
 @click.option('-i', '--interface', required=True, help='The interface to check')
 def main(interface):
     if not util.interface_exists(interface=interface):

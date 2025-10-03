@@ -20,7 +20,6 @@ sys.stdout.reconfigure(line_buffering=True)
 
 cache_dir = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
-logfile = cache_dir / 'waybar-software-updates.log'
 valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 class Package(NamedTuple):
@@ -35,12 +34,19 @@ class SystemUpdates(NamedTuple):
     count        : Optional[int]  = 0
     packages     : Optional[List[str]] = None
 
-logging.basicConfig(
-    filename = logfile,
-    filemode = 'w',  # 'a' = append, 'w' = overwrite
-    format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
-    level    = logging.INFO
-)
+def configure_logging(debug: bool=False, logfile: str=None):
+    logging.basicConfig(
+        filename = logfile,
+        filemode = 'w',  # 'a' = append, 'w' = overwrite
+        format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
+        level    = logging.DEBUG if debug else logging.INFO
+    )
+
+def refresh_handler(signum, frame):
+    logging.info('[refresh_handler] - received SIGHUP — triggering find_updates')
+    update_event.set()
+
+signal.signal(signal.SIGHUP, refresh_handler)
 
 def generate_tooltip(data):
     tooltip = []
@@ -75,7 +81,7 @@ def find_apt_updates(package_type: str = None):
     """
     Execute apt to search for new updates
     """
-    logging.info(f'[find_apt_updates] entering function, type={package_type}')
+    logging.info(f'[find_apt_updates] - entering function')
 
     # command = f'sudo apt update'
     # rc, stdout, stderr = util.run_piped_command(command)
@@ -126,14 +132,14 @@ def find_apt_updates(package_type: str = None):
                 installed_version = value['installed_version'],
             ))
 
-    logging.info(f'[find_apt_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_apt_updates] - returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_brew_updates(package_type: str = None):
     """
     Execute brew to search for new updates
     """
-    logging.info(f'[find_brew_updates] entering function, type={package_type}')
+    logging.info(f'[find_brew_updates] - entering function')
 
     command = f'brew update'
     rc, _, stderr = util.run_piped_command(command)
@@ -172,14 +178,14 @@ def find_brew_updates(package_type: str = None):
             installed_version = obj.get('installed_versions')[0],
         ))
 
-    logging.info(f'[find_brew_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_brew_updates] - returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_dnf_updates(package_type: str=None):
     """
     Execute dnf to search for new updates
     """
-    logging.info(f'[find_dnf_updates] entering function, type={package_type}')
+    logging.info(f'[find_dnf_updates] - entering function')
 
     packages = []
     available_map = {}
@@ -224,13 +230,14 @@ def find_dnf_updates(package_type: str=None):
             installed_version = value.get('installed_version'),
         ))
 
+    logging.info(f'[find_dnf_updates] - returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_flatpak_updates(package_type: str=None):
     """
     Execute flatpak to search for new updates
     """
-    logging.info(f'[find_flatpak_updates] entering function, type={package_type}')
+    logging.info(f'[find_flatpak_updates] - entering function')
 
     command = f'sudo flatpak update --appstream'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -254,15 +261,14 @@ def find_flatpak_updates(package_type: str=None):
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
-    logging.info(f'[find_flatpak_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_flatpak_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_mint_updates(package_type: str=None):
     """
     Execute mintupdate-cli to search for new updates
     """
-
-    logging.info(f'[find_mint_updates] entering function, type={package_type}')
+    logging.info(f'[find_mint_updates] - entering function')
 
     command = f'sudo mintupdate-cli list -r'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -275,14 +281,14 @@ def find_mint_updates(package_type: str=None):
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
-    logging.info(f'[find_mint_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_mint_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_pacman_updates(package_type: str=None):
     """
     Execute pacman to search for new updates
     """
-    logging.info(f'[find_pacman_updates] entering function, type={package_type}')
+    logging.info(f'[find_pacman_updates] - entering function')
 
     # command = f'sudo pacman -Qu'
     # rc, stdout, stderr = util.run_piped_command(command)
@@ -318,14 +324,14 @@ def find_pacman_updates(package_type: str=None):
         else:
             return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
-    logging.info(f'[find_pacman_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_pacman_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_snap_updates(package_type: str=None):
     """
     Execute snap to search for new updates
     """
-    # logging.info(f'[find_snap_updates] entering function, type={package_type}')
+    logging.info(f'[find_snap_updates] - entering function')
 
     # command = f'sudo snap refresh --list'
     # rc, stdout, stderr = util.run_piped_command(command)
@@ -353,14 +359,14 @@ def find_snap_updates(package_type: str=None):
                     installed_version = None,
                 ))
 
-    logging.info(f'[find_snap_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_snap_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_yay_updates(package_type: str=None, aur: bool=False):
     """
     Execute yay to search for new updates
     """
-    logging.info(f'[find_yay_updates] entering function, type={package_type}, aur={aur}')
+    logging.info(f'[find_yay_updates] - entering function, aur={aur}')
 
     # command = f'sudo yay -Qua'
     # rc, stdout, stderr = util.run_piped_command(command)
@@ -405,14 +411,14 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
         else:
             return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
 
-    logging.info(f'[find_yay_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_yay_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_yum_updates(package_type: str=None):
     """
     Execute yum to search for new updates
     """
-    logging.info(f'[find_yum_updates] entering function, type={package_type}')
+    logging.info(f'[find_yum_updates] - entering function')
 
     command = f'sudo yum update -y'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -452,14 +458,14 @@ def find_yum_updates(package_type: str=None):
     #             available_version = bits[1],
     #         ))
 
-    logging.info(f'[find_yum_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_yum_updates] returning data')
     return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
 
 def find_updates(package_type: str = ''):
     """
     Determine which function is required to get the updates
     """
-    logging.info(f'[find_updates] type={package_type}')
+    logging.info(f'[find_updates] - entering with package_type={package_type}')
 
     dispatch = {
         'apt'        : find_apt_updates,
@@ -483,15 +489,12 @@ def worker(package_type: str=None):
         update_event.wait()
         update_event.clear()
 
-        logging.info('[worker] entering main loop')
+        logging.info('[worker] - entering main loop')
         if not util.waybar_is_running():
-            logging.info('[worker] waybar not running')
+            logging.info('[worker] - waybar not running')
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                logging.info(f'[run] Starting - package_type={package_type}')
-
-
                 loading_dict = {
                     'text'    : f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...',
                     'class'   : 'loading',
@@ -502,6 +505,7 @@ def worker(package_type: str=None):
                 data = find_updates(package_type=package_type)
 
                 if data.success:
+                    logging.info(f'[worker] - successfully retrieved data for package type {package_type}')
                     tooltip = generate_tooltip(data)
                     packages = 'package' if data.count == 1 else 'packages'
                     output = {
@@ -524,17 +528,15 @@ def worker(package_type: str=None):
 
             print(json.dumps(output))
 
-def refresh_handler(signum, frame):
-    logging.info('Received SIGHUP — triggering find_updates')
-    update_event.set()
-
-signal.signal(signal.SIGHUP, refresh_handler)
-
 @click.command(help='Check available system updates from different sources', context_settings=context_settings)
 @click.option('-p', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(valid_types)}')
 @click.option('-i', '--interval', type=int, default=1800, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
-def main(package_type, interval, test):
+@click.option('-d', '--debug', default=False, is_flag=True, help='Enable debug logging')
+def main(package_type, interval, test, debug):
+    logfile = cache_dir / f'waybar-software-updates-{package_type}.log'
+    configure_logging(debug=debug, logfile=logfile)
+
     if test:
         data = find_updates(package_type=package_type)
         util.pprint(data)

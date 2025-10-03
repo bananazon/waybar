@@ -361,7 +361,9 @@ def main(api_key, location, use_celsius, label, interval, test):
     if test:
         weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
         util.pprint(weather_data)
-        sys.exit(0)
+        print()
+        print(generate_tooltip(weather_data))
+        return
 
     threading.Thread(
         target = worker,

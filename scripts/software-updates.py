@@ -538,7 +538,9 @@ def main(package_type, interval, test):
     if test:
         data = find_updates(package_type=package_type)
         util.pprint(data)
-        sys.exit(0)
+        print()
+        print(generate_tooltip(data))
+        return
 
     logging.info('[main] entering')
     threading.Thread(target=worker, args=(package_type,), daemon=True).start()

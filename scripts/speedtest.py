@@ -317,8 +317,9 @@ def main(interval, test):
     if test:
         speedtest_data = run_speedtest()
         util.pprint(speedtest_data)
+        print()
         print(generate_tooltip(speedtest_data))
-        sys.exit(0)
+        return
 
     logging.info('[main] entering')
 

@@ -183,7 +183,9 @@ def main(radius, limit, magnitude, interval, test):
     if test:
         quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
         util.pprint(quake_data)
-        sys.exit(0)
+        print()
+        print(generate_tooltip(quake_data.quakes))
+        return
     
     threading.Thread(target=worker, args=(radius, limit, magnitude,), daemon=True).start()
     update_event.set()

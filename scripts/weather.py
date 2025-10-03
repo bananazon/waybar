@@ -15,11 +15,11 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
-LOADING_DICT = { 'text': LOADING, 'class': 'loading', 'tooltip': 'Fetching weather...'}
-LOGFILE = CACHE_DIR / 'waybar-weather-result.log'
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
+loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
+loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Fetching weather...'}
+logfile = cache_dir / 'waybar-weather-result.log'
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -63,7 +63,7 @@ class WeatherData(NamedTuple):
     wind_speed        : Optional[str]   = None
 
 logging.basicConfig(
-    filename=LOGFILE,
+    filename=logfile,
     filemode='a',  # 'a' = append, 'w' = overwrite
     format='%(asctime)s [%(levelname)-5s] - %(message)s',
     level=logging.INFO
@@ -317,7 +317,7 @@ def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                print(json.dumps(LOADING_DICT))
+                print(json.dumps(loading_dict))
 
                 weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
                 if weather_data.success:
@@ -350,7 +350,7 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-@click.command(help='Get weather info from World Weather API', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get weather info from World Weather API', context_settings=context_settings)
 @click.option('-a', '--api-key', required=True, help=f'World Weather API key')
 @click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')

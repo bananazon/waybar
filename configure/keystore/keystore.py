@@ -3,7 +3,7 @@ from pathlib import Path
 import base64
 import sqlite3
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+context_settings = dict(help_option_names=['-h', '--help'])
 DEFAULT_DB = Path.home() / '.local/share/secure_keystore.db'
 DEFAULT_KEY = Path.home() / '.local/share/secure_keystore.key'
 

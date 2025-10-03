@@ -18,9 +18,10 @@ import click
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
-cache_dir = util.get_cache_directory()
+cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
-valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
+update_data      = None
+valid_types      = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 
 class Package(NamedTuple):
     available_version : Optional[str]  = None
@@ -48,15 +49,15 @@ def refresh_handler(signum, frame):
 
 signal.signal(signal.SIGHUP, refresh_handler)
 
-def generate_tooltip(data):
+def generate_tooltip(update_data: NamedTuple=None):
     tooltip = []
-    count = len(data.packages)
+    count = len(update_data.packages)
     max_shown = 20 if count > 20 else count
     max_name_len = 0
     max_version_len = 0
 
-    if data.packages and len(data.packages) > 0:
-        for item in data.packages[:max_shown]:
+    if update_data.packages and len(update_data.packages) > 0:
+        for item in update_data.packages[:max_shown]:
             package_name = item.name.split('.')[0]
             if len(item.name.split('.')[0]) > max_name_len:
                 max_name_len = len(item.name.split('.')[0])
@@ -66,7 +67,7 @@ def generate_tooltip(data):
         max_name_len = max_name_len if max_name_len <=30 else 30
         max_version_len = max_version_len if max_version_len <=30 else 30
 
-        for item in data.packages[:max_shown]:
+        for item in update_data.packages[:max_shown]:
             line = f'{item.name.split('.')[0][:max_name_len]:{max_name_len}} => {item.available_version[:max_version_len]:{max_version_len}}'
             tooltip.append(line)
 
@@ -484,7 +485,22 @@ def find_updates(package_type: str = ''):
 
     return data
 
+def render_output(update_data: NamedTuple=None, icon: str=None):
+    if update_data.success:
+        packages = 'package' if update_data.count == 1 else 'packages'
+        text = f'{icon}{glyphs.icon_spacer}{update_data.package_type} {update_data.count} outdated {packages}'
+        output_class = 'success'
+        tooltip = generate_tooltip(update_data=update_data)
+    else:
+        text = f'{glyphs.md_alert}{glyphs.icon_spacer}{update_data.package_type} failed to find updates'
+        output_class = 'error'
+        tooltip = f'{update_data.package_type} update error'
+
+    return text, output_class, tooltip
+
 def worker(package_type: str=None):
+    global update_data
+
     while True:
         update_event.wait()
         update_event.clear()
@@ -495,30 +511,21 @@ def worker(package_type: str=None):
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                loading_dict = {
-                    'text'    : f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...',
-                    'class'   : 'loading',
-                    'tooltip' : f'Checking {package_type}',
-                }
-                print(json.dumps(loading_dict))
-
-                data = find_updates(package_type=package_type)
-
-                if data.success:
-                    logging.info(f'[worker] - successfully retrieved data for package type {package_type}')
-                    tooltip = generate_tooltip(data)
-                    packages = 'package' if data.count == 1 else 'packages'
-                    output = {
-                        'text'    : f'{glyphs.md_package_variant}{glyphs.icon_spacer}{package_type} {data.count} outdated {packages}',
-                        'class'   : 'success',
-                        'tooltip' : tooltip,
-                    }
+                loading     = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...'
+                loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking {package_type}'}
+                if update_data:
+                    text, _, tooltip = render_output(update_data=update_data, icon=glyphs.md_timer_outline)
+                    print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
                 else:
-                    output = {
-                        'text'    : f'{glyphs.md_package_variant}{glyphs.icon_spacer}{package_type} failed to find updates',
-                        'class'   : 'success',
-                        'tooltip' : f'{package_type} update error',
-                    }
+                    print(json.dumps(loading_dict))
+
+                update_data = find_updates(package_type=package_type)
+                text, output_class, tooltip = render_output(update_data=update_data, icon=glyphs.md_package_variant)
+                output = {
+                    'text'    : text,
+                    'class'   : output_class,
+                    'tooltip' : tooltip,
+                }
             else:
                 output= {
                     'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
@@ -538,10 +545,10 @@ def main(package_type, interval, test, debug):
     configure_logging(debug=debug, logfile=logfile)
 
     if test:
-        data = find_updates(package_type=package_type)
-        util.pprint(data)
+        update_data = find_updates(package_type=package_type)
+        util.pprint(update_data)
         print()
-        print(generate_tooltip(data))
+        print(generate_tooltip(update_data=update_data))
         return
 
     logging.info('[main] entering')

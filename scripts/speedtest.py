@@ -70,6 +70,7 @@ logging.basicConfig(
 )
 
 def generate_tooltip(data: namedtuple=None):
+    logging.info('[generate_tooltip] - entering function')
     tooltip = []
 
     tooltip_od = OrderedDict()
@@ -149,13 +150,19 @@ def get_icon(speed: int = 0) -> str:
         return glyphs.md_speedometer_fast
 
 def parse_speedtest_data(json_data=None):
+    logging.info('[parse_speedtest_data] - entering function')
     speedtest_data = util.dict_to_namedtuple( name='SpeedtestData', obj=json_data)
 
     client_data = speedtest_data.client
     server_data = speedtest_data.server
     speed_rx    = round(speedtest_data.download)
     speed_tx    = round(speedtest_data.upload)
-    icon        = get_icon((speed_rx + speed_tx) / 2)
+    avg_speed   = (speed_rx + speed_tx) / 2
+    icon        = get_icon(avg_speed)
+
+    logging.info(f'[parse_speedtest_data] - speed_rx={speed_rx}, speed_tx={speed_tx}')
+    logging.info(f'[parse_speedtest_data] - avg_speed={avg_speed}')
+    logging.info(f'[parse_speedtest_data] - icon={icon}')
 
     if client_data.ip:
         client_location = util.ip_to_location(ip=client_data.ip, name='ClientLocation')
@@ -210,7 +217,7 @@ def parse_speedtest_data(json_data=None):
     )
 
 def run_speedtest():
-    logging.info('[run_speedtest] running speedtest')
+    logging.info('[run_speedtest] - running speedtest')
     location = None
 
     command_list = ['speedtest-cli', '--secure', '--json']
@@ -258,18 +265,24 @@ def run_speedtest():
     return speedtest_results
 
 def render_output(speedtest_data: namedtuple=None, icon: str=None):
-    parts = []
-    if speedtest_data.speed_rx:
-        parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
-    if speedtest_data.speed_tx:
-        parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
-    
-    if len(parts) == 2:
-        text = f'{icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}'
-        output_class = 'success'
-        tooltip = generate_tooltip(data=speedtest_data)
+    logging.info('[render_output] - entering function')
+    if speedtest_data.success:
+        parts = []
+        if speedtest_data.speed_rx:
+            parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx)}')
+        if speedtest_data.speed_tx:
+            parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx)}')
+
+        if len(parts) == 2:
+            text = f'{icon}{glyphs.icon_spacer}Speedtest {" ".join(parts)}'
+            output_class = 'success'
+            tooltip = generate_tooltip(data=speedtest_data)
+        else:
+            text = f'{icon}{glyphs.icon_spacer}all tests failed'
+            output_class = 'error'
+            tooltip = 'Speedtest error'
     else:
-        text = f'{icon}{glyphs.icon_spacer}{speedtest_data.error}'
+        text = f'{glyphs.md_alert}{glyphs.icon_spacer}{speedtest_data.error}'
         output_class = 'error'
         tooltip = 'Speedtest error'
     
@@ -283,7 +296,7 @@ def worker():
         update_event.clear()
 
         if not util.waybar_is_running():
-            logging.info('[worker] waybar not running')
+            logging.info('[worker] - waybar not running')
             sys.exit(0)
         else:
             if util.network_is_reachable():
@@ -294,20 +307,12 @@ def worker():
                     print(json.dumps(loading_dict))
 
                 speedtest_data = run_speedtest()
-
-                if speedtest_data.success:
-                    text, output_class, tooltip = render_output(speedtest_data=speedtest_data, icon=speedtest_data.icon)
-                    output = {
-                        'text'    : text,
-                        'class'   : output_class,
-                        'tooltip' : tooltip,
-                    }
-                else:
-                    output = {
-                        'text'  : f'{speedtest_data.icon}{glyphs.icon_spacer}{speedtest_data.error}',
-                        'class' : 'error',
-                        'tooltip' : 'Speedtest error',
-                    }
+                text, output_class, tooltip = render_output(speedtest_data=speedtest_data, icon=speedtest_data.icon)
+                output = {
+                    'text'    : text,
+                    'class'   : output_class,
+                    'tooltip' : tooltip,
+                }
             else:
                 output = {
                     'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
@@ -318,7 +323,7 @@ def worker():
         print(json.dumps(output))
 
 def refresh_handler(signum, frame):
-    logging.info('Received SIGHUP — triggering speedtest')
+    logging.info('[refresh_handler] - received SIGHUP — triggering speedtest')
     update_event.set()
 
 signal.signal(signal.SIGHUP, refresh_handler)
@@ -334,7 +339,7 @@ def main(interval, test):
         print(generate_tooltip(speedtest_data))
         return
 
-    logging.info('[main] entering')
+    logging.info('[main] - entering function')
 
     threading.Thread(target=worker, args=(), daemon=True).start()
     update_event.set()

@@ -9,8 +9,8 @@ import re
 util.validate_requirements(modules=['click'])
 import click
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
 
 class SwapInfo(NamedTuple):
     success   : Optional[bool]  = False
@@ -61,12 +61,12 @@ def get_swap_usage():
 
     return swap_info
 
-@click.command(help='Get swap usage from free(1)', context_settings=CONTEXT_SETTINGS)
+@click.command(help='Get swap usage from free(1)', context_settings=context_settings)
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
 @click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
 def main(unit, toggle):
     mode_count = 3
-    statefile = Path(CACHE_DIR) / f'waybar-{util.called_by() or "swap-usage"}-state'
+    statefile = Path(cache_dir) / f'waybar-{util.called_by() or "swap-usage"}-state'
 
     if toggle:
         mode = state.next_state(statefile=statefile, mode_count=mode_count)

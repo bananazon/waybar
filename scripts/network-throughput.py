@@ -14,8 +14,8 @@ import click
 
 util.validate_requirements(binaries=['jc', 'udevadm'])
 
-CACHE_DIR = util.get_cache_directory()
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+cache_dir = util.get_cache_directory()
+context_settings = dict(help_option_names=['-h', '--help'])
 
 class NetworkThroughput(NamedTuple):
     success     : Optional[bool] = False

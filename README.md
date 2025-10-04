@@ -136,7 +136,7 @@ Caches:
 ```
 
 ### Filesystem Usage
-This module shows filesystem usage information with three available output formats that can be toggled by clicking the item in the bar.
+This module shows filesystem usage information with three available output formats that can be toggled by right-clicking the item in the bar.
 
 #### Output Formats
 1. `/foo 779.39 GiB / 3.58 TiB`
@@ -145,12 +145,16 @@ This module shows filesystem usage information with three available output forma
 
 #### Tooltip
 ```
-Device      : /dev/mapper/luks-c7e5b1d9-cbce-4419-8982-0175169c92de
-Mountpoint  : /
-Type        : btrfs
-Kernel name : dm-0
-Removable   : no
-Read-only   : no
+Device        : /dev/mapper/luks-c7e5b1d9-cbce-4419-8982-0175169c92de
+Mountpoint    : /
+Type          : btrfs
+Kernel name   : dm-0
+Removable     : no
+Read-only     : no
+Reads/sec     : 0
+Writes/sec    : 0
+Read Time/sec : 0 ms
+Write Time/sec: 0 ms
 ```
 
 ### Memory Usage

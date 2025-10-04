@@ -52,7 +52,7 @@ def generate_tooltip(cpu_info):
                 core_number = int(core.cpu)
                 core_freq = CPU_INFO[core_number].cpu_frequency
                 tooltip.append(
-                    f'  core {int(core.cpu):02} user {util.pad_float(core.usr, False)}%, sys {util.pad_float(core.sys, False)}%, idle {util.pad_float(core.idle, False)}% ({util.processor_speed(core_freq)})'
+                    f'  core {int(core.cpu):02} user {util.pad_float(core.percent_usr, False)}%, sys {util.pad_float(core.percent_sys, False)}%, idle {util.pad_float(core.percent_idle, False)}% ({util.processor_speed(core_freq)})'
                 )
     
     if cpu_info.caches and type(cpu_info.caches) == list and len(cpu_info.caches) > 0:
@@ -103,9 +103,6 @@ def get_cpu_freq():
     return int(freq_cur) * 1000, int(freq_min) * 1000, int(freq_max) * 1000
 
 def parse_proc_cpuinfo():
-    """
-    Read /proc/cpuinfo and return a list of CPU blocks as dicts
-    """
     global CPU_INFO
     command = f'jc --pretty /proc/cpuinfo'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -121,23 +118,17 @@ def parse_proc_cpuinfo():
     CPU_INFO = cores
 
 def get_cpu_info() -> CpuInfo:
-    """
-    Gather information about the CPU and return it to main()
-    """
     global CPU_INFO
 
-    # make sure mpstat is installed
-    rc, stdout, stderr = util.run_piped_command(f'mpstat -A -o JSON')
+    command = 'mpstat -A | jc --pretty --mpstat'
+    rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         if stdout != '':
             json_data, err = util.parse_json_string(stdout)
             if not err:
                 try:
                     freq_cur, freq_min, freq_max = get_cpu_freq()
-                    cpu_load = []
-                    for cpu in json_data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']:
-                        cpu_load.append(util.dict_to_namedtuple(name='CPU', obj=cpu))
-
+                    cpu_load = [util.dict_to_namedtuple(name='CPU', obj=stanza) for stanza in json_data if (stanza['type'] == 'cpu' and 'cpu' in stanza)]
                     cpu_info = CpuInfo(
                         success        = True,
                         caches         = get_cache_info(),
@@ -182,7 +173,7 @@ def main():
         for core in cpu_info.cpu_load:
             if core.cpu == 'all':
                 output = {
-                    'text'    : f'{get_icon()}{glyphs.icon_spacer}user {core.usr}%, sys {core.sys}%, idle {core.idle}%',
+                    'text'    : f'{get_icon()}{glyphs.icon_spacer}user {core.percent_usr}%, sys {core.percent_sys}%, idle {core.percent_idle}%',
                     'tooltip' : generate_tooltip(cpu_info),
                     'class'   : 'success',
                 }

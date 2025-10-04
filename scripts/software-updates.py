@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -21,12 +22,11 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
+valid_types      = ['apt', 'brew', 'dnf', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur']
 
 class Package(NamedTuple):
-    available_version : Optional[str]  = None
-    installed_version : Optional[str]  = None
-    name              : Optional[str]  = None
+    name    : Optional[str]  = None
+    version : Optional[str]  = None
 
 class SystemUpdates(NamedTuple):
     success      : Optional[bool] = False
@@ -61,14 +61,14 @@ def generate_tooltip(update_data: NamedTuple=None):
             package_name = item.name.split('.')[0]
             if len(item.name.split('.')[0]) > max_name_len:
                 max_name_len = len(item.name.split('.')[0])
-            if len(item.available_version) > max_version_len:
-                max_version_len = len(item.available_version)
+            if len(item.version) > max_version_len:
+                max_version_len = len(item.version)
 
         max_name_len = max_name_len if max_name_len <=30 else 30
         max_version_len = max_version_len if max_version_len <=30 else 30
 
         for item in update_data.packages[:max_shown]:
-            line = f'{item.name.split('.')[0][:max_name_len]:{max_name_len}} => {item.available_version[:max_version_len]:{max_version_len}}'
+            line = f'{item.name.split('.')[0][:max_name_len]:{max_name_len}} => {item.version[:max_version_len]:{max_version_len}}'
             tooltip.append(line)
 
         if count > max_shown:
@@ -78,389 +78,193 @@ def generate_tooltip(update_data: NamedTuple=None):
 
     return '\n'.join(tooltip)
 
+def execute_command(command: list=None):
+    try:
+        result = subprocess.run(
+            command,
+            capture_output = True,
+            text           = True,
+            check          = False,
+        )
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+    except Exception as e:
+        return -1, None, str(e)
+
+def success(package_type: str=None, packages: list=None):
+    return SystemUpdates(
+        success      = True,
+        count        = len(packages),
+        packages     = packages,
+        package_type = package_type
+    )
+
+def error(package_type: str=None, command: list=None):
+    return SystemUpdates(
+        success      = False,
+        error        = f'Failed to execute {" ".join(command)}',
+        package_type = package_type
+    )
+
 def find_apt_updates(package_type: str = None):
-    """
-    Execute apt to search for new updates
-    """
     logging.info(f'[find_apt_updates] - entering function')
 
-    # command = f'sudo apt update'
-    # rc, stdout, stderr = util.run_piped_command(command)
-    # if rc != 0:
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+    command = ['sudo', 'apt', 'update']
+    rc, _, _ = execute_command(command=command)
+    if rc != 0:
+        return error(package_type=package_type, command=command)
 
-    # command = 'sudo apt upgrade --simulate --quiet'
-    # rc, stdout, stderr = util.run_piped_command(command)
-    # if rc == 0:
-    #     available_dict = {}
-    #     packages = []
-    #     lines = [line for line in stdout.split('\n') if line.startswith('Inst')]
-    #     for line in lines:
-    #         match = re.search(r'^Inst\s+(\S+)\s+\[([^\]]+)\]\s+\(([^\s]+)', line)
-    #         if match:
-    #             available_dict[match.group(1)] = {
-    #                 'available_version' : match.group(3),
-    #                 'installed_version' : match.group(2),
-    #             }
-    #     available_sorted = dict(sorted(available_dict.items()))
-    #     for key, value in available_sorted.items():
-    #         packages.append(Package(
-    #             name              = key,
-    #             available_version = value['available_version'],
-    #             installed_version = value['installed_version'],
-    #         ))
-    # else:
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    # This is here to test locally as I don't have apt
-    with open(os.path.join(util.get_script_directory(), 'apt-upgrade-output2.txt'), 'r', encoding='utf-8') as f:
-        stdout = f.read()
-        available_dict = {}
+    command = ['sudo', 'apt', 'upgrade', '--simulate', '--quiet']
+    rc, stdout, _ = execute_command(command=command)
+    if rc == 0:
         packages = []
         lines = [line for line in stdout.split('\n') if line.startswith('Inst')]
         for line in lines:
             match = re.search(r'^Inst\s+(\S+)\s+\[([^\]]+)\]\s+\(([^\s]+)', line)
             if match:
-                available_dict[match.group(1)] = {
-                    'available_version' : match.group(3),
-                    'installed_version' : match.group(2),
-                }
-        available_sorted = dict(sorted(available_dict.items()))
-        for key, value in available_sorted.items():
-            packages.append(Package(
-                name              = key,
-                available_version = value['available_version'],
-                installed_version = value['installed_version'],
-            ))
+                packages.append(Package(name=match.group(1), version=match.group(3)))
+    else:
+        return error(package_type=package_type, command=command)
 
     logging.info(f'[find_apt_updates] - returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_brew_updates(package_type: str = None):
-    """
-    Execute brew to search for new updates
-    """
     logging.info(f'[find_brew_updates] - entering function')
 
-    command = f'brew update'
-    rc, _, stderr = util.run_piped_command(command)
+    command = ['brew', 'update']
+    rc, _, _ = execute_command(command=command)
     if rc != 0:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        return error(package_type=package_type, command=command)
 
-    command = f'brew list --installed-on-request'
-    rc, stdout, _ = util.run_piped_command(command)
+    command = ['brew', 'list', '--installed-on-request']
+    rc, stdout, _ = execute_command(command=command)
     if rc != 0:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        return error(package_type=package_type, command=command)
 
     manually_installed = {line for line in stdout.splitlines()}
 
-    command = f'brew outdated --json'
-    rc, stdout, _ = util.run_piped_command(command)
-    if rc != 0:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    try:
-        brew_data = json.loads(stdout)
-    except Exception as e:
-        return SystemUpdates(success=False, error=f'failed to parse JSON from {command}: {e}', package_type=package_type)
+    command = ['brew', 'outdated', '--json']
+    rc, stdout, _ = execute_command(command=command)
+    if rc == 0:
+        try:
+            brew_data = json.loads(stdout)
+        except Exception as e:
+            return error(package_type=package_type, command=command)
+    else:
+        return error(package_type=package_type, command=command)
 
     packages = []
     for obj in brew_data['formulae']:
-        packages.append(Package(
-            name              = obj.get('name'),
-            available_version = obj.get('current_version'),
-            installed_version = obj.get('installed_versions')[0],
-        ))
+        packages.append(Package(name=obj.get('name'), version=obj.get('current_version')))
 
     for obj in brew_data['casks']:
         packages.append(Package(
-            name              = obj.get('name'),
-            available_version = obj.get('current_version'),
-            installed_version = obj.get('installed_versions')[0],
+            name    = obj.get('name'),
+            version = obj.get('current_version'),
         ))
 
     logging.info(f'[find_brew_updates] - returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_dnf_updates(package_type: str=None):
-    """
-    Execute dnf to search for new updates
-    """
-    logging.info(f'[find_dnf_updates] - entering function')
-
     packages = []
-    available_map = {}
-    installed_map = {}
-
-    command = f'sudo dnf check-upgrade'
-    rc, stdout, stderr = util.run_piped_command(command)
+    command = ['sudo', 'dnf', 'check-upgrade']
+    rc, stdout, _ = execute_command(command)
     if rc == 0:
-        return SystemUpdates(success=True, packages=[], package_type=package_type)
-    elif rc == 1:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        return success(package_type=package_type, packages=packages)
     elif rc == 100:
         for line in stdout.split('\n'):
             bits = re.split(r'\s+', line)
             if len(bits) == 3:
-                available_map[bits[0]] = {
-                    'available_version': bits[1]
-                }
-
-    command = f'sudo dnf list --installed'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0:
-        match = re.search(r'Installed packages\n([\s\S]*)', stdout)
-        if match:
-            for line in match.group(1).split('\n'):
-                bits = re.split(r'\s+', line)
-                if len(bits) == 3:
-                    installed_map[bits[0]] = {
-                        'installed_version': bits[1]
-                    }
+                packages.append(Package(name=bits[0], version=bits[1]))
     else:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-    
-    for key, value in available_map.items():
-        if key in installed_map:
-            available_map[key]['installed_version'] = installed_map[key]['installed_version']
-
-    for key, value in available_map.items():
-        packages.append(Package(
-            name              = key,
-            available_version = value.get('available_version'),
-            installed_version = value.get('installed_version'),
-        ))
+        return error(package_type=package_type, command=command)       
 
     logging.info(f'[find_dnf_updates] - returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
-
-def find_flatpak_updates(package_type: str=None):
-    """
-    Execute flatpak to search for new updates
-    """
-    logging.info(f'[find_flatpak_updates] - entering function')
-
-    command = f'sudo flatpak update --appstream'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc != 0:
-        data['success'] = False
-        data['error'] = f'failed to execute {command}'
-        return data
-
-    command = f'sudo flatpak remote-ls --updates --columns=name,version'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0:
-        packages = []
-        if stdout == '':
-            logging.info(f'[find_flatpak_updates] returning data, package_type={package_type}')
-            return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
-        else:
-            lines = stdout.split('\n')
-            for line in lines:
-                bits = re.split(r'\s+', line)
-                packages.append(bits[0])
-    else:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    logging.info(f'[find_flatpak_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_mint_updates(package_type: str=None):
-    """
-    Execute mintupdate-cli to search for new updates
-    """
     logging.info(f'[find_mint_updates] - entering function')
 
-    command = f'sudo mintupdate-cli list -r'
-    rc, stdout, stderr = util.run_piped_command(command)
+    command = ['sudo', 'mintupdate-cli', 'list', '-r']
+    rc, stdout, _ = execute_command(command)
     if rc == 0:
         packages = []
-        lines = stdout.split('\n')
-        for line in lines:
+        for line in stdout.split('\n'):
             bits = re.split(r'\s+', line)
-            packages.append(bits[1])
+            if len(bits) == 3:
+                packages.append(Package(name=bits[1], version = bits[2]))
     else:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        return error(package_type=package_type, command=command)
 
     logging.info(f'[find_mint_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_pacman_updates(package_type: str=None):
-    """
-    Execute pacman to search for new updates
-    """
     logging.info(f'[find_pacman_updates] - entering function')
 
-    # command = f'sudo pacman -Qu'
-    # rc, stdout, stderr = util.run_piped_command(command)
-    # if rc == 0:
-    #     if stdout != '':
-    #         packages = []
-    #         match = re.search(r':: Checking for updates...\n([\s\S]*)', stdout)
-    #         if match:
-    #             for line in match.group(1).split('\n'):
-    #                 bits = re.split(r'\s+', line)
-    #                 packages.append(Package(
-    #                     name              = bits[0],
-    #                     available_version = bits[3],
-    #                     installed_version = bits[1],
-    #                 ))
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"; no output', package_type=package_type)
-    # else:
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+    command = ['sudo', 'pacman', '-Sy']
+    rc, _, _ = execute_command(command)
+    if rc != 0:
+        pass
 
-    # This is here to test locally as I don't have pacman
-    with open(os.path.join(util.get_script_directory(), 'pacman-output.txt'), 'r', encoding='utf-8') as f:
-        stdout = f.read()
+    command = ['sudo', 'pacman', '-Qu']
+    rc, stdout, _ = execute_command(command)
+    if rc == 0:
         packages = []
-        match = re.search(r'Repositories loaded.\n([\s\S]*)', stdout)
-        if match:
-            for line in match.group(1).split('\n'):
-                bits = re.split(r'\s+', line)
-                packages.append(Package(
-                    name              = bits[0],
-                    available_version = bits[1],
-                    installed_version = None,
-                ))
-        else:
-            return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        for line in stdout.split('\n'):
+            match = re.search(r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)', line)
+            if match:
+                packages.append(Package(name=match.group(1), version=match.group(3)))
+    else:
+        return error(package_type=package_type, command=command)
 
     logging.info(f'[find_pacman_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_snap_updates(package_type: str=None):
-    """
-    Execute snap to search for new updates
-    """
     logging.info(f'[find_snap_updates] - entering function')
 
-    # command = f'sudo snap refresh --list'
-    # rc, stdout, stderr = util.run_piped_command(command)
-    # if rc == 0:
-    #     packages = []
-    #     if stdout !='All snaps up to date':
-    #         lines = stdout.lstrip().strip().split('\n')
-    #         for line in lines[1:]:
-    #             bits = re.split(r'\s+', line)
-    #             packages.append(bits[0])
-    # else:
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    # This is here to test locally as I don't have snap
-    with open(os.path.join(util.get_script_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
-        stdout = f.read()
+    command = ['sudo', 'snap', 'refresh', '--list']
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0:
         packages = []
         if stdout !='All snaps up to date':
             lines = stdout.lstrip().strip().split('\n')
             for line in lines[1:]:
                 bits = re.split(r'\s+', line)
-                packages.append(Package(
-                    name              = bits[0],
-                    available_version = bits[2],
-                    installed_version = None,
-                ))
+                packages.append(bits[0])
+    else:
+        return error(package_type=package_type, command=command)
 
     logging.info(f'[find_snap_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    return success(package_type=package_type, packages=packages)
 
 def find_yay_updates(package_type: str=None, aur: bool=False):
-    """
-    Execute yay to search for new updates
-    """
     logging.info(f'[find_yay_updates] - entering function, aur={aur}')
 
-    # command = f'sudo yay -Qua'
-    # rc, stdout, stderr = util.run_piped_command(command)
-    # if rc == 0:
-    #     packages = []
-    #     try:
-    #         _, after = stdout.split(':: Checking for updates...', 1)
-    #         lines = after.lstrip().strip().split('\n')
-    #     except:
-    #         logging.info(f'[find_pacman_updates] regex not found, please run "{command}" manually to verify')
-    #         lines = []
-
-    #     if aur:
-    #         lines = [line for line in lines if line.endswith('(AUR)')]
-    #     else:
-    #         lines = [line for line in lines if not line.endswith('(AUR)')]
-
-    #     for line in lines:
-    #         bits = re.split(r'\s+', line)
-    #         packages.append(bits[0])
-    # else:
-    #     return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    # This is here to test locally as I don't have yay
-    with open(os.path.join(util.get_script_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
-        stdout = f.read()
-        packages = []
-        match = re.search(r':: Checking for updates...\n([\s\S]*)', stdout)
-        if match:
-            if aur:
-                lines = [line for line in match.group(1).split('\n') if line.endswith('(AUR)')]
-            else:
-                lines = [line for line in match.group(1).split('\n') if not line.endswith('(AUR)')]
-
-            for line in lines:
-                bits = re.split(r'\s+', line)
-                packages.append(Package(
-                    name              = bits[0],
-                    available_version = bits[3],
-                    installed_version = bits[1]
-                ))
-        else:
-            return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
-
-    logging.info(f'[find_yay_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
-
-def find_yum_updates(package_type: str=None):
-    """
-    Execute yum to search for new updates
-    """
-    logging.info(f'[find_yum_updates] - entering function')
-
-    command = f'sudo yum update -y'
-    rc, stdout, stderr = util.run_piped_command(command)
+    command = ['yay', '-Sy']
+    rc, _, _ = execute_command(command)
     if rc != 0:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        pass
 
-    command = f'sudo yum check-update'
-    rc, stdout, stderr = util.run_piped_command(command)
+    command = ['yay', '-Qu']
+    rc, stdout, _ = execute_command(command)
     if rc == 0:
         packages = []
-        try:
-            _, after = stdout.split('Repositories loaded.', 1)
-            lines = after.lstrip().strip().split('\n')
-        except:
-            logging.info(f'[find_yum_updates] regex not found, please run "{command}" manually to verify')
-            lines = []
-
-        for line in lines:
-            bits = re.split(r'\s+', line)
-            packages.append(Package(
-                name              = bits[0],
-                available_version = bits[1],
-            ))
+        for line in stdout.split('\n'):
+            if aur:
+                pattern = r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)\s+\(AUR\)$'
+            else:
+                pattern = r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)$'
+            match = re.search(pattern, line)
+            if match:
+                packages.append(Package(name=match.group(1), version=match.group(3)))
     else:
-        return SystemUpdates(success=False, error=f'Failed to execute "{command}"', package_type=package_type)
+        return error(package_type=package_type, command=command)
 
-    # This is here to test locally as I don't have yum
-    # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
-    #     stdout = f.read()
-    #     packages = []
-    #     _, after = stdout.split('Repositories loaded.', 1)
-    #     after = after.lstrip().rstrip()
-    #     for line in after.split('\n'):
-    #         bits = re.split(r'\s+', line)
-    #         packages.append(Package(
-    #             name              = bits[0],
-    #             available_version = bits[1],
-    #         ))
-
-    logging.info(f'[find_yum_updates] returning data')
-    return SystemUpdates(success=True, count=len(packages), packages=packages, package_type=package_type)
+    logging.info(f'[find_yay_updates] returning data')
+    return success(package_type=package_type, packages=packages)
 
 def find_updates(package_type: str = ''):
     """
@@ -472,12 +276,11 @@ def find_updates(package_type: str = ''):
         'apt'        : find_apt_updates,
         'brew'       : find_brew_updates,
         'dnf'        : find_dnf_updates,
-        'flatpak'    : find_flatpak_updates,
+        'mintupdate' : find_mint_updates,
         'pacman'     : find_pacman_updates,
         'snap'       : find_snap_updates,
         'yay-aur'    : lambda package_type: find_yay_updates(package_type=package_type, aur=True),
         'yay'        : lambda package_type: find_yay_updates(package_type=package_type, aur=False),
-        'yum'        : find_yum_updates,
     }
 
     func = dispatch.get(package_type)

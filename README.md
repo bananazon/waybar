@@ -1,6 +1,13 @@
 # waybar
 I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Macs and I really enjoy their functionality. I was looking for something similar in the Linux world and stumbled across [Polybar](https://polybar.github.io). I used it for some time but I found some limitations I didn't care for. I then discovered Waybar and tried it in a VM, since the distro I was using didn't support Wayland. Well, I've since switched to a distro that supports Wayland and here we are. I hope you enjoy my work.
 
+## Some Fun Features
+* Some modules take a little time to fetch their data. When Waybar loads up for the first time, there's no data available so the module will display some sort of `Working...` text, which will be in a lighter color. Its icon will be a timer. On subsequent refreshes, the icon changes to a timer, and the text lightens until the data has been updated. However, you don't see the generic `Working...` text, you see the last results. Try it and see.
+* Some modules, e.g., `memory-usage` have multiple output formats. You can click on its text to cycle between them. I ran into an issue where when I added showing read/write statistics in the `filesystem-usage` tooltip. See, to gather statistics, you read `/proc/diskstats`, pause for a second, and read it again. Then you do math, etc, etc.. Well, if you try to toggle the output format like you do `memory-usage`, the module logic is re-run and the output format wouldn't update until after the statistics are gathered. I found a way to accommodate all of the features I wanted by
+    1. Using Python `threading.Condition()` to allow me to deal with `needs_redraw` and `needs_fetch` conditions.
+    2. Trapping `SIGHUP` to refresh the data
+    3. Trapping `SIGUSR1` to change the output format and refresh the data
+
 ## Prerequisites
 The following Python modules are required
 1. [`click`](https://pypi.org/project/click)
@@ -16,18 +23,76 @@ The following binaries are required and may not be installed by default
 3. `mpstat` (part of the `sysstat` package)
 
 ## Installation
-What I do is pretty straight forward:
+What I do is pretty straight forward. This is not carved in stone, but you get the idea.
 1. `cd ~/.config`
 2. `git clone https://github.com/gdanko/waybar.git`
-3. `systemctl --user daemon-reload`
-4. `systemctl --user enable waybar.service`
-5. `systemctl --user start waybar.service`
+3. `python3 -m pip install click cryptography Jinja2 psutil PyYAML speedtest-cli`
+4. `sudo dnf install dmidecode jc sysstat`
+5. `cd ~/.config/waybar/configure` Please see the [`configure`](#the-configure-directory) directory section
+6. Edit `config.yaml` to my liking
+7. `./render-config.py`
+8. Copy the resultant `config.jsonc` to `~/.config/waybar`
+9. `~/.config/waybar/launch.py start`
 
 But if you're already using Waybar and have your setup in ~/.config/waybar`, do the following:
 1. Clone the repository.
 2. Copy the scripts directory to your Waybar directory. There are some common files in `./scripts/waybar` so you kind of need it all.
 
-## Installing the User System Unit File (optional)
+## The `configure` Directory
+This directory allows you to generate a `config.jsonc` file from a Jinga2 template. Both python scripts contain `--help` flags.
+
+### Contents
+* `config.jsonc.j2` - Template that `render-config.py` uses to generate a `config.jsonc` file based on the `config.yaml` file.
+* `config.yaml` - YAML template that feeds `render-config.py` in order to generate `config.jsonc`.
+* `manage-keystore.py` - Script to manage a secure sqlite3-based keystore.
+* `render-config.py` - Script to generate `config.jsonc`
+
+#### Managing Keys
+We don't want to put API keys and the link in `config.jsonc`, at least I don't. I created a basic keystore that uses an encrypted sqlite3 database to store sensitive values. To use the keystore with the templates, the service must always be `waybar` as it's hard-coded in `render-config.py` (for now).
+
+##### Setting a Key
+```
+% ./manage-keystore.py set --service waybar --key foo --value bar
+Successfully stored key "foo" in the service "waybar"
+```
+
+##### Getting a Key
+```
+% ./manage-keystore.py get --service waybar --key foo
+bar
+```
+
+##### Updating a Key
+```
+% ./manage-keystore.py update --service waybar --key foo --value baz
+Successfully updated key "foo" in the service "waybar"
+
+% ./manage-keystore.py get --service waybar --key foo
+baz
+```
+
+##### Deleting a Key
+```
+% ./manage-keystore.py delete --service waybar --key foo
+Successfully deleted key "foo" from the service "waybar"
+
+% ./manage-keystore.py get --service waybar --key foo
+The key "foo" doesn't exist in the service "waybar"
+```
+
+#### Using Keys in `config.yaml`
+Please see this excerpt for details. It's pretty straightforward.
+```
+weather:
+  api_key: "{key:wapi_key}"
+  locations:
+  - location: "San Diego, CA, US"
+    enabled: true
+    label: san-diego
+    interval: 300
+```
+
+## Installing the User System Unit File (optional and not fully working...yet)
 1. `mkdir -p ~/.config/systemctl/user`
 2. `copy waybar.service ~/.config/systemctl/user`
 

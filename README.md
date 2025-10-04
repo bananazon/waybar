@@ -26,7 +26,7 @@ The following binaries are required and may not be installed by default
 What I do is pretty straight forward. This is not carved in stone, but you get the idea.
 1. `cd ~/.config`
 2. `git clone https://github.com/gdanko/waybar.git`
-3. `python3 -m pip install click cryptography Jinja2 psutil PyYAML speedtest-cli`
+3. `python3 -m pip install click cryptography Jinja2 psutil PyYAML speedtest-cli --user`
 4. `sudo dnf install dmidecode jc sysstat`
 5. `cd ~/.config/waybar/configure` Please see the [`configure`](#the-configure-directory) directory section
 6. Edit `config.yaml` to my liking

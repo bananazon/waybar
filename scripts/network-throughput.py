@@ -67,7 +67,7 @@ def generate_tooltip(data):
 
 def get_icon(interface: str=None, connected: bool=True):
     if os.path.isdir(f'/sys/class/net/{interface}/wireless'):
-        return glyphs.md_wifi_strength_4 if connected else glyphs.md_wifi_strength_off
+        return glyphs.md_wifi_strength_4 if connected else glyphs.md_wifi_strength_alert_outline
     else:
         return glyphs.md_network if connected else glyphs.md_network_off
 

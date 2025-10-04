@@ -82,7 +82,7 @@ The key "foo" doesn't exist in the service "waybar"
 
 #### Using Keys in `config.yaml`
 Please see this excerpt for details. It's pretty straightforward.
-```
+```yaml
 weather:
   api_key: "{key:wapi_key}"
   locations:

@@ -217,7 +217,7 @@ This module shows recent earthquakes near you. It uses your IP to geolocate you.
 ```
 
 ### Software Updates
-This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`. Please see the [`permissions`](#permissions) section before implementing this module.
+This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `emerge`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`. Please see the [`permissions`](#permissions) section before implementing this module.
 
 #### Output Format
 `dnf 801 outdated packages`
@@ -351,11 +351,10 @@ I put my entries in `/work/sudoers.d/sudoers` and at the end of `/etc/sudoers`, 
 user ALL=(ALL) NOPASSWD: /usr/local/bin/apt
 user ALL=(ALL) NOPASSWD: /usr/bin/apt
 user ALL=(ALL) NOPASSWD: /usr/bin/dnf
-user ALL=(ALL) NOPASSWD: /usr/bin/flatpak
 user ALL=(ALL) NOPASSWD: /usr/bin/mintupdate-cli
 user ALL=(ALL) NOPASSWD: /usr/bin/snap
 user ALL=(ALL) NOPASSWD: /usr/bin/yay
-user ALL=(ALL) NOPASSWD: /usr/bin/yum
+user ALL=(ALL) NOPASSWD: /usr/sbin/emerge
 ```
 
 ### For Memory Usage

@@ -116,18 +116,37 @@ md_network = surrogatepass('\udb81\udef3')
 md_plex = surrogatepass('\udb81\udeba')
 
 # Software updates
-linux_alpine    = surrogatepass('\uf300')
-linux_centos    = surrogatepass('\uf304')
-linux_flathub   = surrogatepass('\uf324')
-linux_kubuntu   = surrogatepass('\uf333')
-linux_opensuse  = surrogatepass('\uf314')
-linux_slackware = surrogatepass('\uf318')
-linux_ubuntu    = surrogatepass('\uf31b')
-linux_void      = surrogatepass('\uf32e')
-md_arch         = surrogatepass('\udb82\udcc7')
-md_debian       = surrogatepass('\udb82\udcda')
-md_fedora       = surrogatepass('\udb82\udcdb')
-md_gentoo       = surrogatepass('\udb82\udce8')
-md_linux        = surrogatepass('\udb80\udf3d')
-md_linux_mint   = surrogatepass('\udb82\udced')
-md_redhat       = surrogatepass('\udb84\udd1b')
+linux_alpine     = surrogatepass('\uf300')
+linux_centos     = surrogatepass('\uf304')
+linux_flathub    = surrogatepass('\uf324')
+linux_kali_linux = surrogatepass('\uf327')
+linux_kubuntu    = surrogatepass('\uf333')
+linux_opensuse   = surrogatepass('\uf314')
+linux_slackware  = surrogatepass('\uf318')
+linux_ubuntu     = surrogatepass('\uf31b')
+linux_void       = surrogatepass('\uf32e')
+md_arch          = surrogatepass('\udb82\udcc7')
+md_debian        = surrogatepass('\udb82\udcda')
+md_fedora        = surrogatepass('\udb82\udcdb')
+md_gentoo        = surrogatepass('\udb82\udce8')
+md_linux         = surrogatepass('\udb80\udf3d')
+md_linux_mint    = surrogatepass('\udb82\udced')
+md_redhat        = surrogatepass('\udb84\udd1b')
+
+distro_map = {
+    'alpine'    : linux_alpine,
+    'arch'      : md_arch,
+    'centos'    : linux_centos,
+    'debian'    : md_debian,
+    'edubuntu'  : linux_ubuntu,
+    'fedora'    : md_fedora,
+    'gentoo'    : md_gentoo,
+    'kali'      : linux_kali_linux,
+    'kubuntu'   : linux_kubuntu,
+    'linuxmint' : md_linux_mint,
+    'opensuse'  : linux_opensuse,
+    'rhel'      : md_redhat,
+    'slackware' : linux_slackware,
+    'ubuntu'    : linux_ubuntu,
+    'void'      : linux_void,
+}

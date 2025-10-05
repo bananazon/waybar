@@ -434,12 +434,14 @@ def get_disk_info(mountpoint: str=None):
                     output['kname'] = json_data['blockdevices'][0]['kname']
                     return output
 
-def get_distro_name():
+def get_distro_icon():
     command = 'cat /etc/os-release | jc --pretty --os-release'
     rc, stdout, _ = run_piped_command(command)
     if rc == 0:
         json_data, err = parse_json_string(stdout)
         if not err and 'ID' in json_data:
-            return json_data['ID']
+            distro_id = json_data['ID']
+            if distro_id in glyphs.distro_map:
+                return glyphs.distro_map[distro_id]
 
-    return None
+    return glyphs.md_linux

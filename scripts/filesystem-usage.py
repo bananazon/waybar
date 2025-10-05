@@ -276,8 +276,11 @@ def worker(mountpoint: str=None, unit: str=None, show_stats: bool=False):
 
         if fetch:
             if disk_info:
-                text, _ = render_output(disk_info=disk_info, unit=unit, icon=glyphs.md_timer_outline)
-                print(json.dumps({'text': text, 'class': 'loading'}))
+                if disk_info.success:
+                    text, _ = render_output(disk_info=disk_info, unit=unit, icon=glyphs.md_timer_outline)
+                    print(json.dumps({'text': text, 'class': 'loading'}))
+                else:
+                    print(json.dumps(loading_dict))
             else:
                 print(json.dumps(loading_dict))
             disk_info = get_disk_usage(mountpoint=mountpoint, show_stats=show_stats)

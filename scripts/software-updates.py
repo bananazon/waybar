@@ -307,8 +307,11 @@ def worker(package_type: str=None):
                 loading     = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...'
                 loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking {package_type}'}
                 if update_data:
-                    text, _, tooltip = render_output(update_data=update_data, icon=glyphs.md_timer_outline)
-                    print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                    if update_data.success:
+                        text, _, tooltip = render_output(update_data=update_data, icon=glyphs.md_timer_outline)
+                        print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                    else:
+                        print(json.dumps(loading_dict))
                 else:
                     print(json.dumps(loading_dict))
 

@@ -305,8 +305,11 @@ def worker():
         else:
             if util.network_is_reachable():
                 if speedtest_data:
-                    text, _, tooltip = render_output(speedtest_data=speedtest_data, icon=glyphs.md_timer_outline)
-                    print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                    if speedtest_data.success:
+                        text, _, tooltip = render_output(speedtest_data=speedtest_data, icon=glyphs.md_timer_outline)
+                        print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                    else:
+                        print(json.dumps(loading_dict))
                 else:
                     print(json.dumps(loading_dict))
 

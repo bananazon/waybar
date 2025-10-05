@@ -84,41 +84,6 @@ def generate_tooltip(update_data: NamedTuple=None):
 
     return '\n'.join(tooltip)
 
-def get_icon():
-    distro_name = util.get_distro_name()
-    if distro_name == 'alpine':
-        return glyphs.linux_alpine
-
-    elif distro_name == 'arch':
-        return glyphs.md_arch
-
-    elif distro_name == 'centos':
-        return glyphs.linux_centos
-
-    elif distro_name == 'debian':
-        return glyphs.md_debian
-
-    elif distro_name == 'fedora':
-        return glyphs.md_fedora
-
-    elif distro_name == 'gentoo':
-        return glyphs.md_gentoo
-
-    elif distro_name == 'linuxmint':
-        return glyphs.md_linux_mint
-
-    elif distro_name == 'rhel':
-        return glyphs.md_redhat
-
-    elif distro_name.endswith('buntu'):
-        return glyphs.linux_ubuntu
-
-    elif distro_name == 'void':
-        return glyphs.linux_void
-
-    else:
-        return glyphs.md_linux
-
 def execute_command(command: list=None, cwd: str=None, shell: bool=False):
     try:
         result = subprocess.run(
@@ -440,7 +405,7 @@ def worker(package_type: str=None):
                     print(json.dumps(loading_dict))
 
                 update_data = find_updates(package_type=package_type)
-                text, output_class, tooltip = render_output(update_data=update_data, icon=get_icon())
+                text, output_class, tooltip = render_output(update_data=update_data, icon=util.get_distro_icon())
                 output = {
                     'text'    : text,
                     'class'   : output_class,

@@ -195,6 +195,11 @@ def to_unix_time(input: str=None) -> int:
     else:
         return 0
 
+def get_human_timestamp() -> str:
+    now = int(time.time())
+    dt = datetime.fromtimestamp(now)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
 def to_24hour_time(input: int=0):
     try:
         # Convert to datetime (local time)

@@ -121,6 +121,10 @@ def generate_tooltip(weather_data):
     for key, value in tooltip_od.items():
         tooltip.append(f'{key:{max_key_length}} : {value}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def get_weather_icon(condition_code, is_day):

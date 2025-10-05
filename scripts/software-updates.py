@@ -76,6 +76,10 @@ def generate_tooltip(update_data: NamedTuple=None):
     else:
         tooltip.append('Hooray! No outdated packages.'),
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def execute_command(command: list=None):

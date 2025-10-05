@@ -139,6 +139,10 @@ def generate_tooltip(data: namedtuple=None):
         for key, value in tooltip_od.items():
             tooltip.append(f'{key:{max_key_length}} : {value}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def get_icon(speed: int = 0) -> str:

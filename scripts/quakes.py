@@ -58,6 +58,10 @@ def generate_tooltip(quakes):
         header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
         tooltip.append(f'{header:{max_header_len}} {quake.place}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def miles_to_kilometers(miles: int=0) -> float:

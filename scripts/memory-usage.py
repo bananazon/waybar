@@ -100,6 +100,10 @@ def generate_tooltip(memory_info):
             if dimm.size and dimm.type and dimm.form_factor and dimm.speed:
                 tooltip.append(f'DIMM {idx:02d} - {util.byte_converter(number=dimm.size, unit='G')} {dimm.type} {dimm.form_factor} @ {dimm.speed}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def get_dimm_info():

@@ -65,6 +65,10 @@ def generate_tooltip(cpu_info):
             if cache.socket_designation and cache.installed_size and cache.speed:
                 tooltip.append(f'  {cache.socket_designation} - {cache.installed_size:{max_key_length}} @ {cache.speed}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def get_icon():

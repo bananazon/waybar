@@ -75,6 +75,10 @@ def generate_tooltip(wifi_status):
         else:
             tooltip.append(f'{key:{max_key_length}} : {value}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def get_status_icon(signal):

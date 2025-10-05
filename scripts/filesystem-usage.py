@@ -112,6 +112,10 @@ def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
     for key, value in tooltip_od.items():
         tooltip.append(f'{key:{max_key_length}} : {value}')
 
+    if len(tooltip) > 0:
+        tooltip.append('')
+        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+
     return '\n'.join(tooltip)
 
 def filesystem_exists(mountpoint: str = None):

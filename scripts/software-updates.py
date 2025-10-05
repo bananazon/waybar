@@ -16,6 +16,8 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
+util.validate_requirements(binaries=['jc'])
+
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 

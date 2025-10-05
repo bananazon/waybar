@@ -433,3 +433,13 @@ def get_disk_info(mountpoint: str=None):
                 if not err:
                     output['kname'] = json_data['blockdevices'][0]['kname']
                     return output
+
+def get_distro_name():
+    command = 'cat /etc/os-release | jc --pretty --os-release'
+    rc, stdout, _ = run_piped_command(command)
+    if rc == 0:
+        json_data, err = parse_json_string(stdout)
+        if not err and 'ID' in json_data:
+            return json_data['ID']
+
+    return None

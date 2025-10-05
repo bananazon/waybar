@@ -82,19 +82,22 @@ def generate_tooltip(update_data: NamedTuple=None):
 
     return '\n'.join(tooltip)
 
-def execute_command(command: list=None):
+def execute_command(command: list=None, cwd: str=None, shell: bool=False):
     try:
         result = subprocess.run(
             command,
+            cwd            = cwd,
             capture_output = True,
             text           = True,
             check          = False,
+            shell          = shell,
         )
-        return result.returncode, result.stdout.strip(), result.stderr.strip()
+        return result.returncode, result.stdout.lstrip().rstrip(), result.stderr.lstrip().rstrip()
     except Exception as e:
         return -1, None, str(e)
 
 def success(package_type: str=None, packages: list=None):
+    logging.info(f'[find_{package_type}_updates] - returning data')
     return SystemUpdates(
         success      = True,
         count        = len(packages),
@@ -102,10 +105,17 @@ def success(package_type: str=None, packages: list=None):
         package_type = package_type
     )
 
-def error(package_type: str=None, command: list=None):
+def error(package_type: str=None, command: list=None, error: str=None):
+    error = error or 'unknown error'
+    if type(command) == list:
+        joined = ' '.join(command)
+    elif type(command) == str:
+        joined = command
+
+    logging.error(f'[find_{package_type}_updates] - failed to execute command "{joined}": {error}')
     return SystemUpdates(
         success      = False,
-        error        = f'Failed to execute {" ".join(command)}',
+        error        = f'Failed to execute "{joined}": {error}',
         package_type = package_type
     )
 
@@ -114,9 +124,9 @@ def find_apt_updates(package_type: str = None):
 
     packages = []
     command = ['sudo', 'apt', 'update']
-    rc, _, _ = execute_command(command=command)
+    rc, _, stderr = execute_command(command=command)
     if rc != 0:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
     command = ['sudo', 'apt', 'upgrade', '--simulate', '--quiet']
     rc, stdout, _ = execute_command(command=command)
@@ -127,31 +137,43 @@ def find_apt_updates(package_type: str = None):
             if match:
                 packages.append(Package(name=match.group(1), version=match.group(3)))
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_apt_updates] - returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_brew_updates(package_type: str = None):
     logging.info(f'[find_brew_updates] - entering function')
 
     packages = []
+    # This should prevent this message
+    # To restore the stashed changes to /home/linuxbrew/.linuxbrew/Homebrew,
+    #   run: cd /home/linuxbrew/.linuxbrew/Homebrew && git stash pop
+    logging.info('[find_brew_updates] - safe brew update')
+    rc, _, stderr = execute_command(
+        command = 'git stash push -m "automation backup" --quiet || true',
+        cwd     = os.environ['HOMEBREW_DIR'] or '/home/linuxbrew/.linuxbrew/Homebrew',
+        shell   = True,
+    )
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    logging.info('[find_brew_updates] - brew outdated')
     command = ['brew', 'outdated', '--json']
-    rc, stdout, _ = execute_command(command=command)
+    rc, stdout, stderr = execute_command(command=command)
     if rc == 0:
-        try:
-            brew_data = json.loads(stdout)
-        except Exception as e:
-            return error(package_type=package_type, command=command)
+        brew_data, stderr = util.parse_json_string(stdout)
+        if stderr:
+            joined = stdout.replace('\n', '')
+            logging.error(f'[find_brew_updates] - JSON parse error - stdout="{joined}", stderr="{stderr}"')
+            return error(package_type=package_type, command=command, error=stderr)
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
     for item_type in ['formulae', 'casks']:
         for package in brew_data[item_type]:
             if 'name' in package and 'current_version' in package:
                 packages.append(Package(name=package['name'], version=package['current_version']))
 
-    logging.info(f'[find_brew_updates] - returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_dnf_updates(package_type: str=None):
@@ -159,7 +181,7 @@ def find_dnf_updates(package_type: str=None):
 
     packages = []
     command = ['sudo', 'dnf', 'check-upgrade']
-    rc, stdout, _ = execute_command(command)
+    rc, stdout, stderr = execute_command(command)
     if rc == 0:
         return success(package_type=package_type, packages=packages)
     elif rc == 100:
@@ -168,9 +190,8 @@ def find_dnf_updates(package_type: str=None):
             if len(bits) == 3:
                 packages.append(Package(name=bits[0], version=bits[1]))
     else:
-        return error(package_type=package_type, command=command)       
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_dnf_updates] - returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_mint_updates(package_type: str=None):
@@ -178,16 +199,15 @@ def find_mint_updates(package_type: str=None):
 
     packages = []
     command = ['sudo', 'mintupdate-cli', 'list', '-r']
-    rc, stdout, _ = execute_command(command)
+    rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):
             bits = re.split(r'\s+', line)
             if len(bits) == 3:
                 packages.append(Package(name=bits[1], version = bits[2]))
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_mint_updates] returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_pacman_updates(package_type: str=None):
@@ -195,21 +215,20 @@ def find_pacman_updates(package_type: str=None):
 
     packages = []
     command = ['sudo', 'pacman', '-Sy']
-    rc, _, _ = execute_command(command)
+    rc, _, stderr = execute_command(command)
     if rc != 0:
-        pass
+        return error(package_type=package_type, command=command, error=stderr)
 
     command = ['sudo', 'pacman', '-Qu']
-    rc, stdout, _ = execute_command(command)
+    rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):
             match = re.search(r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)', line)
             if match:
                 packages.append(Package(name=match.group(1), version=match.group(3)))
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_pacman_updates] returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_snap_updates(package_type: str=None):
@@ -225,9 +244,8 @@ def find_snap_updates(package_type: str=None):
                 bits = re.split(r'\s+', line)
                 packages.append(Package(name=bits[0], version=bits[1]))
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_snap_updates] returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_yay_updates(package_type: str=None, aur: bool=False):
@@ -235,12 +253,12 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
 
     packages = []
     command = ['yay', '-Sy']
-    rc, _, _ = execute_command(command)
+    rc, _, stderr = execute_command(command)
     if rc != 0:
-        pass
+        return error(package_type=package_type, command=command, error=stderr)
 
     command = ['yay', '-Qu']
-    rc, stdout, _ = execute_command(command)
+    rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):
             if aur:
@@ -251,9 +269,8 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
             if match:
                 packages.append(Package(name=match.group(1), version=match.group(3)))
     else:
-        return error(package_type=package_type, command=command)
+        return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info(f'[find_yay_updates] returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_updates(package_type: str = ''):

@@ -108,6 +108,7 @@ def error(package_type: str=None, command: list=None):
 def find_apt_updates(package_type: str = None):
     logging.info(f'[find_apt_updates] - entering function')
 
+    packages = []
     command = ['sudo', 'apt', 'update']
     rc, _, _ = execute_command(command=command)
     if rc != 0:
@@ -116,7 +117,6 @@ def find_apt_updates(package_type: str = None):
     command = ['sudo', 'apt', 'upgrade', '--simulate', '--quiet']
     rc, stdout, _ = execute_command(command=command)
     if rc == 0:
-        packages = []
         lines = [line for line in stdout.split('\n') if line.startswith('Inst')]
         for line in lines:
             match = re.search(r'^Inst\s+(\S+)\s+\[([^\]]+)\]\s+\(([^\s]+)', line)
@@ -131,18 +131,7 @@ def find_apt_updates(package_type: str = None):
 def find_brew_updates(package_type: str = None):
     logging.info(f'[find_brew_updates] - entering function')
 
-    command = ['brew', 'update']
-    rc, _, _ = execute_command(command=command)
-    if rc != 0:
-        return error(package_type=package_type, command=command)
-
-    command = ['brew', 'list', '--installed-on-request']
-    rc, stdout, _ = execute_command(command=command)
-    if rc != 0:
-        return error(package_type=package_type, command=command)
-
-    manually_installed = {line for line in stdout.splitlines()}
-
+    packages = []
     command = ['brew', 'outdated', '--json']
     rc, stdout, _ = execute_command(command=command)
     if rc == 0:
@@ -153,20 +142,17 @@ def find_brew_updates(package_type: str = None):
     else:
         return error(package_type=package_type, command=command)
 
-    packages = []
-    for obj in brew_data['formulae']:
-        packages.append(Package(name=obj.get('name'), version=obj.get('current_version')))
-
-    for obj in brew_data['casks']:
-        packages.append(Package(
-            name    = obj.get('name'),
-            version = obj.get('current_version'),
-        ))
+    for item_type in ['formulae', 'casks']:
+        for package in brew_data[item_type]:
+            if 'name' in package and 'current_version' in package:
+                packages.append(Package(name=package['name'], version=package['current_version']))
 
     logging.info(f'[find_brew_updates] - returning data')
     return success(package_type=package_type, packages=packages)
 
 def find_dnf_updates(package_type: str=None):
+    logging.info(f'[find_dnf_updates] - entering function')
+
     packages = []
     command = ['sudo', 'dnf', 'check-upgrade']
     rc, stdout, _ = execute_command(command)
@@ -186,10 +172,10 @@ def find_dnf_updates(package_type: str=None):
 def find_mint_updates(package_type: str=None):
     logging.info(f'[find_mint_updates] - entering function')
 
+    packages = []
     command = ['sudo', 'mintupdate-cli', 'list', '-r']
     rc, stdout, _ = execute_command(command)
     if rc == 0:
-        packages = []
         for line in stdout.split('\n'):
             bits = re.split(r'\s+', line)
             if len(bits) == 3:
@@ -203,6 +189,7 @@ def find_mint_updates(package_type: str=None):
 def find_pacman_updates(package_type: str=None):
     logging.info(f'[find_pacman_updates] - entering function')
 
+    packages = []
     command = ['sudo', 'pacman', '-Sy']
     rc, _, _ = execute_command(command)
     if rc != 0:
@@ -211,7 +198,6 @@ def find_pacman_updates(package_type: str=None):
     command = ['sudo', 'pacman', '-Qu']
     rc, stdout, _ = execute_command(command)
     if rc == 0:
-        packages = []
         for line in stdout.split('\n'):
             match = re.search(r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)', line)
             if match:
@@ -225,15 +211,15 @@ def find_pacman_updates(package_type: str=None):
 def find_snap_updates(package_type: str=None):
     logging.info(f'[find_snap_updates] - entering function')
 
+    packages = []
     command = ['sudo', 'snap', 'refresh', '--list']
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
-        packages = []
         if stdout !='All snaps up to date':
             lines = stdout.lstrip().strip().split('\n')
             for line in lines[1:]:
                 bits = re.split(r'\s+', line)
-                packages.append(bits[0])
+                packages.append(Package(name=bits[0], version=bits[1]))
     else:
         return error(package_type=package_type, command=command)
 
@@ -243,6 +229,7 @@ def find_snap_updates(package_type: str=None):
 def find_yay_updates(package_type: str=None, aur: bool=False):
     logging.info(f'[find_yay_updates] - entering function, aur={aur}')
 
+    packages = []
     command = ['yay', '-Sy']
     rc, _, _ = execute_command(command)
     if rc != 0:
@@ -251,7 +238,6 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
     command = ['yay', '-Qu']
     rc, stdout, _ = execute_command(command)
     if rc == 0:
-        packages = []
         for line in stdout.split('\n'):
             if aur:
                 pattern = r'^([^\s]+)\s+([^\s]+)\s+->\s+([^\s]+)\s+\(AUR\)$'

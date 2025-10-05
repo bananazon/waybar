@@ -22,7 +22,7 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apt', 'brew', 'dnf', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur']
+valid_types      = ['apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur']
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -31,8 +31,8 @@ class Package(NamedTuple):
 class SystemUpdates(NamedTuple):
     success      : Optional[bool] = False
     error        : Optional[str]  = None
-    package_type : Optional[str]  = None
     count        : Optional[int]  = 0
+    package_type : Optional[str]  = None
     packages     : Optional[List[str]] = None
 
 def configure_logging(debug: bool=False, logfile: str=None):
@@ -81,6 +81,35 @@ def generate_tooltip(update_data: NamedTuple=None):
         tooltip.append(f'Last updated {util.get_human_timestamp()}')
 
     return '\n'.join(tooltip)
+
+def get_icon():
+    distro_name = util.get_distro_name()
+    if distro_name == 'arch':
+        return glyphs.md_arch
+
+    elif distro_name == 'centos':
+        return glyphs.linux_centos
+
+    elif distro_name == 'debian':
+        return glyphs.md_debian
+
+    elif distro_name == 'fedora':
+        return glyphs.md_fedora
+
+    elif distro_name == 'gentoo':
+        return glyphs.md_gentoo
+
+    elif distro_name == 'linuxmint':
+        return glyphs.md_linux_mint
+
+    elif distro_name == 'rhel':
+        return glyphs.md_redhat
+
+    elif distro_name.endswith('buntu'):
+        return glyphs.linux_ubuntu
+
+    else:
+        return glyphs.md_linux
 
 def execute_command(command: list=None, cwd: str=None, shell: bool=False):
     try:
@@ -194,6 +223,31 @@ def find_dnf_updates(package_type: str=None):
 
     return success(package_type=package_type, packages=packages)
 
+def find_emerge_updates(package_type: str=None):
+    logging.info(f'[find_emerge_updates] - entering function')
+
+    packages = []
+    command = ['emerge', '--sync']
+    rc, _, stderr = execute_command(command)
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
+    
+    command = ['emerge', '-puD', '@world']
+    rc, stdout, stderr = execute_command(command)
+    if rc == 0:
+        lines = [line for line in stdout.split('\n') if line.startswith('[ebuild') or line.startswith('[binary')]
+        for line in lines:
+            match = re.search(r'\] ([\w\-+/]+)-([^\s]+)', line)
+            if match:
+                packages.append(Package(
+                    name    = match.group(1),
+                    version = match.group(2),
+                ))
+    else:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    return success(package_type=package_type, packages=packages)
+
 def find_mint_updates(package_type: str=None):
     logging.info(f'[find_mint_updates] - entering function')
 
@@ -283,6 +337,7 @@ def find_updates(package_type: str = ''):
         'apt'        : find_apt_updates,
         'brew'       : find_brew_updates,
         'dnf'        : find_dnf_updates,
+        'emerge'     : find_emerge_updates,
         'mintupdate' : find_mint_updates,
         'pacman'     : find_pacman_updates,
         'snap'       : find_snap_updates,
@@ -321,7 +376,7 @@ def worker(package_type: str=None):
             sys.exit(0)
         else:
             if util.network_is_reachable():
-                loading     = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...'
+                loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...'
                 loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking {package_type}'}
                 if update_data:
                     if update_data.success:
@@ -333,7 +388,7 @@ def worker(package_type: str=None):
                     print(json.dumps(loading_dict))
 
                 update_data = find_updates(package_type=package_type)
-                text, output_class, tooltip = render_output(update_data=update_data, icon=glyphs.md_package_variant)
+                text, output_class, tooltip = render_output(update_data=update_data, icon=get_icon())
                 output = {
                     'text'    : text,
                     'class'   : output_class,

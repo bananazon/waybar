@@ -24,7 +24,7 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur']
+valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur']
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -86,7 +86,10 @@ def generate_tooltip(update_data: NamedTuple=None):
 
 def get_icon():
     distro_name = util.get_distro_name()
-    if distro_name == 'arch':
+    if distro_name == 'alpine':
+        return glyphs.linux_alpine
+
+    elif distro_name == 'arch':
         return glyphs.md_arch
 
     elif distro_name == 'centos':
@@ -152,6 +155,30 @@ def error(package_type: str=None, command: list=None, error: str=None):
         error        = f'Failed to execute "{joined}": {error}',
         package_type = package_type
     )
+
+def find_apk_updates(package_type: str = None):
+    logging.info(f'[find_apk_updates] - entering function')
+
+    packages = []
+    command = ['sudo', 'apk', 'update']
+    rc, _, stderr = execute_command(command)
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    command = ['sudo', 'apk', '--simulate', 'upgrade']
+    rc, stdout, stderr = execute_command(command)
+    if rc == 0:
+        for line in stdout.split('\n'):
+            match = re.search(r'^\(\d+/\d+\)\s+Upgrading\s+([^\s]+)\s+\(([^\s]+)\s+->\s+([^\)]+)', line)
+            if match:
+                packages.append(Package(
+                    name    = match.group(1),
+                    version = match.group(3),
+                ))
+    else:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    return success(package_type=package_type, packages=packages)
 
 def find_apt_updates(package_type: str = None):
     logging.info(f'[find_apt_updates] - entering function')
@@ -311,7 +338,7 @@ def find_xbps_updates(package_type: str=None):
     logging.info(f'[find_xbps_updates] - entering function')
 
     packages = []
-    command = ['xbps-install', '-Snu']
+    command = ['sudo', 'xbps-install', '-Snu']
     rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):
@@ -357,6 +384,7 @@ def find_updates(package_type: str = ''):
     logging.info(f'[find_updates] - entering with package_type={package_type}')
 
     dispatch = {
+        'apk'        : find_apk_updates,
         'apt'        : find_apt_updates,
         'brew'       : find_brew_updates,
         'dnf'        : find_dnf_updates,

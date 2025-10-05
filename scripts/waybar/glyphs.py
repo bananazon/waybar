@@ -116,6 +116,7 @@ md_network = surrogatepass('\udb81\udef3')
 md_plex = surrogatepass('\udb81\udeba')
 
 # Software updates
+linux_alpine    = surrogatepass('\uf300')
 linux_centos    = surrogatepass('\uf304')
 linux_flathub   = surrogatepass('\uf324')
 linux_kubuntu   = surrogatepass('\uf333')

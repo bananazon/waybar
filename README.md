@@ -217,7 +217,7 @@ This module shows recent earthquakes near you. It uses your IP to geolocate you.
 ```
 
 ### Software Updates
-This module displays the number of available outputs for the following package managers: `apt`, `brew`, `dnf`, `emerge`, `mintupdate`, `pacman`, `snap`, `xbps`, `yay`, `yay-aur`. Please see the [`permissions`](#permissions) section before implementing this module.
+This module displays the number of available outputs for the following package managers: `apk`, `apt`, `brew`, `dnf`, `emerge`, `mintupdate`, `pacman`, `snap`, `xbps`, `yay`, `yay-aur`. Please see the [`permissions`](#permissions) section before implementing this module.
 
 #### Output Format
 `dnf 801 outdated packages`

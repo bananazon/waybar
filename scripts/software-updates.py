@@ -24,7 +24,7 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur']
+valid_types      = ['apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur']
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -109,6 +109,9 @@ def get_icon():
 
     elif distro_name.endswith('buntu'):
         return glyphs.linux_ubuntu
+
+    elif distro_name == 'void':
+        return glyphs.linux_void
 
     else:
         return glyphs.md_linux
@@ -304,6 +307,24 @@ def find_snap_updates(package_type: str=None):
 
     return success(package_type=package_type, packages=packages)
 
+def find_xbps_updates(package_type: str=None):
+    logging.info(f'[find_xbps_updates] - entering function')
+
+    packages = []
+    command = ['xbps-install', '-Snu']
+    rc, stdout, stderr = execute_command(command)
+    if rc == 0:
+        for line in stdout.split('\n'):
+            bits = re.split(r'\s+', line)
+            if len(bits) == 6:
+                match = re.match(r'^(.*)-(.*)$', bits[0])
+                if match:
+                    packages.append(Package(name=match.group(1), version=match.group(2)))
+    else:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    return success(package_type=package_type, packages=packages)
+
 def find_yay_updates(package_type: str=None, aur: bool=False):
     logging.info(f'[find_yay_updates] - entering function, aur={aur}')
 
@@ -343,6 +364,7 @@ def find_updates(package_type: str = ''):
         'mintupdate' : find_mint_updates,
         'pacman'     : find_pacman_updates,
         'snap'       : find_snap_updates,
+        'xbps'       : find_xbps_updates,
         'yay-aur'    : lambda package_type: find_yay_updates(package_type=package_type, aur=True),
         'yay'        : lambda package_type: find_yay_updates(package_type=package_type, aur=False),
     }

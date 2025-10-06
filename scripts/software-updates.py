@@ -24,7 +24,7 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur']
+valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur', 'yum']
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -122,7 +122,7 @@ def error(package_type: str=None, command: list=None, error: str=None):
     )
 
 def find_apk_updates(package_type: str = None):
-    logging.info(f'[find_apk_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'apk', 'update']
@@ -146,7 +146,7 @@ def find_apk_updates(package_type: str = None):
     return success(package_type=package_type, packages=packages)
 
 def find_apt_updates(package_type: str = None):
-    logging.info(f'[find_apt_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'apt', 'update']
@@ -168,13 +168,13 @@ def find_apt_updates(package_type: str = None):
     return success(package_type=package_type, packages=packages)
 
 def find_brew_updates(package_type: str = None):
-    logging.info(f'[find_brew_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     # This should prevent this message
     # To restore the stashed changes to /home/linuxbrew/.linuxbrew/Homebrew,
     #   run: cd /home/linuxbrew/.linuxbrew/Homebrew && git stash pop
-    logging.info('[find_brew_updates] - safe brew update')
+    logging.info(f'[find_{package_type}_updates] - safe brew update')
     rc, _, stderr = execute_command(
         command = 'git stash push -m "automation backup" --quiet || true',
         cwd     = os.environ['HOMEBREW_DIR'] or '/home/linuxbrew/.linuxbrew/Homebrew',
@@ -183,14 +183,14 @@ def find_brew_updates(package_type: str = None):
     if rc != 0:
         return error(package_type=package_type, command=command, error=stderr)
 
-    logging.info('[find_brew_updates] - brew outdated')
+    logging.info(f'[find_{package_type}_updates] - brew outdated')
     command = ['brew', 'outdated', '--json']
     rc, stdout, stderr = execute_command(command=command)
     if rc == 0:
         brew_data, stderr = util.parse_json_string(stdout)
         if stderr:
             joined = stdout.replace('\n', '')
-            logging.error(f'[find_brew_updates] - JSON parse error - stdout="{joined}", stderr="{stderr}"')
+            logging.error(f'[find_{package_type}_updates] - JSON parse error - stdout="{joined}", stderr="{stderr}"')
             return error(package_type=package_type, command=command, error=stderr)
     else:
         return error(package_type=package_type, command=command, error=stderr)
@@ -203,7 +203,7 @@ def find_brew_updates(package_type: str = None):
     return success(package_type=package_type, packages=packages)
 
 def find_dnf_updates(package_type: str=None):
-    logging.info(f'[find_dnf_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'dnf', 'check-upgrade']
@@ -221,7 +221,7 @@ def find_dnf_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_emerge_updates(package_type: str=None):
-    logging.info(f'[find_emerge_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['emerge', '--sync']
@@ -246,7 +246,7 @@ def find_emerge_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_mint_updates(package_type: str=None):
-    logging.info(f'[find_mint_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'mintupdate-cli', 'list', '-r']
@@ -262,7 +262,7 @@ def find_mint_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_pacman_updates(package_type: str=None):
-    logging.info(f'[find_pacman_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'pacman', '-Sy']
@@ -283,7 +283,7 @@ def find_pacman_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_snap_updates(package_type: str=None):
-    logging.info(f'[find_snap_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'snap', 'refresh', '--list']
@@ -300,7 +300,7 @@ def find_snap_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_xbps_updates(package_type: str=None):
-    logging.info(f'[find_xbps_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
     command = ['sudo', 'xbps-install', '-Snu']
@@ -318,7 +318,7 @@ def find_xbps_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_yay_updates(package_type: str=None, aur: bool=False):
-    logging.info(f'[find_yay_updates] - entering function, aur={aur}')
+    logging.info(f'[find_{package_type}_updates] - entering function, aur={aur}')
 
     packages = []
     command = ['yay', '-Sy']
@@ -360,6 +360,7 @@ def find_updates(package_type: str = ''):
         'xbps'       : find_xbps_updates,
         'yay-aur'    : lambda package_type: find_yay_updates(package_type=package_type, aur=True),
         'yay'        : lambda package_type: find_yay_updates(package_type=package_type, aur=False),
+        'yum'        : find_dnf_updates,
     }
 
     func = dispatch.get(package_type)

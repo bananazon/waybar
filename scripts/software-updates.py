@@ -287,7 +287,7 @@ def find_snap_updates(package_type: str=None):
 
     packages = []
     command = ['sudo', 'snap', 'refresh', '--list']
-    rc, stdout, stderr = util.run_piped_command(command)
+    rc, stdout, stderr = execute_command(command)
     if rc == 0:
         if stdout !='All snaps up to date':
             lines = stdout.lstrip().strip().split('\n')

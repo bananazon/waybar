@@ -157,6 +157,10 @@ Read Time/sec : 0 ms
 Write Time/sec: 0 ms
 ```
 
+#### Actions
+* `on-click` - Switch output format
+* `on-click-right` - Refresh data
+
 ### Memory Usage
 This module shows memory usage information with three available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
 
@@ -178,6 +182,9 @@ Available = 54.18 GB
 DIMM 00 - 32 GB DDR4 SODIMM @ 3200 MT/s
 DIMM 01 - 32 GB DDR4 SODIMM @ 3200 MT/s
 ```
+
+#### Actions
+* `on-click` - Switch output format
 
 ### Network Throughput
 This module shows network throughtput, received and sent.
@@ -216,6 +223,9 @@ This module shows recent earthquakes near you. It uses your IP to geolocate you.
 2025-09-28 00:09 - mag 0.86 6 km WNW of Borrego Springs, CA
 ```
 
+#### Actions
+* `on-click` - Refresh data
+
 ### Software Updates
 This module displays the number of available outputs for the following package managers: `apk`, `apt`, `brew`, `dnf`, `emerge`, `flatpak`, `mintupdate`, `pacman`, `snap`, `xbps`, `yay`, `yay-aur`, `yum`. Please see the [`permissions`](#permissions) section before implementing this module.
 
@@ -247,6 +257,10 @@ atheros-firmware.noarch   => 20250808-1.fc42
 and 764 more...
 ```
 
+#### Actions
+* `on-click` - Switch between configured package types
+* `on-click-right` - Refresh data
+
 ### Speedtest
 This module connects to [speedtest.net](https://speedtest.net) and gathers download and/or upload speeds. You can left click on it to refresh its output.
 
@@ -273,13 +287,8 @@ Location : San Diego, California, US
 ISP      : AS19165 Webpass Inc.
 ```
 
-### Swap Usage
-This module shows swap usage information with three available output formats that can be toggled by clicking the item in the bar.
-
-#### Output Formats
-1. `0.00 B / 1.91 GiB`
-2. `0% used`
-3. `0.00 B used / 1.91 GiB free`
+#### Actions
+* `on-click` - Refresh data
 
 ### Weather
 This module retrieves weather from [weatherapi.com](https://www.weatherapi.com).
@@ -305,6 +314,9 @@ Moonrise    : 13:08
 Moonset     : 22:43
 Moon Phase  : Waxing Crescent
 ```
+
+#### Actions
+* `on-click` - Refresh data
 
 ### Wi-Fi Status
 This module displays the signal strength in dBm for the specified interface.

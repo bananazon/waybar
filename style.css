@@ -35,7 +35,6 @@ tooltip label {
 #custom-plex-status,
 #custom-quakes,
 #custom-speedtest,
-#custom-swap-usage,
 #custom-software-updates,
 #custom-weather-san-diego,
 #custom-wifi-status-wlo1 {
@@ -63,10 +62,9 @@ tooltip label {
 #custom-network-throughput-enp1s0.error,
 #custom-network-throughput-wlo1.error,
 #custom-plex-status.error,
-#custom.quakes.error,
-#custom-speedtest.error,
-#custom-swap-usage.error,
+#custom-quakes.error,
 #custom-software-updates.error,
+#custom-speedtest.error,
 #custom-weather-san-diego.error,
 #custom-wifi-status-wlo1.error {
     color: #ffb8b8;

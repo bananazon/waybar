@@ -55,19 +55,13 @@ network_interfaces:
     type: network
     interval: 3
 
-software_updates:
-  - package_type: brew
-    enabled: true
-    interval: 1800
-  - package_type: dnf
-    enabled: true
-    interval: 1800
-  - package_type: flatpak
-    enabled: false
-    interval: 1800
-  - package_type: snap
-    enabled: false
-    interval: 1800
+software-updates:
+  enabled: true
+  interval: 1800
+  package_types:
+    - dnf
+    - flatpak
+    - snap
 
 weather:
   api_key: "{key:wapi_key}"

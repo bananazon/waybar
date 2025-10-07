@@ -57,6 +57,16 @@
     },
     {% endif %}
 
+    {% if software_updates.enabled and (software_updates.package_types|length > 0) %}
+    "custom/software-updates": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/software-updates.py {% for p in software_updates.package_types %}--package-type {{ p }} {% endfor %}--interval {{ software_updates.get("interval", 1800) if software_updates is defined else 1800 }}",
+        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in software_updates.package_types %}--package-type {{ p }} {% endfor %}--interval {{ software_updates.get("interval", 1800) if s is defined else 1800 }}')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in software_updates.package_types %}--package-type {{ p }} {% endfor %}--interval {{ software_updates.get("interval", 1800) if s is defined else 1800 }}')"
+    },
+    {% endif %}
+
     {% if speedtest.enabled == true %}
     "custom/speedtest": {
         "format": "{}",
@@ -74,17 +84,6 @@
         "on-click": "{{ scripts_path }}/swap-usage.py --unit {{ swap_usage.get("unit", "auto") if swap_usage is defined else "auto" }} --toggle"
     },
     {% endif %}
-
-    {% for s in software_updates %}
-    {% if s.enabled %}
-    "custom/software-updates-{{ s.package_type }}": {
-        "format": "{}",
-        "return-type": "json",
-        "exec": "{{ scripts_path }}/software-updates.py --package-type {{ s.package_type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py --package-type {{ s.package_type }} --interval {{ s.get("interval", 1800) if s is defined else 1800 }}')"
-    },
-    {% endif %}
-    {% endfor %}
 
     {% for iface in network_interfaces %}
     {% if iface.type == 'wifi' and iface.enabled %}

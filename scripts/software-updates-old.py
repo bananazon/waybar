@@ -22,16 +22,9 @@ update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
 cache_dir        = util.get_cache_directory()
-condition        = threading.Condition()
 context_settings = dict(help_option_names=['-h', '--help'])
-format_index     = 0
-needs_fetch      = False
-needs_redraw     = False
-update_data      = None
 update_data      = None
 valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'flatpak', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur', 'yum']
-
-formats : list | None=None
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -53,28 +46,10 @@ def configure_logging(debug: bool=False, logfile: str=None):
     )
 
 def refresh_handler(signum, frame):
-    global needs_fetch, needs_redraw
-    logging.info(f'[refresh_handler] - received SIGHUP — re-fetching data')
-    with condition:
-        needs_fetch = True
-        needs_redraw = True
-        condition.notify()
-
-def toggle_format(signum, frame):
-    global formats, format_index, needs_redraw
-    format_index = (format_index + 1) % len(formats)
-    if update_data and type(update_data) == list:
-        package_type = update_data[format_index].package_type
-    else:
-        package_type = format_index + 1
-
-    logging.info(f'[toggle_format] - received SIGUSR1 - switching output format to {package_type}')
-    with condition:
-        needs_redraw = True
-        condition.notify()
+    logging.info('[refresh_handler] - received SIGHUP — triggering find_updates')
+    update_event.set()
 
 signal.signal(signal.SIGHUP, refresh_handler)
-signal.signal(signal.SIGUSR1, toggle_format)  
 
 def generate_tooltip(update_data: NamedTuple=None):
     tooltip = []
@@ -105,7 +80,7 @@ def generate_tooltip(update_data: NamedTuple=None):
         if count > max_shown:
             tooltip.append(f'and {count - max_shown} more...')
     else:
-        tooltip.append(f'Hooray! No outdated {update_data.package_type} packages.'),
+        tooltip.append('Hooray! No outdated packages.'),
 
     if len(tooltip) > 0:
         tooltip.append('')
@@ -420,7 +395,6 @@ def find_updates(package_type: str = ''):
     return data
 
 def render_output(update_data: NamedTuple=None, icon: str=None):
-    logging.info(f'[render_outuput] - output_data={update_data}')
     if update_data.success:
         packages = 'package' if update_data.count == 1 else 'packages'
         text = f'{icon}{glyphs.icon_spacer}{update_data.package_type} {update_data.count} outdated {packages}'
@@ -433,91 +407,69 @@ def render_output(update_data: NamedTuple=None, icon: str=None):
 
     return text, output_class, tooltip
 
-def worker(package_types: str=None):
-    global update_data, needs_fetch, needs_redraw, format_index
+def worker(package_type: str=None):
+    global update_data
 
     while True:
-        with condition:
-            while not (needs_fetch or needs_redraw):
-                condition.wait()
+        update_event.wait()
+        update_event.clear()
 
-            fetch        = needs_fetch
-            redraw       = needs_redraw
-            needs_fetch  = False
-            needs_redraw = False
-
-        logging.info('[worker] - entering worker loop')
-        loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking updates...'
-        loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking for updates'}
-
+        logging.info('[worker] - entering main loop')
         if not util.waybar_is_running():
             logging.info('[worker] - waybar not running')
             sys.exit(0)
         else:
-            if not util.network_is_reachable():
+            if util.network_is_reachable():
+                loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type}...'
+                loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking {package_type}'}
+                if update_data:
+                    if update_data.success:
+                        text, _, tooltip = render_output(update_data=update_data, icon=glyphs.md_timer_outline)
+                        print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))
+                    else:
+                        print(json.dumps(loading_dict))
+                else:
+                    print(json.dumps(loading_dict))
+
+                update_data = find_updates(package_type=package_type)
+                text, output_class, tooltip = render_output(update_data=update_data, icon=util.get_distro_icon())
+                output = {
+                    'text'    : text,
+                    'class'   : output_class,
+                    'tooltip' : tooltip,
+                }
+            else:
                 output= {
                     'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
                     'class'   : 'error',
-                    'tooltip' : f'Software update error',
+                    'tooltip' : f'{package_type} update error',
                 }
-                print(json.dumps(output))
-                update_data = None
-                continue
 
-            if fetch:
-                logging.info('fetch time')
-                print(json.dumps(loading_dict))
-                
-                update_data = []
-                for package_type in package_types:
-                    package_data = find_updates(package_type=package_type)
-                    update_data.append(package_data)
-                
-            if update_data and type(update_data) == list:
-                if redraw:
-                    text, output_class, tooltip = render_output(update_data=update_data[format_index], icon=util.get_distro_icon())
-                    output = {
-                        'text'    : text,
-                        'class'   : output_class,
-                        'tooltip' : tooltip,
-                    }
-            
             print(json.dumps(output))
 
 @click.command(help='Check available system updates from different sources', context_settings=context_settings)
-@click.option('-p', '--package-type', required=True, multiple=True, help=f'The type of update to query; valid choices are: {", ".join(valid_types)}')
+@click.option('-p', '--package-type', required=True, help=f'The type of update to query; valid choices are: {", ".join(valid_types)}')
 @click.option('-i', '--interval', type=int, default=1800, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
 @click.option('-d', '--debug', default=False, is_flag=True, help='Enable debug logging')
 def main(package_type, interval, test, debug):
-    global pkg_type, formats, needs_fetch, needs_redraw
-
-    logfile = cache_dir / f'waybar-software-updates.log'
+    logfile = cache_dir / f'waybar-software-updates-{package_type}.log'
     configure_logging(debug=debug, logfile=logfile)
-    formats = list(range(len(package_type)))
-
-    logging.info('[main] entering')
-    logging.info(f'[main] - formats: {formats}')
 
     if test:
-        update_data = find_updates(package_type=package_type[0])
+        update_data = find_updates(package_type=package_type)
         util.pprint(update_data)
         print()
-        print(generate_tooltip(update_data=update_data[0]))
+        print(generate_tooltip(update_data=update_data))
         return
 
+    logging.info('[main] entering')
     threading.Thread(target=worker, args=(package_type,), daemon=True).start()
-
-    with condition:
-        needs_fetch = True
-        needs_redraw = True
-        condition.notify()
+    update_event.set()
 
     while True:
         time.sleep(interval)
-        with condition:
-            needs_fetch = True
-            needs_redraw = True
-            condition.notify()
+        update_event.set()
+
 if __name__ == '__main__':
     main()

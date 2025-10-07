@@ -126,12 +126,6 @@ def render_template(template_file, yaml_file, output_file, dryrun):
                     modules_right.append(f'custom/wifi-status-{name}')
                 modules_right.append(f'custom/network-throughput-{name}')
 
-    if yaml_data.get('software_updates') is not None:
-        for item in yaml_data['software_updates']:
-            if item['enabled']:
-                package_type = item['package_type']
-                modules_right.append(f'custom/software-updates-{package_type}')
-
     if yaml_data.get('weather') is not None:
         if yaml_data['weather'].get('locations') is not None:
             for item in yaml_data['weather']['locations']:
@@ -161,7 +155,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             plex_status        = static_module_map.get('plex-status', {}),
             position           = yaml_data.get('position', 'top'),
             scripts_path       = yaml_data.get('scripts_path', '~/.config/waybar/scripts'), 
-            software_updates   = yaml_data.get('software_updates', []),
+            software_updates   = yaml_data.get('software-updates', {}),
             spacing            = yaml_data.get('spacing', 5),
             speedtest          = static_module_map.get('speedtest', {}),
             swap_usage         = static_module_map.get('swap-usage', {}),

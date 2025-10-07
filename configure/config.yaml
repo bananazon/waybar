@@ -21,13 +21,15 @@ static_modules:
     ip: "{key:plex_ip}"
     port: "{key:plex_port}"
     api_key: "{key:plex_api_token}"
+  - name: quakes
+    enabled: false
+    interval: 1800
+    limit: 20
+    radius: 100m
+    magnitude: 0.1
   - name: speedtest
     enabled: true
     interval: 300
-  - name: swap-usage
-    enabled: false
-    interval: 3
-    unit: auto
 
 filesystems:
   - label: root

@@ -24,7 +24,7 @@ sys.stdout.reconfigure(line_buffering=True)
 cache_dir        = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 update_data      = None
-valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur', 'yum']
+valid_types      = ['apk', 'apt', 'brew', 'dnf', 'emerge', 'flatpak', 'mintupdate', 'pacman', 'snap', 'xbps', 'yay', 'yay-aur', 'yum']
 
 class Package(NamedTuple):
     name    : Optional[str]  = None
@@ -60,9 +60,12 @@ def generate_tooltip(update_data: NamedTuple=None):
 
     if update_data.packages and len(update_data.packages) > 0:
         for item in update_data.packages[:max_shown]:
-            package_name = item.name.split('.')[0]
-            if len(item.name.split('.')[0]) > max_name_len:
-                max_name_len = len(item.name.split('.')[0])
+            # I'm trying to remember why I split on '.'
+            # package_name = item.name.split('.')[0]
+            # if len(item.name.split('.')[0]) > max_name_len:
+            #     max_name_len = len(item.name.split('.')[0])
+            if len(item.name) > max_name_len:
+                max_name_len = len(item.name)
             if len(item.version) > max_version_len:
                 max_version_len = len(item.version)
 
@@ -70,7 +73,8 @@ def generate_tooltip(update_data: NamedTuple=None):
         max_version_len = max_version_len if max_version_len <=30 else 30
 
         for item in update_data.packages[:max_shown]:
-            line = f'{item.name.split('.')[0][:max_name_len]:{max_name_len}} => {item.version[:max_version_len]:{max_version_len}}'
+            # line = f'{item.name.split('.')[0][:max_name_len]:{max_name_len}} => {item.version[:max_version_len]:{max_version_len}}'
+            line = f'{item.name[:max_name_len]:{max_name_len}} => {item.version[:max_version_len]:{max_version_len}}'
             tooltip.append(line)
 
         if count > max_shown:
@@ -122,7 +126,7 @@ def error(package_type: str=None, command: list=None, error: str=None):
     )
 
 def find_apk_updates(package_type: str = None):
-    logging.info(f'[find_{package_type}_updates] - entering function')
+    logging.info(f'[find_{package_type}_updates] - entering fcunction')
 
     packages = []
     command = ['sudo', 'apk', 'update']
@@ -245,6 +249,27 @@ def find_emerge_updates(package_type: str=None):
 
     return success(package_type=package_type, packages=packages)
 
+def find_flatpak_updates(package_type: str=None):
+    logging.info(f'[find_{package_type}_updates] - entering function')
+
+    packages = []
+    command = ['flatpak', 'update', '--appstream']
+    rc, stdout, stderr = execute_command(command)
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    command = ['flatpak', 'remote-ls', '--updates', '--columns=name,version']
+    rc, stdout, stderr = execute_command(command)
+    if rc == 0:
+        for line in stdout.split('\n'):
+            bits = re.split(r'\s+', line)
+            if len(bits) == 2:
+                packages.append(Package(name=bits[0], version = bits[1]))
+    else:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    return success(package_type=package_type, packages=packages)
+
 def find_mint_updates(package_type: str=None):
     logging.info(f'[find_{package_type}_updates] - entering function')
 
@@ -354,6 +379,7 @@ def find_updates(package_type: str = ''):
         'brew'       : find_brew_updates,
         'dnf'        : find_dnf_updates,
         'emerge'     : find_emerge_updates,
+        'flatpak'    : find_flatpak_updates,
         'mintupdate' : find_mint_updates,
         'pacman'     : find_pacman_updates,
         'snap'       : find_snap_updates,

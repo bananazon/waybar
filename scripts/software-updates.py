@@ -420,7 +420,6 @@ def find_updates(package_type: str = ''):
     return data
 
 def render_output(update_data: NamedTuple=None, icon: str=None):
-    logging.info(f'[render_outuput] - output_data={update_data}')
     if update_data.success:
         packages = 'package' if update_data.count == 1 else 'packages'
         text = f'{icon}{glyphs.icon_spacer}{update_data.package_type} {update_data.count} outdated {packages}'
@@ -475,7 +474,9 @@ def worker(package_types: str=None):
                 
             if update_data and type(update_data) == list:
                 if redraw:
-                    text, output_class, tooltip = render_output(update_data=update_data[format_index], icon=util.get_distro_icon())
+                    count = sum(item.count for item in update_data)
+                    icon = glyphs.md_alert if count > 0 else util.get_distro_icon()
+                    text, output_class, tooltip = render_output(update_data=update_data[format_index], icon=icon)
                     output = {
                         'text'    : text,
                         'class'   : output_class,

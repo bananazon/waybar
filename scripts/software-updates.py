@@ -446,9 +446,6 @@ def worker(package_types: str=None):
             needs_redraw = False
 
         logging.info('[worker] - entering worker loop')
-        loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking updates...'
-        loading_dict = {'text': loading, 'class': 'loading', 'tooltip' : f'Checking for updates'}
-
         if not util.waybar_is_running():
             logging.info('[worker] - waybar not running')
             sys.exit(0)
@@ -464,11 +461,13 @@ def worker(package_types: str=None):
                 continue
 
             if fetch:
-                logging.info('fetch time')
-                print(json.dumps(loading_dict))
-                
                 update_data = []
                 for package_type in package_types:
+                    print(json.dumps({
+                        'text'    : f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type} updates...',
+                        'class'   : 'loading',
+                        'tooltip' : f'Checking {package_type} updates...',
+                    }))
                     package_data = find_updates(package_type=package_type)
                     update_data.append(package_data)
                 
@@ -497,8 +496,7 @@ def main(package_type, interval, test, debug):
     configure_logging(debug=debug, logfile=logfile)
     formats = list(range(len(package_type)))
 
-    logging.info('[main] entering')
-    logging.info(f'[main] - formats: {formats}')
+    logging.info('[main] - entering function')
 
     if test:
         update_data = find_updates(package_type=package_type[0])

@@ -11,8 +11,7 @@
     "custom/cpu-usage": {
         "exec": "{{ scripts_path }}/cpu-usage.py",
         "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }},
-        "return-type": "json",
-        "on-click": "{{ scripts_path }}/cpu-usage.py"
+        "return-type": "json"
     },
     {% endif %}
 
@@ -22,8 +21,8 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
-        "on-click-right": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')"
+        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py --mountpoint {{ fs.mountpoint }} --label {{ fs.label }} --interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')"
     },
     {% endif %}
     {% endfor %}
@@ -42,8 +41,7 @@
     "custom/network-throughput-{{ iface.name }}": {
         "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
         "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
-        "return-type": "json",
-        "on-click": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}"
+        "return-type": "json"
     },
     {% endif %}
     {% endfor %}
@@ -54,6 +52,15 @@
         "interval": {{ plex_status.get("interval", 10) if plex_status is defined else 10 }},
         "return-type": "json",
         "on-click": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
+    },
+    {% endif %}
+
+    {% if quakes.enabled %}
+    "custom/quakes": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}')"
     },
     {% endif %}
 
@@ -76,14 +83,16 @@
     },
     {% endif %}
 
-    {% if swap_usage.enabled == true %}
-    "custom/swap-usage": {
-        "exec": "{{ scripts_path }}/swap-usage.py --unit {{ swap_usage.get("unit", "auto") if swap_usage is defined else "auto" }}",
-        "interval": {{ swap_usage.get("interval", 10) if swap_usage is defined else 10 }},
+    {% for location in weather.locations %}
+    {% if location.enabled %}
+    "custom/weather-{{ location.label }}": {
+        "format" : "{}",
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/swap-usage.py --unit {{ swap_usage.get("unit", "auto") if swap_usage is defined else "auto" }} --toggle"
+        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}",
+        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}')"
     },
     {% endif %}
+    {% endfor %}
 
     {% for iface in network_interfaces %}
     {% if iface.type == 'wifi' and iface.enabled %}
@@ -95,16 +104,6 @@
     {% endif %}
     {% endfor %}
 
-    {% for location in weather.locations %}
-    {% if location.enabled %}
-    "custom/weather-{{ location.label }}": {
-        "format" : "{}",
-        "return-type": "json",
-        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}')"
-    },
-    {% endif %}
-    {% endfor %}
     "custom/nothing": {
         "exec": "cat /dev/null"
     }

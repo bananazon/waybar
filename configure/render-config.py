@@ -154,6 +154,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             network_interfaces = yaml_data.get('network_interfaces', []),
             plex_status        = static_module_map.get('plex-status', {}),
             position           = yaml_data.get('position', 'top'),
+            quakes             = static_module_map.get('quakes', {}),
             scripts_path       = yaml_data.get('scripts_path', '~/.config/waybar/scripts'), 
             software_updates   = yaml_data.get('software-updates', {}),
             spacing            = yaml_data.get('spacing', 5),

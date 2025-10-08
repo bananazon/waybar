@@ -316,7 +316,8 @@ Moon Phase  : Waxing Crescent
 ```
 
 #### Actions
-* `on-click` - Refresh data
+* `on-click` - Switch between configured locations
+* `on-click-right` - Refresh data
 
 ### Wi-Fi Status
 This module displays the signal strength in dBm for the specified interface.

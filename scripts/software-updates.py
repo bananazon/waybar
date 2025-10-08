@@ -18,7 +18,6 @@ import click
 
 util.validate_requirements(binaries=['jc'])
 
-update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
 cache_dir        = util.get_cache_directory()

@@ -126,13 +126,16 @@ def render_template(template_file, yaml_file, output_file, dryrun):
                     modules_right.append(f'custom/wifi-status-{name}')
                 modules_right.append(f'custom/network-throughput-{name}')
 
+    if yaml_data.get('software-updates') is not None:
+        if yaml_data['software-updates']['enabled']:
+            if 'package_types' in yaml_data['software-updates'] and type(yaml_data['software-updates']['package_types']) == list and len(yaml_data['software-updates']['package_types']) > 0:
+                modules_right.append('custom/software-updates')
+
     if yaml_data.get('weather') is not None:
-        if yaml_data['weather'].get('locations') is not None:
-            for item in yaml_data['weather']['locations']:
-                if item['enabled']:
-                    label = item['label']
-                    modules_right.append(f'custom/weather-{label}')
-    
+        if yaml_data['weather']['enabled']:
+            if 'locations' in yaml_data['weather'] and type(yaml_data['weather']['locations']) == list and len(yaml_data['weather']['locations']) > 0:
+                modules_right.append('custom/weather')
+
     modules_right = sorted(modules_right)
 
     try:

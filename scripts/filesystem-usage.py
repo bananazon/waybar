@@ -17,6 +17,8 @@ import click
 
 util.validate_requirements(binaries=['jc'])
 
+sys.stdout.reconfigure(line_buffering=True)
+
 cache_dir        = util.get_cache_directory()
 condition        = threading.Condition()
 context_settings = dict(help_option_names=['-h', '--help'])
@@ -26,16 +28,7 @@ logfile          = cache_dir / f'waybar-filesystem-usage.log'
 needs_fetch      = False
 needs_redraw     = False
 
-sys.stdout.reconfigure(line_buffering=True)
-
-class DiskStatsEntry(NamedTuple):
-    first_sample  : Optional[namedtuple] = None
-    second_sample : Optional[namedtuple] = None
- 
-class DiskStats(NamedTuple):
-    success    : Optional[bool] = False
-    error      : Optional[str]  = None
-    entries    : Optional[list[DiskStatsEntry]] = None
+formats : list | None=None
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool] = False
@@ -73,7 +66,7 @@ def refresh_handler(signum, frame):
         condition.notify()
 
 def toggle_format(signum, frame):
-    global format_index, needs_redraw
+    global formats, format_index, needs_redraw
     format_index = (format_index + 1) % len(formats)
     if disk_info and type(disk_info) == list:
         mountpoint = disk_info[format_index].mountpoint
@@ -85,7 +78,7 @@ def toggle_format(signum, frame):
         condition.notify()
 
 signal.signal(signal.SIGHUP, refresh_handler)
-signal.signal(signal.SIGUSR1, toggle_format)  
+signal.signal(signal.SIGUSR1, toggle_format)
 
 def generate_tooltip(disk_info: namedtuple=None, show_stats: bool=False):
     logging.debug(f'[generate_tooltip] - entering with mountpoint={disk_info.mountpoint}')
@@ -148,36 +141,6 @@ def get_sample():
             return entries
 
     return None
-
-def get_disk_stats():
-    logging.debug(f'[get_disk_stats] - entering function')
-    first_sample = get_sample()
-    time.sleep(1)
-    second_sample = get_sample()
-
-    if not first_sample or not second_sample:
-        return DiskStats(
-            success = False,
-            error   = 'failed to get disk stats'
-        )
-
-    if len(first_sample) != len(second_sample):
-         return DiskStats(
-            success = False,
-            error   = 'failed to get disk stats'
-        )
-
-    entries = []
-    for idx, _ in enumerate(first_sample):
-        entries.append(DiskStatsEntry(
-            first_sample  = first_sample,
-            second_sample = second_sample,
-        ))
-
-    return DiskStats(
-        success        = True,
-        entries        = entries,
-    )
 
 def parse_lsblk(filesystem: str=None):
     logging.debug(f'[parse_lsblk] - entering with filesystem={filesystem}')
@@ -305,8 +268,8 @@ def worker(mountpoints: list=None, unit: str=None, show_stats: bool=False):
             needs_redraw = False
 
         if fetch:
-            loading      = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Working...'
-            loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Gathering disk statistics'}
+            loading      = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Gathering disk data...'
+            loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Gathering disk data...'}
             if disk_info and type(disk_info) == list:
                 text, _, tooltip = render_output(disk_info=disk_info[format_index], unit=unit, icon=glyphs.md_timer_outline)
                 print(json.dumps({'text': text, 'class': 'loading', 'tooltip': tooltip}))

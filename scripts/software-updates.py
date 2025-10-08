@@ -25,6 +25,7 @@ cache_dir        = util.get_cache_directory()
 condition        = threading.Condition()
 context_settings = dict(help_option_names=['-h', '--help'])
 format_index     = 0
+logfile          = cache_dir / f'waybar-software-updates.log'
 needs_fetch      = False
 needs_redraw     = False
 update_data      = None
@@ -44,7 +45,7 @@ class SystemUpdates(NamedTuple):
     package_type : Optional[str]  = None
     packages     : Optional[List[str]] = None
 
-def configure_logging(debug: bool=False, logfile: str=None):
+def configure_logging(debug: bool=False):
     logging.basicConfig(
         filename = logfile,
         filemode = 'w',  # 'a' = append, 'w' = overwrite
@@ -432,7 +433,7 @@ def render_output(update_data: NamedTuple=None, icon: str=None):
 
     return text, output_class, tooltip
 
-def worker(package_types: str=None):
+def worker(package_types: list=None):
     global update_data, needs_fetch, needs_redraw, format_index
 
     while True:
@@ -490,10 +491,9 @@ def worker(package_types: str=None):
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
 @click.option('-d', '--debug', default=False, is_flag=True, help='Enable debug logging')
 def main(package_type, interval, test, debug):
-    global pkg_type, formats, needs_fetch, needs_redraw
+    global formats, needs_fetch, needs_redraw
 
-    logfile = cache_dir / f'waybar-software-updates.log'
-    configure_logging(debug=debug, logfile=logfile)
+    configure_logging(debug=debug)
     formats = list(range(len(package_type)))
 
     logging.info('[main] - entering function')
@@ -518,5 +518,6 @@ def main(package_type, interval, test, debug):
             needs_fetch = True
             needs_redraw = True
             condition.notify()
+
 if __name__ == '__main__':
     main()

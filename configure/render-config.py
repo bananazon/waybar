@@ -117,18 +117,20 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             if 'mountpoints' in yaml_data['filesystem_usage'] and type(yaml_data['filesystem_usage']['mountpoints']) == list and len(yaml_data['filesystem_usage']['mountpoints']) > 0:
                 modules_right.append(f'custom/filesystem-usage')
 
-    if yaml_data.get('network_interfaces') is not None:
-        for iface in yaml_data['network_interfaces']:
-            if iface['enabled']:
-                name = iface['name']
-                if iface['type'] == 'wifi':
-                    modules_right.append(f'custom/wifi-status-{name}')
-                modules_right.append(f'custom/network-throughput-{name}')
+    if yaml_data.get('network_throughput') is not None:
+        if yaml_data['network_throughput']['enabled']:
+            if 'interfaces' in yaml_data['network_throughput'] and type(yaml_data['network_throughput']['interfaces']) == list and len(yaml_data['network_throughput']['interfaces']) > 0:
+                modules_right.append(f'custom/network-throughput')
 
     if yaml_data.get('software_updates') is not None:
         if yaml_data['software_updates']['enabled']:
             if 'package_types' in yaml_data['software_updates'] and type(yaml_data['software_updates']['package_types']) == list and len(yaml_data['software_updates']['package_types']) > 0:
                 modules_right.append('custom/software-updates')
+
+    if yaml_data.get('wifi_status') is not None:
+        if yaml_data['wifi_status']['enabled']:
+            if 'interfaces' in yaml_data['wifi_status'] and type(yaml_data['wifi_status']['interfaces']) == list and len(yaml_data['wifi_status']['interfaces']) > 0:
+                modules_right.append(f'custom/wifi-status')
 
     if yaml_data.get('weather') is not None:
         if yaml_data['weather']['enabled']:
@@ -153,7 +155,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             layer              = yaml_data.get('layer', 'bottom'),
             memory_usage       = static_module_map.get('memory-usage', {}),
             modules_right      = modules_right,
-            network_interfaces = yaml_data.get('network_interfaces', []),
+            nt                 = yaml_data.get('network_throughput', {}),
             plex_status        = static_module_map.get('plex-status', {}),
             position           = yaml_data.get('position', 'top'),
             quakes             = static_module_map.get('quakes', {}),
@@ -161,7 +163,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             su                 = yaml_data.get('software_updates', {}),
             spacing            = yaml_data.get('spacing', 5),
             speedtest          = static_module_map.get('speedtest', {}),
-            swap_usage         = static_module_map.get('swap-usage', {}),
+            wifi               = yaml_data.get('wifi_status', {}),
             weather            = yaml_data.get('weather', []),
         )
     except Exception as e:

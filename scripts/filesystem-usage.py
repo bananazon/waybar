@@ -202,58 +202,65 @@ def get_disk_usage(mountpoints: list=None, show_stats: bool=False):
         second_sample = get_sample()
 
     for mountpoint in mountpoints:
-        df_item = None
-        findmnt_item = None
-        first = None
-        second = None
+        if filesystem_exists(mountpoint=mountpoint):
+            df_item = None
+            findmnt_item = None
+            first = None
+            second = None
 
-        command = f'jc --pretty df {mountpoint}'
-        try:
-            rc, stdout, stderr = util.run_piped_command(command)
-            if rc == 0 and stdout != '':
-                df_data, err = util.parse_json_string(stdout)
-                if len(df_data) == 1:
-                    df_item = df_data[0]
-            else:
-                return FilesystemInfo(success = False, error = stderr or f'failed to execute {command}')
-        except:
-            return FilesystemInfo(success = False, error = stderr or f'failed to execute {command}')
-        
-        if df_item:
-            command = f'jc --pretty findmnt {mountpoint}'
+            command = f'jc --pretty df {mountpoint}'
             try:
                 rc, stdout, stderr = util.run_piped_command(command)
                 if rc == 0 and stdout != '':
-                    findmnt_data, err = util.parse_json_string(stdout)
-                    if len(findmnt_data) == 1:
-                        findmnt_item = findmnt_data[0]
+                    df_data, err = util.parse_json_string(stdout)
+                    if len(df_data) == 1:
+                        df_item = df_data[0]
                 else:
                     return FilesystemInfo(success = False, error = stderr or f'failed to execute {command}')
             except:
-                return FilesystemInfo(success = False, error   = stderr or f'failed to execute {command}')
+                return FilesystemInfo(success = False, error = stderr or f'failed to execute {command}')
 
-            lsblk_data = parse_lsblk(filesystem=df_item['filesystem'])
-            if lsblk_data and show_stats:
-                first = [entry for entry in first_sample if entry.device == lsblk_data.kname][0]
-                second = [entry for entry in second_sample if entry.device == lsblk_data.kname][0]
+            if df_item:
+                command = f'jc --pretty findmnt {mountpoint}'
+                try:
+                    rc, stdout, stderr = util.run_piped_command(command)
+                    if rc == 0 and stdout != '':
+                        findmnt_data, err = util.parse_json_string(stdout)
+                        if len(findmnt_data) == 1:
+                            findmnt_item = findmnt_data[0]
+                    else:
+                        return FilesystemInfo(success = False, error = stderr or f'failed to execute {command}')
+                except:
+                    return FilesystemInfo(success = False, error   = stderr or f'failed to execute {command}')
 
-        if df_item and findmnt_item:
+                lsblk_data = parse_lsblk(filesystem=df_item['filesystem'])
+                if lsblk_data and show_stats:
+                    first = [entry for entry in first_sample if entry.device == lsblk_data.kname][0]
+                    second = [entry for entry in second_sample if entry.device == lsblk_data.kname][0]
+
+            if df_item and findmnt_item:
+                disk_usage.append(FilesystemInfo(
+                    success    = True,
+                    filesystem = df_item['filesystem'],
+                    mountpoint = mountpoint,
+                    total      = df_item['1k_blocks'] * 1024,
+                    used       = df_item['used'] * 1024,
+                    free       = df_item['available'] * 1024,
+                    pct_total  = 100,
+                    pct_used   = df_item['use_percent'],
+                    pct_free   = 100 - df_item['use_percent'],
+                    fsopts     = findmnt_item.get('options') or None,
+                    fstype     = findmnt_item.get('fstype') or None,
+                    lsblk      = lsblk_data,
+                    sample1    = first or None,
+                    sample2    = second or None,
+                    updated    = util.get_human_timestamp(),
+                ))
+        else:
             disk_usage.append(FilesystemInfo(
-                success    = True,
-                filesystem = df_item['filesystem'],
+                success    = False,
+                error      = 'doesn\'t exist',
                 mountpoint = mountpoint,
-                total      = df_item['1k_blocks'] * 1024,
-                used       = df_item['used'] * 1024,
-                free       = df_item['available'] * 1024,
-                pct_total  = 100,
-                pct_used   = df_item['use_percent'],
-                pct_free   = 100 - df_item['use_percent'],
-                fsopts     = findmnt_item.get('options') or None,
-                fstype     = findmnt_item.get('fstype') or None,
-                lsblk      = lsblk_data,
-                sample1    = first or None,
-                sample2    = second or None,
-                updated    = util.get_human_timestamp(),
             ))
 
     return disk_usage
@@ -278,7 +285,7 @@ def render_output(disk_info: namedtuple=None, unit: str=None, icon: str=None, sh
         output_class = output_class
         tooltip = generate_tooltip(disk_info=disk_info, show_stats=show_stats)
     else:
-        test = f'{glyphs.md_alert}{glyphs.icon_spacer}{disk_info.mountpoint} {disk_info.error}'
+        text = f'{glyphs.md_alert}{glyphs.icon_spacer}{disk_info.mountpoint} {disk_info.error}'
         output_class = 'error'
         tooltip = f'{disk_info.mountpoint} error'
 
@@ -296,16 +303,6 @@ def worker(mountpoints: list=None, unit: str=None, show_stats: bool=False):
             redraw       = needs_redraw
             needs_fetch  = False
             needs_redraw = False
-
-        # if not filesystem_exists(mountpoint=mountpoint):
-        #     output = {
-        #         'text'    : f'{glyphs.md_harddisk}{glyphs.icon_spacer}{mountpoint} doesn\'t exist',
-        #         'class'   : 'error',
-        #         'tooltip' : 'Filesystem error',
-        #     }
-        #     print(json.dumps(output))
-        #     disk_info = None
-        #     continue    
 
         if fetch:
             loading      = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Working...'

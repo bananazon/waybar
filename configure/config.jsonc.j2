@@ -21,7 +21,9 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}",
-        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
+        {% if fs.mountpoints|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
+        {% endif %}
         "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')"
     },
     {% endif %}
@@ -35,16 +37,16 @@
     },
     {% endif %}
 
-    {% for iface in network_interfaces %}
-    {% if iface.enabled %}
-    "custom/network-throughput-{{ iface.name }}": {
+    {% if nt.enabled and (nt.interfaces|length > 0) %}
+    "custom/network-throughput": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
-        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }}
+        "exec": "{{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.get("interval", 10) if nt is defined else 10 }}"{% if nt.interfaces|length > 1 %},{% endif %}
+        {% if nt.interfaces|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.get("interval", 10) if nt is defined else 10 }}')"
+        {% endif %}
     },
     {% endif %}
-    {% endfor %}
 
     {% if plex_status.enabled == true %}
     "custom/plex-status": {
@@ -70,7 +72,9 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if su is defined else 1800 }}",
-        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if s is defined else 1800 }}')",
+        {% if su.package_types|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if s is defined else 1800 }}')",
+        {% endif %}
         "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if s is defined else 1800 }}')"
     },
     {% endif %}
@@ -84,26 +88,28 @@
     },
     {% endif %}
 
-    {% if weather.enabled and (weather.locations|length >0) %}
+    {% if weather.enabled and (weather.locations|length > 0) %}
     "custom/weather": {
         "format" : "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location '{{ l }}' {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}",
-        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')",
+        {% if weather.locations|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')",
+        {% endif %}
         "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')"
     },
     {% endif %}
 
-    {% for iface in network_interfaces %}
-    {% if iface.type == 'wifi' and iface.enabled %}
-    "custom/wifi-status-{{ iface.name }}": {
-        "format" : "{}",
+    {% if wifi.enabled and (wifi.interfaces|length > 0) %}
+    "custom/wifi-status": {
+        "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }}",
-        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }}
+        "exec": "{{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.get("interval", 10) if wifi is defined else 10 }}"{% if wifi.interfaces|length > 1 %},{% endif %}
+        {% if wifi.interfaces|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.get("interval", 10) if wifi is defined else 10 }}')"
+        {% endif %}
     },
     {% endif %}
-    {% endfor %}
 
     "custom/nothing": {
         "exec": "echo ' '"

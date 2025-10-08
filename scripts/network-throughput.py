@@ -30,6 +30,7 @@ class NetworkThroughput(NamedTuple):
     received    : Optional[str]  = None
     transmitted : Optional[str]  = None
     vendor      : Optional[str]  = None
+    updated     : Optional[str]  = None
 
 def generate_tooltip(data):
     tooltip = []
@@ -65,7 +66,7 @@ def generate_tooltip(data):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {data.updated}')
 
     return '\n'.join(tooltip)
 
@@ -142,6 +143,7 @@ def get_network_throughput(interface: str=None):
         received    = util.network_speed(second.r_bytes - first.r_bytes),
         transmitted = util.network_speed(second.t_bytes - first.t_bytes),
         vendor      = vendor,
+        updated     = util.get_human_timestamp(),
     )
 
 @click.command(name='run', help='Get network throughput via /sys/class/net')

@@ -31,6 +31,7 @@ class WifiStatus(NamedTuple):
     signal         : Optional[int]  = 0
     ssid_mac       : Optional[str]  = None
     ssid_name      : Optional[str]  = None
+    updated        : Optional[str]  = None
 
 def generate_tooltip(wifi_status):
     tooltip = []
@@ -77,7 +78,7 @@ def generate_tooltip(wifi_status):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {wifi_status.updated}')
 
     return '\n'.join(tooltip)
 
@@ -201,6 +202,7 @@ def get_wifi_status(interface: str=None):
         signal         = signal,
         ssid_mac       = ssid_mac,
         ssid_name      = ssid_name,
+        updated        = util.get_human_timestamp(),
     )
 
     return wifi_status

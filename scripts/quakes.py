@@ -47,20 +47,20 @@ class QuakeData(NamedTuple):
     error   : Optional[str]  = None
     quakes  : Optional[list] = None
 
-def generate_tooltip(quakes):
+def generate_tooltip(quake_data: NamedTuple=None):
     tooltip = []
     max_header_len = 0
-    for quake in quakes:
+    for quake in quake_data.quakes:
         header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
         max_header_len = len(header) if len(header) > max_header_len else max_header_len
 
-    for quake in quakes:
+    for quake in quake_data.quakes:
         header = f'{format_time(timestamp=quake.time)} - mag {quake.mag}'
         tooltip.append(f'{header:{max_header_len}} {quake.place}')
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {quake_data.updated}')
 
     return '\n'.join(tooltip)
 
@@ -114,6 +114,7 @@ def get_quake_data(radius: str=None, limit: int=None, magnitude: float=None):
                         return QuakeData(
                             success = True,
                             quakes  = quakes,
+                            updated = util.get_human_timestamp(),
                         )
                     else:
                         return QuakeData(
@@ -154,7 +155,7 @@ def worker(radius: str=None, limit: int=None, magnitude: float=None):
                     output = {
                         'text': f'Earthquakes: {len(quake_data.quakes)}',
                         'class': 'success',
-                        'tooltip': generate_tooltip(quake_data.quakes),
+                        'tooltip': generate_tooltip(quake_data=quake_data),
                     }
                 else:
                     output = {
@@ -188,7 +189,7 @@ def main(radius, limit, magnitude, interval, test):
         quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
         util.pprint(quake_data)
         print()
-        print(generate_tooltip(quake_data.quakes))
+        print(generate_tooltip(quake_data=quake_data))
         return
     
     threading.Thread(target=worker, args=(radius, limit, magnitude,), daemon=True).start()

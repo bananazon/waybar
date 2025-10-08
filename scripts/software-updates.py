@@ -44,6 +44,7 @@ class SystemUpdates(NamedTuple):
     count        : Optional[int]  = 0
     package_type : Optional[str]  = None
     packages     : Optional[List[str]] = None
+    updated      : Optional[str]  = None
 
 def configure_logging(debug: bool=False):
     logging.basicConfig(
@@ -110,7 +111,7 @@ def generate_tooltip(update_data: NamedTuple=None):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {update_data.updated}')
 
     return '\n'.join(tooltip)
 
@@ -134,7 +135,8 @@ def success(package_type: str=None, packages: list=None):
         success      = True,
         count        = len(packages),
         packages     = packages,
-        package_type = package_type
+        package_type = package_type,
+        updated      = util.get_human_timestamp(),
     )
 
 def error(package_type: str=None, command: list=None, error: str=None):

@@ -29,7 +29,7 @@ formats : list | None=None
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
 
-class WeatherData(NamedTuple):
+class LocationData(NamedTuple):
     success           : Optional[bool]  = False
     error             : Optional[str]   = None
     icon              : Optional[str]   = None
@@ -66,6 +66,7 @@ class WeatherData(NamedTuple):
     wind_degree       : Optional[int]   = -1
     wind_dir          : Optional[str]   = None
     wind_speed        : Optional[str]   = None
+    updated           : Optional[str]   = None
 
 def configure_logging(debug: bool=False):
     logging.basicConfig(
@@ -155,7 +156,7 @@ def generate_tooltip(location_data: NamedTuple=None):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {location_data.updated}')
 
     return '\n'.join(tooltip)
 
@@ -284,7 +285,7 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False):
                 forecast_data  = json_data['forecast']['forecastday'][0]['day']
                 location_data  = json_data['location']
 
-                weather_data = WeatherData(
+                weather_data = LocationData(
                     success        = True,
                     icon           = get_weather_icon(current_data['condition']['code'], current_data['is_day']),
                     avg_humidity   = forecast_data.get("avghumidity") or -1,
@@ -319,23 +320,24 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False):
                     wind_degree    = current_data.get("wind_degree") or -1,
                     wind_dir       = current_data.get('wind_dir') or None,
                     wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or None,
+                    updated        = util.get_human_timestamp(),
                 )
             except Exception as e:
                     print(e)
                     exit()
-                    weather_data = WeatherData(
+                    weather_data = LocationData(
                         success        = False,
                         error          = f'could not retrieve the weather for {location}: {str(e)}',
                         location_full  = location,
                     )
         else:
-            weather_data = WeatherData(
+            weather_data = LocationData(
                 success        = False,
                 error          = f'empty response was received',
                 location_full  = location,
             )
     else:
-        weather_data = WeatherData(
+        weather_data = LocationData(
             success        = False,
             error          = f'a non-200 ({response.status}) was received',
             location_full  = location,

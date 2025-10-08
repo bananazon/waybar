@@ -61,6 +61,7 @@ class SpeedtestResults(NamedTuple):
     ping     : Optional[float]  = -1
     speed_rx : Optional[int]    = -1
     speed_tx : Optional[int]    = -1
+    updated  : Optional[str]    = None
 
 logging.basicConfig(
     filename = logfile,
@@ -69,7 +70,7 @@ logging.basicConfig(
     level    = logging.INFO
 )
 
-def generate_tooltip(data: namedtuple=None):
+def generate_tooltip(data: NamedTuple=None):
     logging.info('[generate_tooltip] - entering function')
     tooltip = []
 
@@ -141,7 +142,7 @@ def generate_tooltip(data: namedtuple=None):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {data.updated}')
 
     return '\n'.join(tooltip)
 
@@ -218,6 +219,7 @@ def parse_speedtest_data(json_data=None):
         ping     = speedtest_data.ping or -1,
         speed_rx = speed_rx,
         speed_tx = speed_tx,
+        updated  = util.get_human_timestamp(),
     )
 
 def run_speedtest():

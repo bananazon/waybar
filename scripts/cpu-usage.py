@@ -28,6 +28,7 @@ class CpuInfo(NamedTuple):
     freq_max       : Optional[int]   = 0
     freq_min       : Optional[str]   = 0
     model          : Optional[str]   = None
+    updated        : Optional[str]   = None
 
 def generate_tooltip(cpu_info):
     global CPU_INFO
@@ -67,7 +68,7 @@ def generate_tooltip(cpu_info):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {cpu_info.updated}')
 
     return '\n'.join(tooltip)
 
@@ -143,6 +144,7 @@ def get_cpu_info() -> CpuInfo:
                         freq_max       = freq_max,
                         freq_min       = freq_min,
                         model          = CPU_INFO[0].model_name or 'Unknown',
+                        updated        = util.get_human_timestamp(),
                     )
                 except Exception as e:
                     cpu_info = CpuInfo(

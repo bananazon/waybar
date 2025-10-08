@@ -36,6 +36,7 @@ class MemoryInfo(NamedTuple):
     swap_total     : Optional[int]  = 0
     swap_used      : Optional[int]  = 0
     swap_free      : Optional[int]  = 0
+    updated        : Optional[str]  = None
 
 def generate_tooltip(memory_info):
     unit = 'G'
@@ -102,7 +103,7 @@ def generate_tooltip(memory_info):
 
     if len(tooltip) > 0:
         tooltip.append('')
-        tooltip.append(f'Last updated {util.get_human_timestamp()}')
+        tooltip.append(f'Last updated {memory_info.updated}')
 
     return '\n'.join(tooltip)
 
@@ -181,6 +182,7 @@ def get_memory_usage():
                 swap_pct_total = swap_pct_total,
                 swap_pct_used  = swap_pct_used,
                 swap_pct_free  = swap_pct_free,
+                updated        = util.get_human_timestamp(),
             )
         else:
             mem_info = MemoryInfo(

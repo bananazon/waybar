@@ -112,11 +112,10 @@ def render_template(template_file, yaml_file, output_file, dryrun):
                 name = module['name']
                 modules_right.append(f'custom/{name}')
 
-    if yaml_data.get('filesystems') is not None:
-        for filesystem in yaml_data['filesystems']:
-            if filesystem['enabled']:
-                label = filesystem['label']
-                modules_right.append(f'custom/filesystem-usage-{label}')
+    if yaml_data.get('filesystem_usage') is not None:
+        if yaml_data['filesystem_usage']['enabled']:
+            if 'mountpoints' in yaml_data['filesystem_usage'] and type(yaml_data['filesystem_usage']['mountpoints']) == list and len(yaml_data['filesystem_usage']['mountpoints']) > 0:
+                modules_right.append(f'custom/filesystem-usage')
 
     if yaml_data.get('network_interfaces') is not None:
         for iface in yaml_data['network_interfaces']:
@@ -126,9 +125,9 @@ def render_template(template_file, yaml_file, output_file, dryrun):
                     modules_right.append(f'custom/wifi-status-{name}')
                 modules_right.append(f'custom/network-throughput-{name}')
 
-    if yaml_data.get('software-updates') is not None:
-        if yaml_data['software-updates']['enabled']:
-            if 'package_types' in yaml_data['software-updates'] and type(yaml_data['software-updates']['package_types']) == list and len(yaml_data['software-updates']['package_types']) > 0:
+    if yaml_data.get('software_updates') is not None:
+        if yaml_data['software_updates']['enabled']:
+            if 'package_types' in yaml_data['software_updates'] and type(yaml_data['software_updates']['package_types']) == list and len(yaml_data['software_updates']['package_types']) > 0:
                 modules_right.append('custom/software-updates')
 
     if yaml_data.get('weather') is not None:
@@ -148,7 +147,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
         output = config_template.render(
             cpu_usage          = static_module_map.get('cpu-usage', {}),
             exclusive          = yaml_data.get('exclusive', True),
-            filesystems        = yaml_data.get('filesystems', []),
+            fs                 = yaml_data.get('filesystem_usage', []),
             font               = yaml_data.get('font', 'Arimo Nerd Font 12'),
             height             = yaml_data.get('height', 31),
             layer              = yaml_data.get('layer', 'bottom'),
@@ -159,7 +158,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
             position           = yaml_data.get('position', 'top'),
             quakes             = static_module_map.get('quakes', {}),
             scripts_path       = yaml_data.get('scripts_path', '~/.config/waybar/scripts'), 
-            software_updates   = yaml_data.get('software-updates', {}),
+            su                 = yaml_data.get('software_updates', {}),
             spacing            = yaml_data.get('spacing', 5),
             speedtest          = static_module_map.get('speedtest', {}),
             swap_usage         = static_module_map.get('swap-usage', {}),

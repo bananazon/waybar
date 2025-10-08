@@ -136,12 +136,10 @@ Caches:
 ```
 
 ### Filesystem Usage
-This module shows filesystem usage information with three available output formats that can be toggled by right-clicking the item in the bar.
+This module shows filesystem usage information and statistics.
 
-#### Output Formats
-1. `/foo 779.39 GiB / 3.58 TiB`
-2. `/foo 22% used`
-3. `/foo 779.41 GiB used / 2.64 TiB free`
+#### Output Format
+`/foo 779.39 GiB / 3.58 TiB`
 
 #### Tooltip
 ```
@@ -158,7 +156,7 @@ Write Time/sec: 0 ms
 ```
 
 #### Actions
-* `on-click` - Switch output format
+* `on-click` - Switch between configured mountpoints
 * `on-click-right` - Refresh data
 
 ### Memory Usage

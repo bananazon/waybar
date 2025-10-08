@@ -41,15 +41,11 @@ filesystem_usage:
     - /
     - /work
 
-network_interfaces:
-  - name: wlo1
-    enabled: true
-    type: wifi
-    interval: 3
-  - name: enp1s0
-    enabled: false
-    type: network
-    interval: 3
+network_throughput:
+  enabled: true
+  interval: 10
+  interfaces:
+    - wlo1
 
 software_updates:
   enabled: true
@@ -58,6 +54,13 @@ software_updates:
     - dnf
     - flatpak
     - snap
+
+wifi_status:
+  enabled: true
+  interval: 10
+  interfaces:
+    - wlo1
+    - lo
 
 weather:
   enabled: true

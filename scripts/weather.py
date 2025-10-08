@@ -15,11 +15,16 @@ import time
 util.validate_requirements(modules=['click'])
 import click
 
-cache_dir = util.get_cache_directory()
+cache_dir        = util.get_cache_directory()
+condition        = threading.Condition()
 context_settings = dict(help_option_names=['-h', '--help'])
-loading = f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching weather...'
-loading_dict = { 'text': loading, 'class': 'loading', 'tooltip': 'Fetching weather...'}
-logfile = cache_dir / 'waybar-weather-result.log'
+format_index     = 0
+logfile          = cache_dir / 'waybar-weather.log'
+needs_fetch      = False
+needs_redraw     = False
+weather_data     = None
+
+formats : list | None=None
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)
@@ -28,91 +33,118 @@ class WeatherData(NamedTuple):
     success           : Optional[bool]  = False
     error             : Optional[str]   = None
     icon              : Optional[str]   = None
-    avg_humidity      : Optional[int]   = 0
+    avg_humidity      : Optional[int]   = -1
     cloud_cover       : Optional[float] = None
     condition         : Optional[str]   = None
-    condition_code    : Optional[int]   = 0
+    condition_code    : Optional[int]   = -1
     country           : Optional[str]   = None
     dewpoint          : Optional[str]   = None
     current_temp      : Optional[str]   = None
     feels_like        : Optional[str]   = None
     gust              : Optional[str]   = None
     heat_index        : Optional[str]   = None
-    humidity          : Optional[str]   = None
+    humidity          : Optional[int]   = -1
     location_full     : Optional[str]   = None
     location_short    : Optional[str]   = None
     moonrise          : Optional[str]   = None
-    moonrise_unix     : Optional[int]   = 0
+    moonrise_unix     : Optional[int]   = -1
     moonset           : Optional[str]   = None
-    moonset_unix      : Optional[int]   = 0
-    moon_illumination : Optional[int]   = 0
+    moonset_unix      : Optional[int]   = -1
+    moon_illumination : Optional[int]   = -1
     moon_phase        : Optional[str]   = None
     precipitation     : Optional[str]   = None
     region            : Optional[str]   = None
     sunrise           : Optional[str]   = None
-    sunrise_unix      : Optional[int]   = 0
+    sunrise_unix      : Optional[int]   = -1
     sunset            : Optional[str]   = None
-    sunset_unix       : Optional[int]   = 0
+    sunset_unix       : Optional[int]   = -1
     todays_high       : Optional[str]   = None
     todays_low        : Optional[str]   = None
     uv                : Optional[float] = None
     visibility        : Optional[str]   = None
     wind_chill        : Optional[str]   = None
-    wind_degree       : Optional[int]   = 0
+    wind_degree       : Optional[int]   = -1
     wind_dir          : Optional[str]   = None
     wind_speed        : Optional[str]   = None
 
-logging.basicConfig(
-    filename = logfile,
-    filemode = 'w',  # 'a' = append, 'w' = overwrite
-    format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
-    level    = logging.INFO
-)
+def configure_logging(debug: bool=False):
+    logging.basicConfig(
+        filename = logfile,
+        filemode = 'w',  # 'a' = append, 'w' = overwrite
+        format   = '%(asctime)s [%(levelname)-5s] - %(message)s',
+        level    = logging.DEBUG if debug else logging.INFO
+    )
 
-def generate_tooltip(weather_data):
+def refresh_handler(signum, frame):
+    global needs_fetch, needs_redraw
+    logging.info(f'[refresh_handler] - received SIGHUP — re-fetching data')
+    with condition:
+        needs_fetch = True
+        needs_redraw = True
+        condition.notify()
+
+def toggle_format(signum, frame):
+    global formats, format_index, needs_redraw
+    format_index = (format_index + 1) % len(formats)
+    if weather_data and type(weather_data) == list:
+        location = weather_data[format_index].location_full
+    else:
+        location = format_index + 1
+
+    logging.info(f'[toggle_format] - received SIGUSR1 - switching output format to {location}')
+    with condition:
+        needs_redraw = True
+        condition.notify()
+
+signal.signal(signal.SIGHUP, refresh_handler)
+signal.signal(signal.SIGUSR1, toggle_format)  
+
+def generate_tooltip(location_data: NamedTuple=None):
     tooltip = []
     tooltip_od = OrderedDict()
 
-    if weather_data.location_full:
-        tooltip_od['Location'] = weather_data.location_full
+    if location_data.location_full:
+        tooltip_od['Location'] = location_data.location_full
+    elif location_data.location_short:
+        tooltip_od['Location'] = location_data.location_short
 
-    if weather_data.condition:
-        tooltip_od['Condition'] = weather_data.condition
+    if location_data.condition:
+        tooltip_od['Condition'] = location_data.condition
 
-    if weather_data.feels_like:
-        tooltip_od['Feels Like'] = weather_data.feels_like
+    if location_data.feels_like:
+        tooltip_od['Feels Like'] = location_data.feels_like
 
-    if weather_data.todays_high and weather_data.todays_low:
-        tooltip_od['High / Low'] = f'{weather_data.todays_high} / {weather_data.todays_low}'
+    if location_data.todays_high and location_data.todays_low:
+        tooltip_od['High / Low'] = f'{location_data.todays_high} / {location_data.todays_low}'
 
-    if weather_data.wind_speed and weather_data.wind_degree:
-        tooltip_od['Wind'] = f'{weather_data.wind_speed} @ {weather_data.wind_degree}'
+    if location_data.wind_speed and location_data.wind_degree:
+        tooltip_od['Wind'] = f'{location_data.wind_speed} @ {location_data.wind_degree}°'
 
-    if weather_data.cloud_cover:
-        tooltip_od['Cloud Cover'] = weather_data.cloud_cover
+    if location_data.cloud_cover >= 0:
+        tooltip_od['Cloud Cover'] = f'{location_data.cloud_cover}%'
 
-    if weather_data.humidity:
-        tooltip_od['Humidity'] = weather_data.humidity
+    if location_data.humidity >= 0:
+        tooltip_od['Humidity'] = f'{location_data.humidity}%'
 
-    if weather_data.dewpoint:
-        tooltip_od['Dew Point'] = weather_data.dewpoint
+    if location_data.dewpoint:
+        tooltip_od['Dew Point'] = location_data.dewpoint
 
-    if weather_data.uv:
-        tooltip_od['UV Index'] = f'{weather_data.uv} of 11'
+    if location_data.uv:
+        tooltip_od['UV Index'] = f'{location_data.uv} of 11'
 
-    if weather_data.visibility:
-        tooltip_od['Visibility'] = weather_data.visibility
+    if location_data.visibility:
+        tooltip_od['Visibility'] = location_data.visibility
 
-    if weather_data.sunrise_unix and weather_data.sunset_unix:
-        tooltip_od['Sunrise'] = util.to_24hour_time(weather_data.sunrise_unix)
-        tooltip_od['Sunset'] = util.to_24hour_time(weather_data.sunset_unix)
+    if location_data.sunrise_unix and location_data.sunset_unix:
+        tooltip_od['Sunrise'] = util.to_24hour_time(location_data.sunrise_unix)
+        tooltip_od['Sunset'] = util.to_24hour_time(location_data.sunset_unix)
 
-    if weather_data.moonrise_unix and weather_data.moonset_unix:
-        tooltip_od['Moonrise'] = util.to_24hour_time(weather_data.moonrise_unix)
-        tooltip_od['Moonset'] = util.to_24hour_time(weather_data.moonset_unix)
+    if location_data.moonrise_unix and location_data.moonset_unix:
+        tooltip_od['Moonrise'] = util.to_24hour_time(location_data.moonrise_unix)
+        tooltip_od['Moonset'] = util.to_24hour_time(location_data.moonset_unix)
 
-    if weather_data.moon_phase:
-        tooltip_od['Moon Phase'] = weather_data.moon_phase
+    if location_data.moon_phase:
+        tooltip_od['Moon Phase'] = location_data.moon_phase
 
     max_key_length = 0
     for key in tooltip_od.keys():
@@ -215,7 +247,9 @@ def get_weather_icon(condition_code, is_day):
 
     return glyphs.md_weather_sunny
 
-def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
+def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False):
+    logging.info(f'[get_weather] - entering function with location={location}')
+
     weather_data = None
     response = http.request(
         url    = 'https://api.weatherapi.com/v1/forecast.json',
@@ -253,19 +287,19 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
                 weather_data = WeatherData(
                     success        = True,
                     icon           = get_weather_icon(current_data['condition']['code'], current_data['is_day']),
-                    avg_humidity   = f'{forecast_data.get("avghumidity")}%' or 'Unknown',
-                    cloud_cover    = current_data.get('cloud') or 'Unknown',
-                    condition      = (current_data.get('condition') or {}).get('text') or 'Unknown',
-                    condition_code = (current_data.get('condition') or {}).get('code') or 'Unknown',
-                    country        = location_data.get('country') or 'Unknown',
-                    current_temp   = f'{current_data.get(f"temp_{unit_lower}")}°{unit}' or 'Unknown',
-                    dewpoint       = f'{current_data.get(f"dewpoint_{unit_lower}")}°{unit}' or 'Unknown',
-                    feels_like     = f'{current_data.get(f"feelslike_{unit_lower}")}°{unit}' or 'Unknown',
-                    gust           = f'{current_data.get(f"gust_{speed}")} {speed}' or 'Unknown',
-                    heat_index     = f'{current_data.get(f"heatindex_{unit_lower}")}°{unit}' or 'Unknown',
-                    humidity       = f'{current_data.get("humidity")}%' or 'Unknown',
+                    avg_humidity   = forecast_data.get("avghumidity") or -1,
+                    cloud_cover    = current_data.get('cloud') or -1,
+                    condition      = (current_data.get('condition') or {}).get('text') or None,
+                    condition_code = (current_data.get('condition') or {}).get('code') or -1,
+                    country        = location_data.get('country') or None,
+                    current_temp   = f'{current_data.get(f"temp_{unit_lower}")}°{unit}' or None,
+                    dewpoint       = f'{current_data.get(f"dewpoint_{unit_lower}")}°{unit}' or None,
+                    feels_like     = f'{current_data.get(f"feelslike_{unit_lower}")}°{unit}' or None,
+                    gust           = f'{current_data.get(f"gust_{speed}")} {speed}' or None,
+                    heat_index     = f'{current_data.get(f"heatindex_{unit_lower}")}°{unit}' or None,
+                    humidity       = current_data.get('humidity') or -1,
                     location_full  = location,
-                    location_short = location_data.get('name') or 'Unknown',
+                    location_short = location_data.get('name') or None,
                     moonrise       = astro_data.get('moonrise') or 'No moonrise',
                     moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
                     moonset        = astro_data.get('moonset') or 'No moonset',
@@ -275,16 +309,16 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
                     sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
                     sunset         = astro_data.get('sunset') or 'No sunset',
                     sunset_unix    = util.to_unix_time(astro_data.get('sunset')),
-                    precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' or 'Unknown',
-                    region         = location_data.get('region') or 'Unknown',
-                    todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' or 'Unknown',
-                    todays_low     = f'{forecast_data.get(f"mintemp_{unit_lower}")}°{unit}' or 'Unknown',
+                    precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' or None,
+                    region         = location_data.get('region') or None,
+                    todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' or None,
+                    todays_low     = f'{forecast_data.get(f"mintemp_{unit_lower}")}°{unit}' or None,
                     uv             = current_data.get('uv') or None,
-                    visibility     = f'{current_data.get(f"vis_{distance}")} {distance}' or 'Unknown',
-                    wind_chill     = f'{current_data.get(f"windchill_{unit_lower}")}°{unit}' or 'Unknown',
-                    wind_degree    = f'{current_data.get("wind_degree")}°' or 'Unknown',
-                    wind_dir       = current_data.get('wind_dir') or 'Unknown',
-                    wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or 'Unknown',
+                    visibility     = f'{current_data.get(f"vis_{distance}")} {distance}' or None,
+                    wind_chill     = f'{current_data.get(f"windchill_{unit_lower}")}°{unit}' or None,
+                    wind_degree    = current_data.get("wind_degree") or -1,
+                    wind_dir       = current_data.get('wind_dir') or None,
+                    wind_speed     = f'{current_data.get(f"wind_{speed}")} {speed}' or None,
                 )
             except Exception as e:
                     print(e)
@@ -309,76 +343,105 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
 
     return weather_data
 
-def worker(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None):
-    logging.info('[worker] entering function')
+def render_output(location_data: NamedTuple=None, icon: str=None):
+    if location_data.success:
+        text = f'{icon}{glyphs.icon_spacer}{location_data.location_short} {location_data.current_temp}'
+        output_class = 'success'
+        tooltip = generate_tooltip(location_data=location_data)
+    else:
+        text = f'{glyphs.md_alert}{glyphs.icon_spacer}{location} {weather_data.error if weather_data.error is not None else "Unknown error"}'
+        output_class = 'error'
+        tooltip = f'{location} error'
+
+    return text, output_class, tooltip
+
+def worker(api_key: str=None, locations: list=None, use_celsius: bool=False):
+    global weather_data, needs_fetch, needs_redraw, format_index
 
     while True:
-        update_event.wait()
-        update_event.clear()
+        with condition:
+            while not (needs_fetch or needs_redraw):
+                condition.wait()
 
+            fetch        = needs_fetch
+            redraw       = needs_redraw
+            needs_fetch  = False
+            needs_redraw = False
+
+        logging.info('[worker] - entering worker loop')
         if not util.waybar_is_running():
-            logging.info('[worker] waybar not running')
+            logging.info('[worker] - waybar not running')
             sys.exit(0)
         else:
-            if util.network_is_reachable():
-                print(json.dumps(loading_dict))
-
-                weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
-                if weather_data.success:
-                    tooltip = generate_tooltip(weather_data)
-
-                    output = {
-                        'text'    : f'{weather_data.icon}{glyphs.icon_spacer}{weather_data.location_short} {weather_data.current_temp}',
-                        'class'   : 'success',
-                        'tooltip' : tooltip,
-                    }
-                else:
-                    icon = weather_data.icon or glyphs.md_alert
-                    output = {
-                        'text'    : f'{glyphs.md_alert} {location} {weather_data.error if weather_data.error is not None else "Unknown error"}',
-                        'class'   : 'error',
-                        'tooltip' : f'{location} error',
-                    }
-            else:
-                output = {
+            if not util.network_is_reachable():
+                output= {
                     'text'    : f'{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable',
                     'class'   : 'error',
-                    'tooltip' : f'{location} error',
+                    'tooltip' : f'Weather update error',
                 }
+                print(json.dumps(output))
+                weather_data = None
+                continue
+
+            if fetch:
+                weather_data = []
+                for location in locations:
+                    print(json.dumps({
+                        'text'    : f'{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching {location}...',
+                        'class'   : 'loading',
+                        'tooltip' : f'Fetching {location}...',
+                    }))
+
+                    location_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius)
+                    weather_data.append(location_data)
+
+            if weather_data and type(weather_data) == list:
+                if redraw:
+                    icon = weather_data[format_index].icon or glyphs.md_alert
+                    text, output_class, tooltip = render_output(location_data=weather_data[format_index], icon=icon)
+                    output = {
+                        'text'    : text,
+                        'class'   : output_class,
+                        'tooltip' : tooltip,
+                    }
 
             print(json.dumps(output))
 
-def refresh_handler(signum, frame):
-    logging.info('Received SIGHUP — triggering get_weather()')
-    update_event.set()
-
-signal.signal(signal.SIGHUP, refresh_handler)
-
 @click.command(help='Get weather info from World Weather API', context_settings=context_settings)
 @click.option('-a', '--api-key', required=True, help=f'World Weather API key')
-@click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
+@click.option('-l', '--location', required=True, multiple=True, default=['San Diego, CA, US', 'Los Angeles, CA, US'], help='The location to query')
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
-@click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
 @click.option('-i', '--interval', type=int, default=300, help='The update interval (in seconds)')
 @click.option('-t', '--test', default=False, is_flag=True, help='Print the output and exit')
-def main(api_key, location, use_celsius, label, interval, test):
+@click.option('-d', '--debug', default=False, is_flag=True, help='Enable debug logging')
+def main(api_key, location, use_celsius, interval, test, debug):
+    global formats, needs_fetch, needs_redraw
+
+    configure_logging(debug=debug)
+    formats = list(range(len(location)))
+
+    logging.info('[main] - entering function')
+
     if test:
-        weather_data = get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label)
+        weather_data = get_weather(api_key=api_key, location=location[0], use_celsius=use_celsius)
         util.pprint(weather_data)
         print()
-        print(generate_tooltip(weather_data))
+        print(generate_tooltip(weather_data[0]))
         return
 
-    threading.Thread(
-        target = worker,
-        args   = (api_key, location, use_celsius, label,),
-        daemon = True,
-    ).start()
-    update_event.set()
+    threading.Thread(target = worker, args = (api_key, location, use_celsius,), daemon = True).start()
+
+    with condition:
+        needs_fetch = True
+        needs_redraw = True
+        condition.notify()
 
     while True:
         time.sleep(interval)
-        update_event.set()
+        with condition:
+            needs_fetch = True
+            needs_redraw = True
+            condition.notify()
 
 if __name__ == '__main__':
     main()

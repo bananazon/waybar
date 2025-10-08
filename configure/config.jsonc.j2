@@ -9,9 +9,10 @@
 
     {% if cpu_usage.enabled == true %}
     "custom/cpu-usage": {
+        "format": "{}",
+        "return-type": "json",
         "exec": "{{ scripts_path }}/cpu-usage.py",
-        "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }},
-        "return-type": "json"
+        "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }}
     },
     {% endif %}
 
@@ -27,28 +28,30 @@
 
     {% if memory_usage.enabled == true %}
     "custom/memory-usage": {
-        "exec": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }}",
-        "interval": {{ memory_usage.get("interval", 10) if memory_usage is defined else 10 }},
+        "format": "{}",
         "return-type": "json",
-        "on-click": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }} --toggle"
+        "exec": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }}",
+        "interval": {{ memory_usage.get("interval", 10) if memory_usage is defined else 10 }}
     },
     {% endif %}
 
     {% for iface in network_interfaces %}
     {% if iface.enabled %}
     "custom/network-throughput-{{ iface.name }}": {
+        "format": "{}",
+        "return-type": "json",
         "exec": "{{ scripts_path }}/network-throughput.py --interface {{ iface.name }}",
-        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
-        "return-type": "json"
+        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }}
     },
     {% endif %}
     {% endfor %}
 
     {% if plex_status.enabled == true %}
     "custom/plex-status": {
+        "format": "{}",
+        "return-type": "json",
         "exec": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'",
         "interval": {{ plex_status.get("interval", 10) if plex_status is defined else 10 }},
-        "return-type": "json",
         "on-click": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
     },
     {% endif %}
@@ -94,9 +97,10 @@
     {% for iface in network_interfaces %}
     {% if iface.type == 'wifi' and iface.enabled %}
     "custom/wifi-status-{{ iface.name }}": {
+        "format" : "{}",
+        "return-type": "json",
         "exec": "{{ scripts_path }}/wifi-status.py --interface {{ iface.name }}",
-        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }},
-        "return-type": "json"
+        "interval": {{ iface.get("interval", 10) if iface is defined else 10 }}
     },
     {% endif %}
     {% endfor %}

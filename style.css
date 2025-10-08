@@ -27,16 +27,15 @@ tooltip label {
 /* ---------- Common Styles ---------- */
 /* Applies to all modules to avoid repetition */
 #custom-cpu-usage,
-#custom-filesystem-usage-root,
-#custom-filesystem-usage-work,
+#custom-filesystem-usage,
 #custom-memory-usage,
 #custom-network-throughput-enp1s0,
 #custom-network-throughput-wlo1,
 #custom-nothing,
 #custom-plex-status,
 #custom-quakes,
-#custom-speedtest,
 #custom-software-updates,
+#custom-speedtest,
 #custom-weather,
 #custom-wifi-status-wlo1 {
     background: transparent;
@@ -46,19 +45,17 @@ tooltip label {
 }
 
 /* Common style for loading */
-#custom-filesystem-usage-root.loading,
-#custom-filesystem-usage-work.loading,
+#custom-filesystem-usage.loading,
 #custom-quakes.loading,
-#custom-speedtest.loading,
 #custom-software-updates.loading,
+#custom-speedtest.loading,
 #custom-weather.loading {
     color: #adadad;
 }
 
 /* Common style for error */
 #custom-cpu-usage.error,
-#custom-filesystem-usage-root.error,
-#custom-filesystem-usage-work.error,
+#custom-filesystem-usage.error,
 #custom-memory-usage.error,
 #custom-network-throughput-enp1s0.error,
 #custom-network-throughput-wlo1.error,

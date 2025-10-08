@@ -83,16 +83,15 @@
     },
     {% endif %}
 
-    {% for location in weather.locations %}
-    {% if location.enabled %}
-    "custom/weather-{{ location.label }}": {
+    {% if weather.enabled and (weather.locations|length >0) %}
+    "custom/weather": {
         "format" : "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location '{{ location.location}}' --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} --location {{ location.location}} --label {{ location.label }} --interval {{ location.get("interval", 300) if location is defined else 300 }}')"
+        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location '{{ l }}' {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}",
+        "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')"
     },
     {% endif %}
-    {% endfor %}
 
     {% for iface in network_interfaces %}
     {% if iface.type == 'wifi' and iface.enabled %}
@@ -105,6 +104,6 @@
     {% endfor %}
 
     "custom/nothing": {
-        "exec": "cat /dev/null"
+        "exec": "echo ' '"
     }
 }

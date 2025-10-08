@@ -31,21 +31,15 @@ static_modules:
     enabled: true
     interval: 300
 
-filesystems:
-  - label: root
-    enabled: true
-    mountpoint: /
-    show_stats: true
-    interval: 5
-    unit: auto
-    debug: false
-  - label: work
-    enabled: true
-    mountpoint: /work
-    show_stats: true
-    interval: 5
-    unit: auto
-    debug: false
+filesystem_usage:
+  enabled: true
+  show_stats: true
+  interval: 60
+  debug: false
+  unit: auto
+  mountpoints:
+    - /
+    - /work
 
 network_interfaces:
   - name: wlo1
@@ -57,7 +51,7 @@ network_interfaces:
     type: network
     interval: 3
 
-software-updates:
+software_updates:
   enabled: true
   interval: 1800
   package_types:

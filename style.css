@@ -29,15 +29,14 @@ tooltip label {
 #custom-cpu-usage,
 #custom-filesystem-usage,
 #custom-memory-usage,
-#custom-network-throughput-enp1s0,
-#custom-network-throughput-wlo1,
+#custom-network-throughput,
 #custom-nothing,
 #custom-plex-status,
 #custom-quakes,
 #custom-software-updates,
 #custom-speedtest,
 #custom-weather,
-#custom-wifi-status-wlo1 {
+#custom-wifi-status {
     background: transparent;
     border-radius: 6px;
     color: #ffffff;
@@ -46,10 +45,12 @@ tooltip label {
 
 /* Common style for loading */
 #custom-filesystem-usage.loading,
+#custom-network-throughput.loading,
 #custom-quakes.loading,
 #custom-software-updates.loading,
 #custom-speedtest.loading,
-#custom-weather.loading {
+#custom-weather.loading,
+#custom-wifi-status.loading {
     color: #adadad;
 }
 
@@ -57,14 +58,13 @@ tooltip label {
 #custom-cpu-usage.error,
 #custom-filesystem-usage.error,
 #custom-memory-usage.error,
-#custom-network-throughput-enp1s0.error,
-#custom-network-throughput-wlo1.error,
+#custom-network-throughput.error,
 #custom-plex-status.error,
 #custom-quakes.error,
 #custom-software-updates.error,
 #custom-speedtest.error,
 #custom-weather.error,
-#custom-wifi-status-wlo1.error {
+#custom-wifi-status.error {
     color: #ffb8b8;
 }
 

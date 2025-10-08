@@ -12,7 +12,6 @@ import click
 
 util.validate_requirements(binaries=['dmidecode', 'jc'])
 
-cache_dir = util.get_cache_directory()
 context_settings = dict(help_option_names=['-h', '--help'])
 
 class MemoryInfo(NamedTuple):
@@ -201,14 +200,6 @@ def get_memory_usage():
 @click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
 @click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
 def main(unit, toggle):
-    mode_count = 3
-    statefile = Path(cache_dir) / f'waybar-{util.called_by() or "memory-usage"}-state'
-
-    if toggle:
-        mode = state.next_state(statefile=statefile, mode_count=mode_count)
-    else:
-        mode = state.current_state(statefile=statefile)
-
     memory_info = get_memory_usage()
     if memory_info.success:
         tooltip   = generate_tooltip(memory_info)
@@ -226,24 +217,11 @@ def main(unit, toggle):
         elif pct_free >= 50:
             output_class = 'good'
 
-        if mode == 0:
-            output = {
-                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}',
-                'class'   : output_class,
-                'tooltip' : tooltip,
-            }
-        elif mode == 1:
-            output = {
-                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{pct_used}% used',
-                'class'   : output_class,
-                'tooltip' : tooltip,
-            }
-        elif mode == 2:
-            output = {
-                'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used}% used / {free}% free',
-                'class'   : output_class,
-                'tooltip' : tooltip,
-            }
+        output = {
+            'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}',
+            'class'   : output_class,
+            'tooltip' : tooltip,
+        }
     else:
         output = {
             'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{memory_info.error if memory_info.error is not None else "Unknown error"}',

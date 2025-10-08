@@ -160,12 +160,10 @@ Write Time/sec: 0 ms
 * `on-click-right` - Refresh data
 
 ### Memory Usage
-This module shows memory usage information with three available output formats that can be toggled by clicking the item in the bar. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
+This module shows memory usage information. This module relies on `dmidecode` so please see the [`permissions`](#permissions) section before implementing this module.
 
-#### Output Formats
-1. `8.04 GiB / 59.75 GiB`
-2. `13% used`
-3. `8.03 GiB used / 51.72 GiB free`
+#### Output Format
+`8.04 GiB / 59.75 GiB`
 
 #### Tooltip
 ```
@@ -180,9 +178,6 @@ Available = 54.18 GB
 DIMM 00 - 32 GB DDR4 SODIMM @ 3200 MT/s
 DIMM 01 - 32 GB DDR4 SODIMM @ 3200 MT/s
 ```
-
-#### Actions
-* `on-click` - Switch output format
 
 ### Network Throughput
 This module shows network throughtput, received and sent.

@@ -196,6 +196,9 @@ Driver       : iwlwifi
 Alias        : /sys/subsystem/net/devices/wlo1
 ```
 
+#### Actions
+* `on-click` - Switch between configured interfaces
+
 ### Quakes
 This module shows recent earthquakes near you. It uses your IP to geolocate you.
 
@@ -336,6 +339,9 @@ Available Ciphers :
   WEP104
   WEP40
 ```
+
+#### Actions
+* `on-click` - Switch between configured interfaces
 
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.

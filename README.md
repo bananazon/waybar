@@ -92,6 +92,9 @@ weather:
     interval: 300
 ```
 
+### Notes
+* Some modules will accommodate multiple entries, e.g., `filesystem-usage` mountpoints or `weather` locations. If there are multiple entries, left clicking the item in the bar will cycle between the different configured entries. The config template will disable the `on-click` action if there is only one configured item because it makes little sense to enable the click when there is nothing to do.
+
 ## Installing the User System Unit File (optional and not fully working...yet)
 1. `mkdir -p ~/.config/systemctl/user`
 2. `copy waybar.service ~/.config/systemctl/user`

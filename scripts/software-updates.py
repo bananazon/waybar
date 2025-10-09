@@ -79,7 +79,7 @@ signal.signal(signal.SIGUSR1, toggle_format)
 
 def generate_tooltip(update_data: NamedTuple=None):
     tooltip = []
-    count = len(update_data.packages)
+    count = update_data.count
     max_shown = 20 if count > 20 else count
     max_name_len = 0
     max_version_len = 0
@@ -235,6 +235,15 @@ def find_brew_updates(package_type: str = None):
 
 def find_dnf_updates(package_type: str=None):
     logging.info(f'[find_{package_type}_updates] - entering function')
+    command = ['sudo', 'dnf', 'clean', 'all']
+    rc, _, stderr = execute_command(command)
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
+
+    command = ['sudo', 'dnf', 'makecache']
+    rc, _, stderr = execute_command(command)
+    if rc != 0:
+        return error(package_type=package_type, command=command, error=stderr)
 
     packages = []
     command = ['sudo', 'dnf', 'check-upgrade']
@@ -503,7 +512,7 @@ def main(package_type, interval, test, debug):
         update_data = find_updates(package_type=package_type[0])
         util.pprint(update_data)
         print()
-        print(generate_tooltip(update_data=update_data[0]))
+        print(generate_tooltip(update_data=update_data))
         return
 
     threading.Thread(target=worker, args=(package_type,), daemon=True).start()

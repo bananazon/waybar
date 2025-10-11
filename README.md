@@ -138,6 +138,31 @@ Caches:
   L3 - Cache - 8 MB   @ 1 ns
 ```
 
+### Disk Consumers
+This module shows the top consumers for specified directories.
+
+#### Output format
+`/work`
+
+#### Tooltip
+```
+Plex           637.90 GiB
+Dropbox        165.01 GiB
+home           23.47 GiB
+Mismatched     2.60 GiB
+Pictures       1.62 GiB
+AppImages      653.47 MiB
+OpenEmu        46.29 MiB
+dfimage        9.21 MiB
+old-time-radio 5.91 MiB
+waybar-temp    1.51 MiB
+Videos         1.27 MiB
+```
+
+#### Actions
+* `on-click` - Switch between configured paths
+* `on-click-right` - Refresh data
+
 ### Filesystem Usage
 This module shows filesystem usage information and statistics.
 

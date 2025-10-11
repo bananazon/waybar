@@ -31,6 +31,14 @@ static_modules:
     enabled: true
     interval: 300
 
+disk_consumers:
+  enabled: true
+  interval: 3600
+  unit: auto
+  paths:
+    - "~"
+    - /work
+
 filesystem_usage:
   enabled: true
   show_stats: true

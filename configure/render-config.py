@@ -112,6 +112,12 @@ def render_template(template_file, yaml_file, output_file, dryrun):
                 name = module['name']
                 modules_right.append(f'custom/{name}')
 
+    if yaml_data.get('disk_consumers') is not None:
+        if yaml_data['disk_consumers']['enabled']:
+            if 'paths' in yaml_data['disk_consumers'] and type(yaml_data['disk_consumers']['paths']) == list and len(yaml_data['disk_consumers']['paths']) > 0:
+                yaml_data['disk_consumers']['paths'] = [os.path.expanduser(item).rstrip('/') for item in yaml_data['disk_consumers']['paths']]
+                modules_right.append(f'custom/disk-consumers')
+
     if yaml_data.get('filesystem_usage') is not None:
         if yaml_data['filesystem_usage']['enabled']:
             if 'mountpoints' in yaml_data['filesystem_usage'] and type(yaml_data['filesystem_usage']['mountpoints']) == list and len(yaml_data['filesystem_usage']['mountpoints']) > 0:
@@ -148,6 +154,7 @@ def render_template(template_file, yaml_file, output_file, dryrun):
     try:
         output = config_template.render(
             cpu_usage          = static_module_map.get('cpu-usage', {}),
+            dc                 = yaml_data.get('disk_consumers', []),
             exclusive          = yaml_data.get('exclusive', True),
             fs                 = yaml_data.get('filesystem_usage', []),
             font               = yaml_data.get('font', 'Arimo Nerd Font 12'),

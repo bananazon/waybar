@@ -16,6 +16,18 @@
     },
     {% endif %}
 
+    {% if dc.enabled == true and (dc.paths|length > 0) %}
+    "custom/disk-consumers": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path '{{ p }}' {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}{{ " --show-stats" if dc.show_stats and dc.show_stats == true}}{{ " --debug" if dc.debug and dc.debug == true}}",
+        {% if dc.paths|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')",
+        {% endif %}
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')"
+    },
+    {% endif %}
+
     {% if fs.enabled == true and (fs.mountpoints|length > 0) %}
     "custom/filesystem-usage": {
         "format": "{}",

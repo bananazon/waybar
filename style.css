@@ -27,6 +27,7 @@ tooltip label {
 /* ---------- Common Styles ---------- */
 /* Applies to all modules to avoid repetition */
 #custom-cpu-usage,
+#custom-disk-consumers,
 #custom-filesystem-usage,
 #custom-memory-usage,
 #custom-network-throughput,
@@ -45,6 +46,7 @@ tooltip label {
 
 /* Common style for loading */
 #custom-filesystem-usage.loading,
+#custom-disk-consumers.loading,
 #custom-network-throughput.loading,
 #custom-quakes.loading,
 #custom-software-updates.loading,
@@ -56,6 +58,7 @@ tooltip label {
 
 /* Common style for error */
 #custom-cpu-usage.error,
+#custom-disk-consumers.error,
 #custom-filesystem-usage.error,
 #custom-memory-usage.error,
 #custom-network-throughput.error,

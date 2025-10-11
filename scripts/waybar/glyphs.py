@@ -99,6 +99,8 @@ md_speedometer_fast   = surrogatepass('\udb81\udcc5')
 # Others
 cod_package           = surrogatepass('\ueb29')
 fa_arrow_rotate_right = surrogatepass('\uf01e')
+md_file               = surrogatepass('\udb80\ude14')
+md_folder             = surrogatepass('\udb80\ude4b')
 md_package_variant    = surrogatepass('\udb80\udfd6')
 md_timer_outline      = surrogatepass('\udb81\udd1b')
 icon_spacer           = '  '

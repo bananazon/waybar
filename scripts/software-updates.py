@@ -294,12 +294,14 @@ def find_flatpak_updates(package_type: str=None):
     if rc != 0:
         return error(package_type=package_type, command=command, error=stderr)
 
-    command = ['flatpak', 'remote-ls', '--updates', '--columns=name,version']
+    command = ['flatpak', 'remote-ls', '--updates', '--columns=name,version,branch']
     rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):
-            bits = re.split(r'\s+', line)
+            bits = re.split(r'\t+', line)
             if len(bits) == 2:
+                packages.append(Package(name=bits[0], version = bits[1]))
+            elif len(bits) == 3:
                 packages.append(Package(name=bits[0], version = bits[1]))
     else:
         return error(package_type=package_type, command=command, error=stderr)

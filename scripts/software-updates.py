@@ -286,6 +286,15 @@ def find_emerge_updates(package_type: str=None):
     return success(package_type=package_type, packages=packages)
 
 def find_flatpak_updates(package_type: str=None):
+    # % flatpak upgrade
+    #         ID                                             Branch                Op            Remote             Download
+    # 1.     org.freedesktop.Platform.GL.default            24.08                 u             flathub            < 145.4 MB
+    # 2.     org.freedesktop.Platform.GL.default            24.08extra            u             flathub            < 145.4 MB
+
+    # % flatpak remote-ls --updates
+    # Name                 Application ID                              Version        Branch            Arch
+    # Mesa                 org.freedesktop.Platform.GL.default         25.2.4         24.08             x86_64
+    # Mesa (Extra)         org.freedesktop.Platform.GL.default         25.2.4         24.08extra        x86_64
     logging.info(f'[find_{package_type}_updates] - entering function')
 
     packages = []
@@ -294,7 +303,7 @@ def find_flatpak_updates(package_type: str=None):
     if rc != 0:
         return error(package_type=package_type, command=command, error=stderr)
 
-    command = ['flatpak', 'remote-ls', '--updates', '--columns=name,version,branch']
+    command = ['flatpak', 'remote-ls', '--updates', '--columns=application,version,branch']
     rc, stdout, stderr = execute_command(command)
     if rc == 0:
         for line in stdout.split('\n'):

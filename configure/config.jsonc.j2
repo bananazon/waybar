@@ -66,7 +66,7 @@
         "return-type": "json",
         "exec": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'",
         "interval": {{ plex_status.get("interval", 10) if plex_status is defined else 10 }},
-        "on-click": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
+        "on-click-right": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
     },
     {% endif %}
 
@@ -75,7 +75,7 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}')"
     },
     {% endif %}
 
@@ -96,7 +96,7 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}",
-        "on-click": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
     },
     {% endif %}
 

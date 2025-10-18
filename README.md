@@ -248,7 +248,7 @@ This module shows recent earthquakes near you. It uses your IP to geolocate you.
 ```
 
 #### Actions
-* `on-click` - Refresh data
+* `on-click-right` - Refresh data
 
 ### Software Updates
 This module displays the number of available outputs for the following package managers: `apk`, `apt`, `brew`, `dnf`, `emerge`, `flatpak`, `mintupdate`, `pacman`, `snap`, `xbps`, `yay`, `yay-aur`, `yum`. Please see the [`permissions`](#permissions) section before implementing this module.
@@ -312,7 +312,7 @@ ISP      : AS19165 Webpass Inc.
 ```
 
 #### Actions
-* `on-click` - Refresh data
+* `on-click-right` - Refresh data
 
 ### Weather
 This module retrieves weather from [weatherapi.com](https://www.weatherapi.com).

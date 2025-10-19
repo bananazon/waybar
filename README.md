@@ -385,7 +385,7 @@ I put my entries in `/work/sudoers.d/sudoers` and at the end of `/etc/sudoers`, 
 #includedir /work/sudoers.d
 ```
 
-### For Software Updates
+### For Software Updates!
 ```
 # mint has a wrapper in /usr/local/bin
 user ALL=(ALL) NOPASSWD: /usr/local/bin/apt

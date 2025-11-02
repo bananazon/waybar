@@ -1,31 +1,31 @@
-from collections import namedtuple
-from pprint import pprint
+from collections.abc import MutableMapping
+from dataclasses import dataclass, field
+from http.client import HTTPResponse
+from typing import cast
 import json
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
-def dict_to_namedtuple(name, d):
-    """Convert a dictionary to a namedtuple, with safe field names."""
-    # Replace invalid characters in keys with underscore
-    fields = [k.replace('-', '_').replace(' ', '_') for k in d.keys()]
-    NT = namedtuple(name, fields)
-    return NT(**d)
 
-# Response namedtuple
-HTTPResponse = namedtuple('HTTPResponse', ['status', 'headers', 'body'])
+@dataclass
+class Response:
+    status: int = 0
+    headers: dict[str, object] = field(default_factory=dict)
+    body: str | None = None
+
 
 def request(
-    url         : str  = None,
-    method      : str  = 'GET',
-    headers     : dict = None,
-    params      : dict = None,
-    data        : dict = None,
-    timeout     : int  = 5,
-    retries     : int  = 3,
-    retry_delay : int = 1
-):
+    url: str,
+    method: str,
+    headers: MutableMapping[str, str] | None = None,
+    params: dict[str, object] | None = None,
+    data: dict[str, object] | str | None = None,
+    timeout: float = 5.0,  # 5
+    retries: int = 3,  # 3
+    retry_delay: float = 1.0,  # 1
+) -> Response | None:
     """
     Robust HTTP request function.
 
@@ -46,34 +46,37 @@ def request(
             'body': dict (if JSON) or str
         } or None on failure
     """
-    if params and method.upper() == 'GET':
+    json_data: bytes | None = None
+
+    if params and method.upper() == "GET":
         query_string = urllib.parse.urlencode(params)
-        url = f'{url}?{query_string}'
-    
-    if data is not None:
+        url = f"{url}?{query_string}"
+
+    if data:
         if isinstance(data, dict):
-            data = json.dumps(data).encode('utf-8')
+            json_data = json.dumps(data).encode("utf-8")
             headers = headers or {}
-            headers['Content-Type'] = 'application/json'
-        elif isinstance(data, str):
-            data = data.encode('utf-8')
+            headers["Content-Type"] = "application/json"
 
     headers = headers or {}
 
     for attempt in range(1, retries + 1):
         try:
-            request = urllib.request.Request(url, data=data, headers=headers, method=method)
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                raw_body = response.read().decode('utf-8').strip()
-                try:
-                    body = json.loads(raw_body)
-                except json.JSONDecodeError:
-                    body = raw_body
+            if json_data is not None:
+                request = urllib.request.Request(
+                    url, data=bytes(json_data), headers=headers, method=method
+                )
+            else:
+                request = urllib.request.Request(url, headers=headers, method=method)
 
-                return HTTPResponse(
+            with urllib.request.urlopen(request, timeout=timeout) as resp_any:
+                response = cast(HTTPResponse, resp_any)
+                body = response.read().decode("utf-8").strip()
+
+                return Response(
                     status=response.status,
                     headers=dict(response.getheaders()),
-                    body=body
+                    body=body,
                 )
 
         except (urllib.error.URLError, urllib.error.HTTPError) as e:

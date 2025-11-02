@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 from waybar import glyphs, http, util
-import json
-
-# util.validate_requirements(modules=["click"])
 import click
+import json
 
 context_settings = dict(help_option_names=["-h", "--help"])
 
 
-def get_plex_status(ip: str, port: int, token: str) -> tuple[bool, bool]:
+def get_plex_status(port: int, token: str) -> tuple[bool, bool]:
     response = http.request(
         method="GET",
         url=f"http://localhost:{port}/identity",
@@ -33,14 +31,6 @@ def get_plex_status(ip: str, port: int, token: str) -> tuple[bool, bool]:
     help="Show the status of your Plex Media Server", context_settings=context_settings
 )
 @click.option(
-    "-i",
-    "--ip",
-    required=False,
-    default=util.find_public_ip(),
-    show_default=True,
-    help="The public IP of the Plex media server",
-)
-@click.option(
     "-p",
     "--port",
     required=False,
@@ -56,40 +46,33 @@ def get_plex_status(ip: str, port: int, token: str) -> tuple[bool, bool]:
 )
 def main(ip: str, port: int, token: str):
     if util.network_is_reachable():
-        if not ip:
+        process, available = get_plex_status(port=port, token=token)
+        process_color = "green" if process else "red"
+        availability_color = "green" if available else "red"
+        process_ok = "OK" if process else "Not OK"
+        availability_ok = "OK" if available else "Not OK"
+        tooltip = [
+            "Plex Media Server",
+            f"IP: {ip}",
+            f"Port: {port}",
+            f'Process: <span foreground="{process_color}">{process_ok}</span>',
+            f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
+        ]
+
+        if process and available:
             output = {
-                "text": f"{glyphs.md_alert}{glyphs.icon_spacer}unable to determine the public IP address",
-                "class": "error",
-                "tooltip": "Plex error",
+                "text": f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+                "class": "success",
+                "markup": "pango",
+                "tooltip": "\n".join(tooltip),
             }
         else:
-            process, available = get_plex_status(ip=ip, port=port, token=token)
-            process_color = "green" if process else "red"
-            availability_color = "green" if available else "red"
-            process_ok = "OK" if process else "Not OK"
-            availability_ok = "OK" if available else "Not OK"
-            tooltip = [
-                "Plex Media Server",
-                f"IP: {ip}",
-                f"Port: {port}",
-                f'Process: <span foreground="{process_color}">{process_ok}</span>',
-                f'Availability: <span foreground="{availability_color}">{availability_ok}</span>',
-            ]
-
-            if process and available:
-                output = {
-                    "text": f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
-                    "class": "success",
-                    "markup": "pango",
-                    "tooltip": "\n".join(tooltip),
-                }
-            else:
-                output = {
-                    "text": f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
-                    "class": "error",
-                    "markup": "pango",
-                    "tooltip": "\n".join(tooltip),
-                }
+            output = {
+                "text": f'{glyphs.md_plex}{glyphs.icon_spacer}<span foreground="{process_color}">●</span> <span foreground="{availability_color}">●</span>',
+                "class": "error",
+                "markup": "pango",
+                "tooltip": "\n".join(tooltip),
+            }
     else:
         output = {
             "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",

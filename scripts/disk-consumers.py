@@ -133,7 +133,7 @@ def find_consumers(path: str):
                     usage=usage_od,
                     updated=util.get_human_timestamp(),
                 )
-        except Exception as e:
+        except Exception:
             return PathEntry(
                 success=False,
                 path=path,

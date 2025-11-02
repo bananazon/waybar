@@ -1,12 +1,10 @@
 from . import glyphs, http
-from collections import namedtuple
+from dacite import from_dict, Config
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from pprint import pprint as pp
-from typing import List, Tuple, Optional, Union
+from typing import cast
 import getpass
-import importlib.util
-import inspect
 import json
 import os
 import psutil
@@ -15,16 +13,30 @@ import shlex
 import shutil
 import socket
 import subprocess
-import sys
 import time
 
-def pprint(input):
-    pp(input)
 
-def run_piped_command(command: str=None, background: bool=False) -> Union[
-    Tuple[int, bytes, bytes],  # blocking mode
-    List[subprocess.Popen]     # background mode
-]:
+@dataclass
+class LocationData:
+    city: str | None = None
+    country: str | None = None
+    hostname: str | None = None
+    ip: str | None = None
+    loc: str | None = None
+    org: str | None = None
+    postal: str | None = None
+    readme: str | None = None
+    region: str | None = None
+    timezone: str | None = None
+
+
+def run_piped_command(
+    command: str = "", background: bool = False
+) -> (
+    tuple[int, str, str]
+    | list[subprocess.Popen[bytes]]
+    | tuple[int, None, FileNotFoundError]
+):
     """
     Run a shell-like command with pipes using subprocess.
 
@@ -37,8 +49,8 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
         - If background=True : list of Popen objects (pipeline)
     """
     # Split pipeline into stages
-    parts = [shlex.split(cmd.strip()) for cmd in command.split('|')]
-    processes = []
+    parts = [shlex.split(cmd.strip()) for cmd in command.split("|")]
+    processes: list[subprocess.Popen[bytes]] = []
     prev_stdout = None
 
     for i, part in enumerate(parts):
@@ -47,8 +59,10 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
                 part,
                 stdin=prev_stdout,
                 stdout=subprocess.PIPE if not background else subprocess.DEVNULL,
-                stderr=subprocess.PIPE if not background and i == len(parts) - 1 else subprocess.DEVNULL,
-                preexec_fn=os.setpgrp if background else None
+                stderr=subprocess.PIPE
+                if not background and i == len(parts) - 1
+                else subprocess.DEVNULL,
+                preexec_fn=os.setpgrp if background else None,
             )
 
             if prev_stdout:
@@ -65,248 +79,212 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
     # Foreground (blocking) mode
     stdout, stderr = processes[-1].communicate()
     for p in processes[:-1]:
-        p.wait()
+        _ = p.wait()
 
     return processes[-1].returncode, stdout.decode().strip(), stderr.decode().strip()
 
-#==========================================================
-#  Process management
-#==========================================================
 
-def waybar_is_running():
-    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
+def get_valid_units() -> list[str]:
+    """
+    Return a list of valid storage units
+    """
+    return [
+        "K",
+        "Ki",
+        "M",
+        "Mi",
+        "G",
+        "Gi",
+        "T",
+        "Ti",
+        "P",
+        "Pi",
+        "E",
+        "Ei",
+        "Z",
+        "Zi",
+        "auto",
+    ]
+
+
+def error_exit(icon: str, message: str):
+    print(
+        json.dumps(
+            {
+                "text": f"{icon} {message}",
+                "class": "error",
+            }
+        )
+    )
+
+
+def get_cache_directory() -> Path:
+    xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache:
+        cache_dir = Path(xdg_cache) / "waybar"
+    else:
+        cache_dir = Path.home() / ".cache/waybar"
+
+    if not os.path.exists(cache_dir):
         try:
-            if proc.info.get('cmdline') is not None:
-                cmd = ' '.join(list(proc.info['cmdline']))
-                if cmd == 'waybar' and proc.info.get('username') == getpass.getuser():
-                    return {
-                        'cmd'      : cmd,
-                        'cmdline'  : list(proc.info.get('cmdline')) if proc.info.get('cmdline') is not None else [],
-                        'created'  : int(proc.info.get('create_time')),
-                        'pid'      : proc.info.get('pid'),
-                        'username' : proc.info.get('username'),
-                    }
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    return None
+            os.mkdir(cache_dir, mode=0o700)
+        except Exception:
+            error_exit(icon=glyphs.md_alert, message=f'Couldn\'t create "{cache_dir}"')
 
-#==========================================================
-#  Conversersion
-#==========================================================
+    return cache_dir
 
-def network_speed(number: int=0, bytes: bool=False) -> str:
-    """
-    Intelligently determine network speed
-    """
-    # test this with dummy numbers
-    suffix = 'iB/s' if bytes else 'bit/s'
 
-    for unit in ['', 'K', 'M', 'G', 'T', 'P']:
-        if abs(number) < 1024.0:
-            if bytes:
-                return f'{pad_float(number / 8)} {unit}{suffix}'
-            return f'{pad_float(number)} {unit}{suffix}'
-        number = number / 1024
+def str_hook(v: str | None):
+    if v is None:
+        return None
+    return str(v)
 
-def processor_speed(number: int=0) -> str:
-    """
-    Intelligently determine processor speed
-    """
-    suffix = 'Hz'
 
-    for unit in ['', 'K', 'M', 'G', 'T']:
-        if abs(number) < 1000.0:
-            return f'{pad_float(number)} {unit}{suffix}'
-        number = number / 1000
+def int_hook(v: int | None):
+    if v is None:
+        return 0  # or None if your field is Optional[int]
+    return int(v)
 
-def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=False) -> str:
-    """
-    Convert bytes to the given unit.
-    """
-    if unit is None:
-        unit = 'auto'
-    suffix = 'B'
-
-    if unit == 'auto':
-        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
-            if abs(number) < 1024.0:
-                return f'{pad_float(number)} {unit}{suffix}'
-            number = number / 1024
-        return f'{pad_float(number)} Yi{suffix}'
-    else:
-        prefix = unit[0]
-        divisor = 1000
-        if len(unit) == 2 and unit.endswith('i'):
-            divisor = 1024
-
-        prefix_map = {'K': 1, 'Ki': 1, 'M': 2, 'Mi': 2,  'G': 3, 'Gi': 3, 'T': 4, 'Ti': 4, 'P': 5, 'Pi': 5, 'E': 6, 'Ei': 6, 'Z': 7, 'Zi': 7}
-        if unit in prefix_map.keys():
-            if use_int:
-                return f'{int(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
-            else:
-                return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
-        else:
-            return f'{number} {suffix}'
-
-def convert_value(value: str):
-    value = value.strip()  # normalize
-    if value.lower() in {'yes', 'no'}:
-        return value == 'yes'       # convert to bool
-    try:
-        if "." in value:
-            return float(value)
-        else:
-            return int(value)
-    except ValueError:
-        return value
-
-def dict_to_namedtuple(name: str=None, obj: dict=None):
-    """
-    Recursively convert a dict (possibly nested) into a namedtuple.
-    """
-    if isinstance(obj, dict):
-        fields = {to_snake_case(k): dict_to_namedtuple(k.capitalize(), v) for k, v in obj.items()}
-        NT = namedtuple(name, fields.keys())
-        return NT(**fields)
-    elif isinstance(obj, list):
-        return [dict_to_namedtuple(name, i) for i in obj]
-    else:
-        return obj
-
-#==========================================================
-#  Time functions
-#==========================================================
-
-def to_unix_time(input: str=None) -> int:
-    pattern = r'^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$'
-    if re.match(pattern, input):
-        try:
-            # Parse as 12-hour format
-            dt = datetime.strptime(input, '%I:%M %p')
-
-            # Replace today's date with the parsed time
-            now = datetime.now()
-            dt = dt.replace(year=now.year, month=now.month, day=now.day)
-
-            # Convert to Unix timestamp (local time)
-            return int(time.mktime(dt.timetuple()))
-        except:
-            return 0
-    else:
-        return 0
 
 def get_human_timestamp() -> str:
     now = int(time.time())
     dt = datetime.fromtimestamp(now)
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-def to_24hour_time(input: int=0):
+
+def byte_converter(number: float, unit: str | None, use_int: bool) -> str:
+    """
+    Convert bytes to the given unit.
+    """
+    if unit is None:
+        unit = "auto"
+    suffix = "B"
+
+    if unit == "auto":
+        for unit_prefix in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi"]:
+            if abs(number) < 1024.0:
+                return (
+                    f"{pad_float(number=number, round_int=False)} {unit_prefix}{suffix}"
+                )
+            number /= 1024
+        return f"{pad_float(number=number, round_int=False)} Yi{suffix}"
+    else:
+        divisor: int = 1000
+        if len(unit) == 2 and unit.endswith("i"):
+            divisor = 1024
+
+        prefix_map: dict[str, int] = {
+            "K": 1,
+            "Ki": 1,
+            "M": 2,
+            "Mi": 2,
+            "G": 3,
+            "Gi": 3,
+            "T": 4,
+            "Ti": 4,
+            "P": 5,
+            "Pi": 5,
+            "E": 6,
+            "Ei": 6,
+            "Z": 7,
+            "Zi": 7,
+            "Y": 8,
+            "Yi": 8,
+        }
+
+        if unit in prefix_map:
+            power: int = prefix_map[unit]
+            value = cast(float, number / (divisor**power))
+            if use_int:
+                return f"{int(value)} {unit}{suffix}"
+            else:
+                return f"{pad_float(value, round_int=False)} {unit}{suffix}"
+        else:
+            return f"{number} {suffix}"
+
+
+def pad_float(number: float | str, round_int: bool) -> str:
+    """
+    Pad a float to two decimal places.
+    """
+    if type(number) is str:
+        number = float(number)
+
+    if isinstance(number, int) and round_int:
+        return str(int(number))
+    else:
+        return f"{number:.2f}"
+
+
+def processor_speed(number: float) -> str | None:
+    """
+    Intelligently determine processor speed
+    """
+    suffix = "Hz"
+
+    for unit in ["", "K", "M", "G", "T"]:
+        if abs(number) < 1000.0:
+            return f"{pad_float(number=number, round_int=False)} {unit}{suffix}"
+        number = number / 1000
+
+
+def to_unix_time(input: str | None) -> int:
+    if input:
+        pattern = r"^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$"
+        if re.match(pattern, input):
+            try:
+                # Parse as 12-hour format
+                dt = datetime.strptime(input, "%I:%M %p")
+
+                # Replace today's date with the parsed time
+                now = datetime.now()
+                dt = dt.replace(year=now.year, month=now.month, day=now.day)
+
+                # Convert to Unix timestamp (local time)
+                return int(time.mktime(dt.timetuple()))
+            except Exception:
+                return 0
+        else:
+            return 0
+    return 0
+
+
+def to_24hour_time(input: int) -> str | None:
     try:
         # Convert to datetime (local time)
         dt = datetime.fromtimestamp(input)
 
         # Format as 24-hour time (HH:MM)
         return dt.strftime("%H:%M")
-    except:
+    except Exception:
         return None
 
-def duration(seconds: int=0):
-    seconds = int(seconds)
-    days = int(seconds / 86400)
-    hours = int(((seconds - (days * 86400)) / 3600))
-    minutes = int(((seconds - days * 86400 - hours * 3600) / 60))
-    secs = int((seconds - (days * 86400) - (hours * 3600) - (minutes * 60)))
 
-    return days, hours, minutes, secs
-
-def get_duration(seconds: int=0) -> str:
-    d, h, m, s = duration(seconds)
-    if d > 0:
-        return f'{d:02d}d {h:02d}h {m:02d}m {s:02d}s'
-    else:
-        return f'{h:02d}h {m:02d}m {s:02d}s'
-
-#==========================================================
-#  File and directory
-#==========================================================
-
-def file_exists(filename: str='') -> bool:
-    return True if (os.path.exists(filename) and os.path.isfile(filename)) else False
-
-def get_config_directory() -> str:
-    return os.path.join(
-        Path.home(),
-        '.config',
-        'waybar',
-    )
-
-def get_script_directory() -> str:
-    return os.path.join(
-        get_config_directory(),
-        'scripts',
-    )
-
-def get_cache_directory():
-    xdg_cache = os.environ.get('XDG_CACHE_HOME')
-    if xdg_cache:
-        cache_dir = Path(xdg_cache / 'waybar')
-    else:
-        cache_dir = Path.home() / '.cache/waybar'
-    
-    if not os.path.exists(cache_dir):
+def waybar_is_running() -> dict[str, str | list[str] | int | None] | None:
+    for proc in psutil.process_iter(
+        attrs=["cmdline", "create_time", "name", "pid", "ppid", "username"]
+    ):
         try:
-            os.mkdir(cache_dir, mode=0o700)
-        except:
-            error_exit(
-                icon = glyphs.md_alert,
-                message = f'Couldn\'t create "{cache_dir}"'
-            )
+            if proc.info.get("cmdline") is not None:
+                cmdline = cast(list[str], proc.info["cmdline"])
+                cmd = " ".join(cmdline)
+                if cmd == "waybar" and proc.info.get("username") == getpass.getuser():
+                    created = cast(int, proc.info.get("create_time"))
+                    return {
+                        "cmd": cmd,
+                        "cmdline": cmdline or [],
+                        "created": created,
+                        "pid": proc.info.get("pid"),
+                        "ppid": proc.info.get("ppid"),
+                        "username": proc.info.get("username"),
+                    }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return None
 
-    return cache_dir
-
-#==========================================================
-#  Dependencies and validation
-#==========================================================
-
-def parse_json_string(input: str=''):
-    try:
-        json_data = json.loads(input)
-        return json_data, None
-    except Exception as err:
-        return None, err, 
-
-def which(binary_name: str) -> bool:
-    return shutil.which(binary_name)
-
-def validate_requirements(modules: list=[], binaries: list=[]):
-    if len(modules) > 0:
-        missing = []
-        for module in modules:
-            if importlib.util.find_spec(module) is None:
-                missing.append(module)
-
-        if missing:
-            icon = glyphs.md_alert
-            error_exit(
-                icon    = icon,
-                message = f'Please install via pip: {", ".join(missing)}',
-            )
-
-    if len(binaries) > 0:
-        missing = []
-        for binary in binaries:
-            if not which(binary_name=binary):
-                missing.append(binary)
-        
-        if missing:
-            icon = glyphs.md_alert
-            error_exit(
-                icon    = icon,
-                message = f'Please install: {", ".join(missing)}',
-            )
 
 def network_is_reachable():
-    host = '8.8.8.8'
+    host = "8.8.8.8"
     port = 53
     timeout = 3
     try:
@@ -316,131 +294,133 @@ def network_is_reachable():
     except OSError:
         return False
 
-def interface_exists(interface: str=None) -> bool:
-    try:
-        return os.path.isdir(f'/sys/class/net/{interface}')
-    except:
-        return False
 
-def interface_is_connected(interface: str=None) -> bool:
-    try:
-        with open(f'/sys/class/net/{interface}/carrier', 'r') as f:
-            contents = f.read()
-        return True if int(contents) == 1 else False
-    except:
-        return False
-
-#==========================================================
-#  Formatting and conversion
-#==========================================================
-
-def pad_float(number: int=0, round_int: bool=True) -> str:
-    """
-    Pad a float to two decimal places.
-    """
-    if type(number) == str:
-        number = float(number)
-
-    if number.is_integer() and round_int:
-        return str(int(number))
-    else:
-        return f'{number:.2f}'
-
-def to_snake_case(s: str) -> str:
-    # Replace anything that's not a letter or number with underscore
-    s = re.sub(r'[^0-9a-zA-Z]+', '_', s)
-    # Add underscore between camelCase or PascalCase boundaries
-    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
-    # Collapse multiple underscores into one
-    s = re.sub(r'_+', '_', s)
-    # Strip leading/trailing underscores, lowercase
-    return s.strip('_').lower()
-
-#==========================================================
-#  Other
-#==========================================================
-
-def get_valid_units() -> list:
-    """
-    Return a list of valid storage units
-    """
-    return ['K', 'Ki', 'M', 'Mi', 'G', 'Gi', 'T', 'Ti', 'P', 'Pi', 'E', 'Ei', 'Z', 'Zi', 'auto']
-
-def error_exit(icon, message):
-    print(json.dumps({
-        'text'  : f'{icon} {message}',
-        'class' : 'error',
-    }))
-
-def called_by():
-    caller = inspect.stack()[1]
-    try:
-        return os.path.splitext(os.path.basename(caller.filename))[0]
-    except:
-        return None
-
-def ip_to_location(ip: str=None, name: str=None):
-    url = f'https://ipinfo.io/{ip}/json'
-    response = http.request(url=url)
-    if response.status == 200:
-        return dict_to_namedtuple(name=name, obj=response.body)
-
+def ip_to_location(ip: str) -> LocationData | None:
+    location_data: LocationData = LocationData()
+    response = http.request(
+        method="GET",
+        url=f"https://ipinfo.io/{ip}/json",
+        params={},
+    )
+    if response and response.status == 200 and response.body:
+        json_data = cast(dict[str, str], json.loads(response.body))
+        location_data = from_dict(
+            data_class=LocationData, data=json_data, config=Config(cast=[str])
+        )
+        return location_data
     return None
 
-def find_public_ip():
-    url = 'https://ifconfig.io'
-    headers = {'User-Agent': 'curl/7.54.1'}
-    response = http.request(url=url, headers=headers)
-    if response.status == 200:
+
+def network_speed(number: float, bytes: bool) -> str | None:
+    """
+    Intelligently determine network speed
+    """
+    # test this with dummy numbers
+    suffix = "iB/s" if bytes else "bit/s"
+
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if abs(number) < 1024.0:
+            if bytes:
+                return f"{pad_float(number=number / 8, round_int=False)} {unit}{suffix}"
+            return f"{pad_float(number=number, round_int=False)} {unit}{suffix}"
+        number = number / 1024
+
+
+def get_config_directory() -> str:
+    return os.path.join(
+        Path.home(),
+        ".config",
+        "waybar",
+    )
+
+
+def get_script_directory() -> str:
+    return os.path.join(
+        get_config_directory(),
+        "scripts",
+    )
+
+
+def which(binary_name: str) -> str | None:
+    return shutil.which(binary_name)
+
+
+def duration(seconds: int = 0) -> tuple[int, int, int, int]:
+    seconds = int(seconds)
+    days = int(seconds / 86400)
+    hours = int(((seconds - (days * 86400)) / 3600))
+    minutes = int(((seconds - days * 86400 - hours * 3600) / 60))
+    secs = int((seconds - (days * 86400) - (hours * 3600) - (minutes * 60)))
+
+    return days, hours, minutes, secs
+
+
+def get_duration(seconds: int = 0) -> str:
+    d, h, m, s = duration(seconds)
+    if d > 0:
+        return f"{d:02d}d {h:02d}h {m:02d}m {s:02d}s"
+    else:
+        return f"{h:02d}h {m:02d}m {s:02d}s"
+
+
+def interface_exists(interface: str) -> bool:
+    try:
+        return os.path.isdir(f"/sys/class/net/{interface}")
+    except Exception:
+        return False
+
+
+def interface_is_connected(interface: str) -> bool:
+    try:
+        with open(f"/sys/class/net/{interface}/carrier", "r") as f:
+            contents = f.read()
+        return True if int(contents) == 1 else False
+    except Exception:
+        return False
+
+
+def find_public_ip() -> str | None:
+    headers = {"User-Agent": "curl/7.54.1"}
+    response = http.request(method="GET", url="https://ifconfig.io", headers=headers)
+    if response and response.status == 200 and response.body:
         return response.body
 
     return None
 
-def find_private_ip_and_mac(interface: str=None):
-    ip = None
-    mac = None
-    command = f'ip -4 addr show dev {interface}'
-    rc, stdout, _ = run_piped_command(command)
-    if rc == 0 and stdout != '':
-        match = re.search(r'inet\s+(\d+\.\d+\.\d+\.\d+)', stdout)
+
+def find_private_ip_and_mac(interface: str) -> tuple[str, str]:
+    ip: str = ""
+    mac: str = ""
+    command = f"ip -4 addr show dev {interface}"
+    rc, stdout_raw, _ = run_piped_command(command)
+
+    stdout = stdout_raw if isinstance(stdout_raw, str) else ""
+    if rc == 0 and stdout != "":
+        match = re.search(r"inet\s+(\d+\.\d+\.\d+\.\d+)", stdout)
         if match:
             ip = match.group(1)
 
-    command = f'ip -4 link show dev {interface}'
-    rc, stdout, _ = run_piped_command(command)
-    if rc == 0 and stdout != '':
-        match = re.search(r'ether\s+([a-z0-9:]+)', stdout)
+    command = f"ip -4 link show dev {interface}"
+    rc, stdout_raw, _ = run_piped_command(command)
+    stdout = stdout_raw if isinstance(stdout_raw, str) else ""
+    if rc == 0 and stdout != "":
+        match = re.search(r"ether\s+([a-z0-9:]+)", stdout)
         if match:
             mac = match.group(1)
 
     return ip, mac
 
-def get_disk_info(mountpoint: str=None):
-    output = {}
-    command = f'jc --pretty df {mountpoint}'
-    rc, stdout, stderr = run_piped_command(command)
-    if rc == 0:
-        json_data, err = parse_json_string(stdout)
-        if not err:
-            filesystem = json_data[0]['filesystem']
-            output['mountpoint'] = mountpoint
-            output['filesystem'] = filesystem
 
-            command = f'lsblk -O --json {filesystem}'
-            rc, stdout, stderr = run_piped_command(command)
-            if rc == 0:
-                json_data, err = parse_json_string(stdout)
-                if not err:
-                    output['kname'] = json_data['blockdevices'][0]['kname']
-                    return output
+def get_distro_icon() -> str:
+    command = "cat /etc/os-release | jc --pretty --os-release"
+    rc, stdout_raw, _ = run_piped_command(command)
 
-def get_distro_icon():
-    command = 'cat /etc/os-release | jc --pretty --os-release'
-    rc, stdout, _ = run_piped_command(command)
-    if rc == 0:
-        json_data, err = parse_json_string(stdout)
-        if not err and 'ID' in json_data:
-            distro_id = json_data['ID']
+    stdout = stdout_raw if isinstance(stdout_raw, str) else ""
+
+    if rc == 0 and stdout:
+        json_data = cast(dict[str, str], json.loads(stdout))
+        if "ID" in json_data:
+            distro_id = json_data["ID"]
             if distro_id in glyphs.distro_map:
                 return glyphs.distro_map[distro_id]
 

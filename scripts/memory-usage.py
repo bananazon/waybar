@@ -1,235 +1,317 @@
 #!/usr/bin/env python3
 
 from collections import OrderedDict
-from pathlib import Path
-from typing import Any, Dict, List, Optional, NamedTuple
-from waybar import glyphs, state, util
+from dacite import from_dict, Config
+from dataclasses import dataclass, field
+from typing import cast
+from waybar import glyphs, util
+import click
 import json
 import re
 
-util.validate_requirements(modules=['click'])
-import click
 
-util.validate_requirements(binaries=['dmidecode', 'jc'])
+@dataclass
+class DimmValues:
+    array_handle: str | None = None
+    asset_tag: str | None = None
+    bank_locator: str | None = None
+    cache_size: str | None = None
+    configured_memory_speed: str | None = None
+    configured_voltage: str | None = None
+    data_width: str | None = None
+    error_information_handle: str | None = None
+    firmware_version: str | None = None
+    form_factor: str | None = None
+    locator: str | None = None
+    logical_size: str | None = None
+    manufacturer: str | None = None
+    maximum_voltage: str | None = None
+    memory_operating_mode_capability: str | None = None
+    memory_subsystem_controller_manufacturer_id: str | None = None
+    memory_subsystem_controller_product_id: str | None = None
+    memory_technology: str | None = None
+    minimum_voltage: str | None = None
+    module_manufacturer_id: str | None = None
+    module_product_id: str | None = None
+    non_volatile_size: str | None = None
+    part_number: str | None = None
+    rank: str | None = None
+    serial_number: str | None = None
+    set: str | None = None
+    size: str = ""
+    size_raw: int = 0
+    speed: str | None = None
+    total_width: str | None = None
+    type: str | None = None
+    type_detail: str | None = None
+    volatile_size: str | None = None
 
-context_settings = dict(help_option_names=['-h', '--help'])
 
-class MemoryInfo(NamedTuple):
-    success        : Optional[bool] = False
-    error          : Optional[str]  = None
-    available      : Optional[int]  = 0
-    buffers        : Optional[int]  = 0
-    buffers_cache  : Optional[int]  = 0
-    cached         : Optional[int]  = 0
-    dimms          : Optional[list] = None
-    free           : Optional[int]  = 0
-    pct_free       : Optional[int]  = 0
-    pct_total      : Optional[int]  = 0
-    pct_used       : Optional[int]  = 0
-    shared         : Optional[int]  = 0
-    total          : Optional[int]  = 0
-    used           : Optional[int]  = 0
-    swap_pct_total : Optional[int]  = 0
-    swap_pct_used  : Optional[int]  = 0
-    swap_pct_free  : Optional[int]  = 0
-    swap_total     : Optional[int]  = 0
-    swap_used      : Optional[int]  = 0
-    swap_free      : Optional[int]  = 0
-    updated        : Optional[str]  = None
+@dataclass
+class DimmInfo:
+    bytes: int = 0
+    description: str | None = None
+    handle: str | None = None
+    type: int = 0
+    values: DimmValues = field(default_factory=DimmValues)
 
-def generate_tooltip(memory_info):
-    unit = 'G'
-    tooltip = []
 
-    tooltip.append('Memory')
-    tooltip_od = OrderedDict()
-    if  memory_info.total >= 0:
-        tooltip_od['Total'] = util.byte_converter(number=memory_info.total, unit=unit)
+@dataclass
+class MemoryInfo:
+    success: bool = False
+    error: str | None = None
+    available: int = 0
+    buffers: int = 0
+    buffers_cache: int = 0
+    cached: int = 0
+    dimms: list[DimmInfo] = field(default_factory=list)
+    free: int = 0
+    pct_free: int = 0
+    pct_total: int = 0
+    pct_used: int = 0
+    shared: int = 0
+    total: int = 0
+    used: int = 0
+    swap_pct_total: int = 0
+    swap_pct_used: int = 0
+    swap_pct_free: int = 0
+    swap_total: int = 0
+    swap_used: int = 0
+    swap_free: int = 0
+    updated: str | None = None
 
-    if memory_info.used >= 0:
-        tooltip_od['Used'] = util.byte_converter(number=memory_info.used, unit=unit)
 
-    if memory_info.free >= 0:
-        tooltip_od['Free'] = util.byte_converter(number=memory_info.free, unit=unit)
+context_settings = dict(help_option_names=["-h", "--help"])
 
-    if memory_info.shared >= 0:
-        tooltip_od['Shared'] = util.byte_converter(number=memory_info.shared, unit=unit)
 
-    if memory_info.buffers >= 0:
-        tooltip_od['Buffers'] = util.byte_converter(number=memory_info.buffers, unit=unit)
+def generate_tooltip(memory_info: MemoryInfo) -> str:
+    unit = "G"
+    tooltip: list[str] = []
+    tooltip.append("Memory")
+    tooltip_od: OrderedDict[str, str | int] = OrderedDict()
 
-    if memory_info.cached >= 0:
-        tooltip_od['Cached'] = util.byte_converter(number=memory_info.cached, unit=unit)
-
-    if memory_info.available >= 0:
-        tooltip_od['Available'] = util.byte_converter(number=memory_info.available, unit=unit)
-
-    max_key_length = 0
-    for key in tooltip_od.keys():
-        max_key_length = len(key) if len(key) > max_key_length else max_key_length
-
-    for key, value in tooltip_od.items():
-        tooltip.append(f'  {key:{max_key_length}} : {value}')
-
-    if len(tooltip) > 0:
-        tooltip.append('')
-
-    tooltip.append('Swap')
-    tooltip_od = OrderedDict()
-    if memory_info.swap_total >= 0:
-        tooltip_od['Total'] = util.byte_converter(number=memory_info.swap_total, unit=unit)
-
-    if memory_info.swap_used >= 0:
-        tooltip_od['Used'] = util.byte_converter(number=memory_info.swap_used, unit=unit)
-
-    if memory_info.swap_free >= 0:
-        tooltip_od['Free'] = util.byte_converter(number=memory_info.swap_free, unit=unit)
-
-    max_key_length = 0
-    for key in tooltip_od.keys():
-        max_key_length = len(key) if len(key) > max_key_length else max_key_length
-
-    for key, value in tooltip_od.items():
-        tooltip.append(f'  {key:{max_key_length}} : {value}')
-
-    if len(tooltip) > 0:
-        tooltip.append('')
-
-    if memory_info.dimms and type(memory_info.dimms) == list:
-        for idx, dimm in enumerate(memory_info.dimms):
-            if dimm.size and dimm.type and dimm.form_factor and dimm.speed:
-                tooltip.append(f'DIMM {idx:02d} - {util.byte_converter(number=dimm.size, unit='G')} {dimm.type} {dimm.form_factor} @ {dimm.speed}')
-
-    if len(tooltip) > 0:
-        tooltip.append('')
-        tooltip.append(f'Last updated {memory_info.updated}')
-
-    return '\n'.join(tooltip)
-
-def get_dimm_info():
-    command = 'sudo dmidecode -t memory | jc --dmidecode'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        json_data, err = util.parse_json_string(stdout)
-        if not err:
-            dimms = []
-            for memory_device in json_data:
-                if memory_device['description'] == 'Memory Device':
-                    try:
-                        bits = re.split(r'\s+', memory_device['values']['size'])
-                        if len(bits) == 2:
-                            raw = int(bits[0])
-                            if bits[1] == 'MB':
-                                memory_device['values']['size'] = int(raw * (1000**2))
-                            if bits[1] == 'GB':
-                                memory_device['values']['size'] = int(raw * (1000**3))
-                    except:
-                        pass
-
-                    dimms.append(util.dict_to_namedtuple(name='DimmInfo', obj=memory_device['values']))
-
-            return dimms if len(dimms) > 0 else None
-
-    return None
-
-def get_memory_usage():
-    """
-    Read /proc/meminfo and return a namedtuple with some of its values
-    """
-    command = 'cat /proc/meminfo | jc --pretty --proc-meminfo'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        json_data, err = util.parse_json_string(stdout)
-        if not err:
-            available     = json_data['MemAvailable'] * 1024
-            buffers       = json_data['Buffers'] * 1024
-            cached        = json_data['Cached'] * 1024
-            free          = json_data['MemFree'] * 1024
-            s_reclaimable = json_data['SReclaimable'] * 1024
-            shared        = json_data['Shmem'] * 1024
-            total         = json_data['MemTotal'] * 1024
-            used          = total - free - buffers - cached - s_reclaimable
-            pct_total     = 100
-            pct_used      = int(((total - available) / total) * 100)
-            pct_free      = pct_total - pct_used
-
-            # Swap
-            swap_total     = json_data['SwapTotal'] * 1024
-            swap_free      = json_data['SwapFree'] * 1024
-            swap_used      = swap_total - swap_free
-            swap_pct_total = 100
-            swap_pct_used  = int((swap_used / swap_total) * 100)
-            swap_pct_free  = swap_pct_total - swap_pct_used
-
-            mem_info = MemoryInfo(
-                success        = True,
-                available      = available,
-                buffers        = buffers,
-                buffers_cache  = buffers + cached + s_reclaimable,
-                cached         = cached,
-                dimms          = get_dimm_info(),
-                free           = free,
-                pct_free       = pct_free,
-                pct_total      = pct_total,
-                pct_used       = pct_used,
-                shared         = shared,
-                total          = total,
-                used           = used,
-                swap_total     = swap_total,
-                swap_free      = swap_free,
-                swap_used      = swap_total - swap_free,
-                swap_pct_total = swap_pct_total,
-                swap_pct_used  = swap_pct_used,
-                swap_pct_free  = swap_pct_free,
-                updated        = util.get_human_timestamp(),
-            )
-        else:
-            mem_info = MemoryInfo(
-                success = False,
-                error   = 'no output from /proc/meminfo',
-            )
-    else:
-        mem_info = MemInfo(
-            success   = False,
-            error     = stderr or f'failed to execute "{command}"',
+    if memory_info.total >= 0:
+        tooltip_od["Total"] = util.byte_converter(
+            number=memory_info.total, unit=unit, use_int=False
         )
 
-    return mem_info
+    if memory_info.used >= 0:
+        tooltip_od["Used"] = util.byte_converter(
+            number=memory_info.used, unit=unit, use_int=False
+        )
 
-@click.command(help='Get memory usage from /proc/meminfo and dmidecode(8)', context_settings=context_settings)
-@click.option('-u', '--unit', required=False, type=click.Choice(util.get_valid_units()), help=f'The unit to use for output display')
-@click.option('-t', '--toggle', default=False, is_flag=True, help='Toggle the output format')
-def main(unit, toggle):
+    if memory_info.free >= 0:
+        tooltip_od["Free"] = util.byte_converter(
+            number=memory_info.free, unit=unit, use_int=False
+        )
+
+    if memory_info.shared >= 0:
+        tooltip_od["Shared"] = util.byte_converter(
+            number=memory_info.shared, unit=unit, use_int=False
+        )
+
+    if memory_info.buffers >= 0:
+        tooltip_od["Buffers"] = util.byte_converter(
+            number=memory_info.buffers, unit=unit, use_int=False
+        )
+
+    if memory_info.cached >= 0:
+        tooltip_od["Cached"] = util.byte_converter(
+            number=memory_info.cached, unit=unit, use_int=False
+        )
+
+    if memory_info.available >= 0:
+        tooltip_od["Available"] = util.byte_converter(
+            number=memory_info.available, unit=unit, use_int=False
+        )
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f"  {key:{max_key_length}} : {value}")
+
+    if len(tooltip) > 0:
+        tooltip.append("")
+
+    tooltip.append("Swap")
+    tooltip_od = OrderedDict()
+    if memory_info.swap_total >= 0:
+        tooltip_od["Total"] = util.byte_converter(
+            number=memory_info.swap_total, unit=unit, use_int=False
+        )
+
+    if memory_info.swap_used >= 0:
+        tooltip_od["Used"] = util.byte_converter(
+            number=memory_info.swap_used, unit=unit, use_int=False
+        )
+
+    if memory_info.swap_free >= 0:
+        tooltip_od["Free"] = util.byte_converter(
+            number=memory_info.swap_free, unit=unit, use_int=False
+        )
+
+    max_key_length = 0
+    for key in tooltip_od.keys():
+        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+
+    for key, value in tooltip_od.items():
+        tooltip.append(f"  {key:{max_key_length}} : {value}")
+
+    if len(tooltip) > 0:
+        tooltip.append("")
+
+    if memory_info.dimms and type(memory_info.dimms) is list:
+        for idx, dimm in enumerate(memory_info.dimms):
+            if (
+                dimm.values.size_raw
+                and dimm.type
+                and dimm.values.form_factor
+                and dimm.values.speed
+            ):
+                tooltip.append(
+                    f"DIMM {idx:02d} - {util.byte_converter(number=dimm.values.size_raw, unit=unit, use_int=False)} {dimm.type} {dimm.values.form_factor} @ {dimm.values.speed}"
+                )
+
+    if len(tooltip) > 0:
+        tooltip.append("")
+        tooltip.append(f"Last updated {memory_info.updated}")
+
+    return "\n".join(tooltip)
+
+
+def get_dimm_info() -> list[DimmInfo]:
+    dimms: list[DimmInfo] = []
+    command = "sudo dmidecode -t memory | jc --dmidecode"
+    rc, stdout_raw, _ = util.run_piped_command(command)
+
+    stdout = stdout_raw if isinstance(stdout_raw, str) else ""
+    if rc == 0 and stdout != "":
+        json_data = cast(list[dict[str, object]], json.loads(stdout))
+        for device in json_data:
+            if device["description"] == "Memory Device":
+                dimm = from_dict(
+                    data_class=DimmInfo,
+                    data=device,
+                    config=Config(cast=[int, str]),
+                )
+                match = re.search(r"(\d+)\s+([MmGg][Bb])$", dimm.values.size)
+                if match:
+                    raw = int(match.group(1))
+                    if match.group(2).upper() == "MB":
+                        dimm.values.size_raw = int(raw * (1000**2))
+                    elif match.group(2).upper() == "GB":
+                        dimm.values.size_raw = int(raw * (1000**3))
+
+                dimms.append(dimm)
+
+    return dimms
+
+
+def get_memory_usage() -> MemoryInfo:
+    memory_info: MemoryInfo = MemoryInfo()
+    command = "cat /proc/meminfo | jc --pretty --proc-meminfo"
+    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+
+    stdout = stdout_raw if isinstance(stdout_raw, str) else ""
+    stderr = stderr_raw if isinstance(stderr_raw, str) else ""
+    if rc == 0 and stdout != "":
+        json_data = cast(dict[str, int], json.loads(stdout))
+        available = json_data.get("Available", 0) * 1024
+        buffers = json_data.get("Buffers", 0) * 1024
+        cached = json_data.get("Cached", 0) * 1024
+        free = json_data.get("MemFree", 0) * 1024
+        s_reclaimable = json_data.get("SReclaimable", 0) * 1024
+        shared = json_data.get("Shmem", 0) * 1024
+        total = json_data.get("MemTotal", 0) * 1024
+        used = total - free - buffers - cached - s_reclaimable
+        pct_total = 100
+        pct_used = int(((total - available) / total) * 100)
+        pct_free = pct_total - pct_used
+
+        # Swap
+        swap_total = json_data.get("SwapTotal", 0) * 1024
+        swap_free = json_data.get("SwapFree", 0) * 1024
+        swap_used = swap_total - swap_free
+        swap_pct_total = 100
+        swap_pct_used = int((swap_used / swap_total) * 100)
+        swap_pct_free = swap_pct_total - swap_pct_used
+
+        memory_info = MemoryInfo(
+            success=True,
+            available=available,
+            buffers=buffers,
+            buffers_cache=buffers + cached + s_reclaimable,
+            cached=cached,
+            dimms=get_dimm_info(),
+            free=free,
+            pct_free=pct_free,
+            pct_total=pct_total,
+            pct_used=pct_used,
+            shared=shared,
+            total=total,
+            used=used,
+            swap_total=swap_total,
+            swap_free=swap_free,
+            swap_used=swap_total - swap_free,
+            swap_pct_total=swap_pct_total,
+            swap_pct_used=swap_pct_used,
+            swap_pct_free=swap_pct_free,
+            updated=util.get_human_timestamp(),
+        )
+    else:
+        memory_info = MemoryInfo(
+            success=False,
+            error=stderr or f'failed to execute "{command}"',
+        )
+
+    return memory_info
+
+
+@click.command(
+    help="Get memory usage from /proc/meminfo and dmidecode(8)",
+    context_settings=context_settings,
+)
+@click.option(
+    "-u",
+    "--unit",
+    required=False,
+    type=click.Choice(util.get_valid_units()),
+    help="The unit to use for output display",
+)
+def main(unit: str):
+    output: dict[str, object] = {}
+    output_class: str = ""
     memory_info = get_memory_usage()
+
     if memory_info.success:
-        tooltip   = generate_tooltip(memory_info)
-        pct_total = memory_info.pct_total
-        pct_used  = memory_info.pct_used
-        pct_free  = memory_info.pct_free
-        total     = util.byte_converter(number=memory_info.total, unit=unit)
-        used      = util.byte_converter(number=memory_info.used, unit=unit)
-        free      = util.byte_converter(number=memory_info.free, unit=unit)
+        tooltip = generate_tooltip(memory_info)
+        pct_free = memory_info.pct_free
+        total = util.byte_converter(number=memory_info.total, unit=unit, use_int=False)
+        used = util.byte_converter(number=memory_info.used, unit=unit, use_int=False)
 
         if pct_free < 20:
-            output_class = 'critical'
+            output_class = "critical"
         elif pct_free >= 20 and pct_free < 50:
-            output_class = 'warning'
+            output_class = "warning"
         elif pct_free >= 50:
-            output_class = 'good'
+            output_class = "good"
 
         output = {
-            'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}',
-            'class'   : output_class,
-            'tooltip' : tooltip,
+            "text": f"{glyphs.md_memory}{glyphs.icon_spacer}{used} / {total}",
+            "class": output_class,
+            "tooltip": tooltip,
         }
     else:
         output = {
-            'text'    : f'{glyphs.md_memory}{glyphs.icon_spacer}{memory_info.error if memory_info.error is not None else "Unknown error"}',
-            'class'   : 'error',
-            'tooltip' : 'System Memory',
+            "text": f"{glyphs.md_memory}{glyphs.icon_spacer}{memory_info.error if memory_info.error is not None else 'Unknown error'}",
+            "class": "error",
+            "tooltip": "System Memory",
         }
 
     print(json.dumps(output))
+
 
 if __name__ == "__main__":
     main()

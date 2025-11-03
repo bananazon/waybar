@@ -1,0 +1,3 @@
+[tool.basedpyright]
+# options: "off" | "basic" | "strict"
+typeCheckingMode = "basic"

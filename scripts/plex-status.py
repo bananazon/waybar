@@ -7,10 +7,10 @@ import json
 context_settings = dict(help_option_names=["-h", "--help"])
 
 
-def get_plex_status(port: int, token: str) -> tuple[bool, bool]:
+def get_plex_status(ip: str, port: int, token: str) -> tuple[bool, bool]:
     response = http.request(
         method="GET",
-        url=f"http://localhost:{port}/identity",
+        url=f"http://{ip}:{port}/identity",
     )
     process = True if response and response.status == 200 else False
 
@@ -31,6 +31,14 @@ def get_plex_status(port: int, token: str) -> tuple[bool, bool]:
     help="Show the status of your Plex Media Server", context_settings=context_settings
 )
 @click.option(
+    "-i",
+    "--ip",
+    required=False,
+    default="127.0.0.1",
+    show_default=True,
+    help="The local IP address of the Plex media server",
+)
+@click.option(
     "-p",
     "--port",
     required=False,
@@ -46,7 +54,7 @@ def get_plex_status(port: int, token: str) -> tuple[bool, bool]:
 )
 def main(ip: str, port: int, token: str):
     if util.network_is_reachable():
-        process, available = get_plex_status(port=port, token=token)
+        process, available = get_plex_status(ip=ip, port=port, token=token)
         process_color = "green" if process else "red"
         availability_color = "green" if available else "red"
         process_ok = "OK" if process else "Not OK"

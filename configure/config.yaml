@@ -1,10 +1,11 @@
 # ~/.config/waybar/config.yaml
 
-layer: 'bottom'
-position: 'top'
+layer: "bottom"
+position: "top"
 height: 31
 spacing: 5
 exclusive: true
+font: "Arimo Nerd Font 12"
 scripts_path: /home/gdanko/.config/waybar/scripts
 
 static_modules:
@@ -16,10 +17,10 @@ static_modules:
     interval: 3
     unit: auto
   - name: plex-status
-    enabled: false
+    enabled: true
     interval: 60
     ip: "{key:plex_ip}"
-    port: "{key:plex_port}"
+    port: 32400
     api_key: "{key:plex_api_token}"
   - name: quakes
     enabled: false

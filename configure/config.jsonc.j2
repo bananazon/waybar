@@ -12,7 +12,7 @@
         "format": "{}",
         "return-type": "json",
         "exec": "{{ scripts_path }}/cpu-usage.py",
-        "interval": {{ cpu_usage.get("interval", 10) if cpu_usage is defined else 10 }}
+        "interval": {{ cpu_usage.interval if cpu_usage is defined else 10 }}
     },
     {% endif %}
 
@@ -20,11 +20,11 @@
     "custom/disk-consumers": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path '{{ p }}' {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}{{ " --show-stats" if dc.show_stats and dc.show_stats == true}}{{ " --debug" if dc.debug and dc.debug == true}}",
+        "exec": "{{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path '{{ p }}' {% endfor %}--interval {{ dc.interval if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}{{ " --show-stats" if dc.show_stats and dc.show_stats == true}}{{ " --debug" if dc.debug and dc.debug == true}}",
         {% if dc.paths|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')",
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.interval if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')",
         {% endif %}
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.get("interval", 10) if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/disk-consumers.py {% for p in dc.paths %}--path {{ p }} {% endfor %}--interval {{ dc.interval if dc is defined else 10 }} --unit {{ (dc.unit if dc.unit else "auto") or "auto" }}')"
     },
     {% endif %}
 
@@ -32,11 +32,11 @@
     "custom/filesystem-usage": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}",
+        "exec": "{{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.interval if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}",
         {% if fs.mountpoints|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.interval if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')",
         {% endif %}
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.get("interval", 10) if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/filesystem-usage.py {% for m in fs.mountpoints %}--mountpoint {{ m }} {% endfor %}--interval {{ fs.interval if fs is defined else 10 }} --unit {{ (fs.unit if fs.unit else "auto") or "auto" }}{{ " --show-stats" if fs.show_stats and fs.show_stats == true}}{{ " --debug" if fs.debug and fs.debug == true}}')"
     },
     {% endif %}
 
@@ -44,8 +44,8 @@
     "custom/memory-usage": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.get("unit", "auto") if memory_usage is defined else "auto" }}",
-        "interval": {{ memory_usage.get("interval", 10) if memory_usage is defined else 10 }}
+        "exec": "{{ scripts_path }}/memory-usage.py --unit {{ memory_usage.unit if memory_usage is defined else "auto" }}",
+        "interval": {{ memory_usage.interval if memory_usage is defined else 10 }}
     },
     {% endif %}
 
@@ -53,9 +53,9 @@
     "custom/network-throughput": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.get("interval", 10) if nt is defined else 10 }}"{% if nt.interfaces|length > 1 %},{% endif %}
+        "exec": "{{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.interval if nt is defined else 10 }}"{% if nt.interfaces|length > 1 %},{% endif %}
         {% if nt.interfaces|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.get("interval", 10) if nt is defined else 10 }}')"
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/network-throughput.py {% for i in nt.interfaces %}--interface {{ i }} {% endfor %}--interval {{ nt.interval or 10 if nt is defined else 10 }}')"
         {% endif %}
     },
     {% endif %}
@@ -64,9 +64,9 @@
     "custom/plex-status": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'",
-        "interval": {{ plex_status.get("interval", 10) if plex_status is defined else 10 }},
-        "on-click-right": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.get("ip", "127.0.0.1") if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.get("port", 32400) if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
+        "exec": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.ip if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.port if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'",
+        "interval": {{ plex_status.interval if plex_status is defined else 10 }},
+        "on-click-right": "{{ scripts_path }}/plex-status.py --ip {{ plex_status.ip if plex_status is defined else "127.0.0.1" }} --port {{ plex_status.port if plex_status is defined else 32400 }} --token '{{ plex_status.api_key if plex_status.api_key else none}}'"
     },
     {% endif %}
 
@@ -74,8 +74,8 @@
     "custom/quakes": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}",
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.get("interval", 1800) if quakes is defined else 1800 }} --radius {{ quakes.get("radius", "100m") if quakes is defined else "100m" }} --limit {{ quakes.get("limit", 20) if quakes is defined else 20 }} --magnitude {{ quakes.get("magnitude", 0.1) if quakes is defined else 0.1 }}')"
+        "exec": "{{ scripts_path }}/quakes.py --interval {{ quakes.interval if quakes is defined else 1800 }} --radius {{ quakes.radius if quakes is defined else "100m" }} --limit {{ quakes.limit if quakes is defined else 20 }} --magnitude {{ quakes.magnitude if quakes is defined else 0.1 }}",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.interval if quakes is defined else 1800 }} --radius {{ quakes.radius if quakes is defined else "100m" }} --limit {{ quakes.limit if quakes is defined else 20 }} --magnitude {{ quakes.magnitude if quakes is defined else 0.1 }}')"
     },
     {% endif %}
 
@@ -83,11 +83,11 @@
     "custom/software-updates": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if su is defined else 1800 }}",
+        "exec": "{{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.interval if su is defined else 1800 }}",
         {% if su.package_types|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if s is defined else 1800 }}')",
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.interval if s is defined else 1800 }}')",
         {% endif %}
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.get("interval", 1800) if s is defined else 1800 }}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/software-updates.py {% for p in su.package_types %}--package-type {{ p }} {% endfor %}--interval {{ su.interval if s is defined else 1800 }}')"
     },
     {% endif %}
 
@@ -95,8 +95,8 @@
     "custom/speedtest": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}",
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/speedtest.py --interval {{ speedtest.get("interval", 300) if speedtest is defined else 300 }}')"
+        "exec": "{{ scripts_path }}/speedtest.py --interval {{ speedtest.interval if speedtest is defined else 300 }}",
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/speedtest.py --interval {{ speedtest.interval if speedtest is defined else 300 }}')"
     },
     {% endif %}
 
@@ -104,11 +104,11 @@
     "custom/weather": {
         "format" : "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location '{{ l }}' {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}",
+        "exec": "{{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location '{{ l }}' {% endfor %}--interval {{ weather.interval if weather is defined else 300 }}",
         {% if weather.locations|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')",
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.interval if weather is defined else 300 }}')",
         {% endif %}
-        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.get("interval", 300) if weather is defined else 300 }}')"
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/weather.py --api-key {{ weather.api_key }} {% for l in weather.locations %}--location {{ l }} {% endfor %}--interval {{ weather.interval if weather is defined else 300 }}')"
     },
     {% endif %}
 
@@ -116,9 +116,9 @@
     "custom/wifi-status": {
         "format": "{}",
         "return-type": "json",
-        "exec": "{{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.get("interval", 10) if wifi is defined else 10 }}"{% if wifi.interfaces|length > 1 %},{% endif %}
+        "exec": "{{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.interval if wifi is defined else 10 }}"{% if wifi.interfaces|length > 1 %},{% endif %}
         {% if wifi.interfaces|length > 1 %}
-            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.get("interval", 10) if wifi is defined else 10 }}')"
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/wifi-status.py {% for i in wifi.interfaces %}--interface {{ i }} {% endfor %}--interval {{ wifi.interval if wifi is defined else 10 }}')"
         {% endif %}
     },
     {% endif %}

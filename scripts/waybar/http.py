@@ -79,8 +79,7 @@ def request(
                     body=body,
                 )
 
-        except (urllib.error.URLError, urllib.error.HTTPError) as e:
-            print(f"Attempt {attempt} failed: {e}")
+        except (urllib.error.URLError, urllib.error.HTTPError):
             if attempt < retries:
                 time.sleep(retry_delay)
             else:

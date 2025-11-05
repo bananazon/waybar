@@ -17,7 +17,7 @@ static_modules:
     interval: 3
     unit: auto
   - name: plex-status
-    enabled: true
+    enabled: false
     interval: 60
     ip: "{key:plex_ip}"
     port: 32400

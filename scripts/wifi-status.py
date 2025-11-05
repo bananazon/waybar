@@ -13,7 +13,8 @@ import sys
 import threading
 import time
 
-sys.stdout.reconfigure(line_buffering=True)
+
+sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
 @dataclass
@@ -332,6 +333,12 @@ def get_wifi_status(interfaces: list[str]) -> list[WifiStatus]:
                         ssid_name=ssid_name,
                         updated=util.get_human_timestamp(),
                     )
+            else:
+                interface_status = WifiStatus(
+                    success=False,
+                    error="disconnected",
+                    interface=interface,
+                )
         wifi_status.append(interface_status)
 
     return wifi_status
@@ -350,7 +357,7 @@ def render_output(wifi_status: WifiStatus, icon: str | None) -> tuple[str, str, 
     else:
         text = f"{glyphs.md_wifi_strength_alert_outline}{glyphs.icon_spacer}{interface} {wifi_status.error}"
         output_class = "error"
-        tooltip = f"{wifi_status.interface} error"
+        tooltip = f"{wifi_status.interface} {wifi_status.error}"
 
     logging.debug(
         f"[render_output] - exiting with text={text}, output_class={output_class}, tooltip={tooltip}"
@@ -427,8 +434,6 @@ def main(interface: list[str], interval: int, test: bool, debug: bool):
     formats = list(range(len(interface)))
 
     if test:
-        print(interval)
-
         wifi_status = get_wifi_status(interfaces=interface)
         text, output_class, tooltip = render_output(
             wifi_status=wifi_status[0], icon=None

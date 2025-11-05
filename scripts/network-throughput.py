@@ -15,7 +15,7 @@ import sys
 import threading
 import time
 
-sys.stdout.reconfigure(line_buffering=True)
+sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
 @dataclass
@@ -46,6 +46,7 @@ class NetworkThroughput:
     alias: str | None = None
     device_name: str | None = None
     driver: str | None = None
+    icon: str | None = None
     interface: str = ""
     ip_private: str | None = None
     ip_public: str | None = None
@@ -247,6 +248,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                         device_name=device_name,
                         driver=driver,
                         interface=interface,
+                        icon=get_icon(interface=interface),
                         ip_private=private_ip,
                         ip_public=public_ip,
                         mac_address=mac_address,
@@ -266,6 +268,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                     NetworkThroughput(
                         success=False,
                         error="disconnected",
+                        icon=get_icon(interface=interface),
                         interface=interface,
                     )
                 )
@@ -274,6 +277,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                 NetworkThroughput(
                     success=False,
                     error="doesn't exist",
+                    icon=get_icon(interface=interface),
                     interface=interface,
                 )
             )
@@ -286,15 +290,19 @@ def render_output(
     interface = network_throughput.interface
     logging.debug("[render_output] - entering function")
     if not icon:
-        icon = icon if icon else get_icon(interface=interface)
+        icon = (
+            network_throughput.icon
+            if not network_throughput.icon
+            else get_icon(interface=interface)
+        )
     if network_throughput.success:
         text = f"{icon}{glyphs.icon_spacer}{interface} {glyphs.cod_arrow_small_down}{network_throughput.received} {glyphs.cod_arrow_small_up}{network_throughput.transmitted}"
         output_class = "success"
         tooltip = generate_tooltip(network_throughput=network_throughput)
     else:
-        text = f"{glyphs.md_alert}{glyphs.icon_spacer}{interface} {network_throughput.error}"
+        text = f"{icon}{glyphs.icon_spacer}{interface} {network_throughput.error}"
         output_class = "error"
-        tooltip = f"{network_throughput.interface} error"
+        tooltip = f"{network_throughput.interface} {network_throughput.error}"
 
     return text, output_class, tooltip
 
@@ -367,7 +375,6 @@ def main(interface: list[str], interval: int, test: bool, debug: bool):
     formats = list(range(len(interface)))
 
     if test:
-        print(interval)
         network_throughput = get_network_throughput(interfaces=interface)
         text, output_class, tooltip = render_output(
             network_throughput=network_throughput[format_index],

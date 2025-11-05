@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-sys.stdout.reconfigure(line_buffering=True)
+sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
 @dataclass

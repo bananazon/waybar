@@ -14,8 +14,6 @@ import re
 import sys
 import yaml as y
 
-T = TypeVar("T")
-
 
 class DataclassInstance(Protocol):
     __dataclass_fields__: dict[str, Field[object]]

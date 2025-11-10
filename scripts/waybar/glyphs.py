@@ -104,6 +104,7 @@ md_file = surrogatepass("\udb80\ude14")
 md_folder = surrogatepass("\udb80\ude4b")
 md_package_variant = surrogatepass("\udb80\udfd6")
 md_timer_outline = surrogatepass("\udb81\udd1b")
+nf_fa_dropbox = surrogatepass("\uf16b")
 icon_spacer = "  "
 
 # Alerts

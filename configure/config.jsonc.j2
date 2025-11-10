@@ -28,6 +28,15 @@
     },
     {% endif %}
 
+    {% if dropbox_status.enabled == true %}
+    "custom/dropbox-status": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/dropbox-status.py",
+        "interval": {{ dropbox_status.interval if dropbox_status is defined else 3 }}
+    },
+    {% endif %}
+
     {% if fs.enabled == true and (fs.mountpoints|length > 0) %}
     "custom/filesystem-usage": {
         "format": "{}",

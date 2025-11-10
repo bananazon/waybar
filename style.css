@@ -1,10 +1,10 @@
 /* https://docs.gtk.org/gtk3/css-properties.html */
 
-*{
+* {
     font-family: "Arimo Nerd Font", Roboto, Helvetica, Arial, sans-serif;
     font-stretch: condensed;
     font-weight: normal;
-    font-size: 9.0pt;
+    font-size: 9pt;
 }
 
 window#waybar {
@@ -28,6 +28,7 @@ tooltip label {
 /* Applies to all modules to avoid repetition */
 #custom-cpu-usage,
 #custom-disk-consumers,
+#custom-dropbox-status,
 #custom-filesystem-usage,
 #custom-memory-usage,
 #custom-network-throughput,
@@ -59,6 +60,7 @@ tooltip label {
 /* Common style for error */
 #custom-cpu-usage.error,
 #custom-disk-consumers.error,
+#custom-dropbox-status.error,
 #custom-filesystem-usage.error,
 #custom-memory-usage.error,
 #custom-network-throughput.error,

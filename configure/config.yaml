@@ -12,6 +12,9 @@ static_modules:
   - name: cpu-usage
     enabled: true
     interval: 3
+  - name: dropbox-status
+    enabled: true
+    interval: 3
   - name: memory-usage
     enabled: true
     interval: 3
@@ -69,7 +72,6 @@ wifi_status:
   interval: 10
   interfaces:
     - wlo1
-    - lo
 
 weather:
   enabled: true

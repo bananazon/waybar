@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
-from collections.abc import Mapping
-from dacite import from_dict, Config
-from dataclasses import dataclass, field, fields, is_dataclass, Field
-from keystore import SecureKeyStore
-from jinja2 import Template
-from pathlib import Path
-from typing import cast, Protocol, TypeVar
-import click
 import json
 import os
 import re
 import sys
+from collections.abc import Mapping
+from dataclasses import Field, dataclass, field, fields, is_dataclass
+from pathlib import Path
+from typing import Protocol, TypeVar, cast
+
+import click
 import yaml as y
+from dacite import Config, from_dict
+from jinja2 import Template
+from keystore import SecureKeyStore
 
 
 class DataclassInstance(Protocol):
@@ -246,6 +247,7 @@ def render_template(
         output = config_template.render(
             cpu_usage=static_module_map.get("cpu-usage", StaticModule()),
             dc=configuration.disk_consumers or [],
+            dropbox_status=static_module_map.get("dropbox-status", StaticModule()),
             exclusive=configuration.exclusive,
             fs=configuration.filesystem_usage or [],
             font=configuration.font or "Arimo Nerd Font 12",

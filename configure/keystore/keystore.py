@@ -1,7 +1,7 @@
-from cryptography.fernet import Fernet
-from pathlib import Path
-from typing import Any
 import sqlite3
+from pathlib import Path
+
+from cryptography.fernet import Fernet
 
 context_settings = dict(help_option_names=["-h", "--help"])
 DEFAULT_DB = Path.home() / ".local/share/secure_keystore.db"

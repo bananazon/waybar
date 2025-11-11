@@ -12,10 +12,11 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 The following Python modules are required
 1. [`click`](https://pypi.org/project/click)
 2. [`cryptography`](https://pypi.org/project/cryptography)
-3. [`Jinja2`](https://pypi.org/project/Jinja2)
-4. [`psutil`](https://pypi.org/project/psutil)
-5. [`PyYAML`](https://pypi.org/project/PyYAML)
-6. [`speedtest-cli`](https://pypi.org/project/speedtest-cli)
+3. [`dacite`](https://pypi.org/project/dacite)
+4. [`Jinja2`](https://pypi.org/project/Jinja2)
+5. [`psutil`](https://pypi.org/project/psutil)
+6. [`PyYAML`](https://pypi.org/project/PyYAML)
+7. [`speedtest-cli`](https://pypi.org/project/speedtest-cli)
 
 The following binaries are required and may not be installed by default
 1. `dmidecode`

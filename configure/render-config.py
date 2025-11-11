@@ -7,7 +7,7 @@ import sys
 from collections.abc import Mapping
 from dataclasses import Field, dataclass, field, fields, is_dataclass
 from pathlib import Path
-from typing import Protocol, TypeVar, cast
+from typing import Protocol, cast
 
 import click
 import yaml as y

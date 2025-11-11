@@ -142,7 +142,7 @@ Caches:
 This module shows the top consumers for specified directories.
 
 #### Output format
-`/work 859.84 GiB / 3.64 TiB`
+`/work/Dropbox/Documents`
 
 #### Tooltip
 ```

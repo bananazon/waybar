@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-from waybar import glyphs, http, util
-import click
 import json
+
+import click
+from waybar import glyphs, http, util
 
 context_settings = dict(help_option_names=["-h", "--help"])
 

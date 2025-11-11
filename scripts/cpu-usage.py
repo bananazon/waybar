@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-from dacite import from_dict, Config
-from dataclasses import dataclass, field
-from typing import cast
-from waybar import glyphs, util
-import click
 import json
 import platform
+from dataclasses import dataclass, field
+from typing import cast
+
+import click
+from dacite import Config, from_dict
+from waybar import glyphs, util
 
 
 @dataclass

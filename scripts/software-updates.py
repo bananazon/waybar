@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass, field
-from typing_extensions import Protocol
-from waybar import glyphs, util
-import click
 import json
 import logging
 import re
@@ -12,6 +8,11 @@ import subprocess
 import sys
 import threading
 import time
+from dataclasses import dataclass, field
+
+import click
+from typing_extensions import Protocol
+from waybar import glyphs, util
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 

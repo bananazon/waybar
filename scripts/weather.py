@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
-from collections import OrderedDict
-from dacite import from_dict, Config
-from dataclasses import dataclass, field
-from typing import cast
-from waybar import glyphs, http, util
-import click
 import json
 import logging
 import signal
 import sys
 import threading
 import time
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from typing import cast
+
+import click
+from dacite import Config, from_dict
+from waybar import glyphs, http, util
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 

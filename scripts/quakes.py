@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 
-from dacite import from_dict, Config
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import cast
-from waybar import glyphs, http, util
-import click
 import json
 import logging
 import re
@@ -13,6 +7,13 @@ import signal
 import sys
 import threading
 import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import cast
+
+import click
+from dacite import Config, from_dict
+from waybar import glyphs, http, util
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore

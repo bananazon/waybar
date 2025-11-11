@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 
-from collections import OrderedDict
-from dataclasses import dataclass, field
-from glob import glob
-from pathlib import Path
-from waybar import glyphs, util
-import click
 import json
 import logging
 import os
@@ -15,6 +9,13 @@ import subprocess
 import sys
 import threading
 import time
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from glob import glob
+from pathlib import Path
+
+import click
+from waybar import glyphs, util
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 

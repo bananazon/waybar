@@ -1,19 +1,21 @@
-from . import glyphs, http
-from dacite import from_dict, Config
-from dataclasses import dataclass
-from datetime import datetime
-from pathlib import Path
-from typing import cast
 import getpass
 import json
 import os
-import psutil
 import re
 import shlex
 import shutil
 import socket
 import subprocess
 import time
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import cast
+
+import psutil
+from dacite import Config, from_dict
+
+from . import glyphs, http
 
 
 @dataclass

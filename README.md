@@ -142,7 +142,7 @@ Caches:
 This module shows the top consumers for specified directories.
 
 #### Output format
-`/work`
+`/work 859.84 GiB / 3.64 TiB`
 
 #### Tooltip
 ```
@@ -162,6 +162,17 @@ Videos         1.27 MiB
 #### Actions
 * `on-click` - Switch between configured paths
 * `on-click-right` - Refresh data
+
+### Dropbox Status
+This module show Dropbox status.
+
+#### Output Format
+`Syncing 881 files`
+
+#### Tooltip
+```
+Uploading 881 files (624.6 KB/sec, 18 mins)
+```
 
 ### Filesystem Usage
 This module shows filesystem usage information and statistics.
@@ -277,7 +288,7 @@ apr                       => 1.7.6-3.fc42
 at                        => 3.2.5-16.fc42
 at-spi2-atk               => 2.56.3-1.fc42
 at-spi2-core              => 2.56.3-1.fc42
-atheros-firmware.noarch   => 20250808-1.fc42 
+atheros-firmware.noarch   => 20250808-1.fc42
 and 764 more...
 ```
 

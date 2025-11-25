@@ -535,49 +535,45 @@ def worker(api_key: str, locations: list[str], use_celsius: bool):
             needs_redraw = False
 
         logging.info("[worker] - entering worker loop")
-        if not util.waybar_is_running():
-            logging.info("[worker] - waybar not running")
-            sys.exit(0)
-        else:
-            if not util.network_is_reachable():
+
+        if not util.network_is_reachable():
+            output = {
+                "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
+                "class": "error",
+                "tooltip": "Weather update error",
+            }
+            print(json.dumps(output))
+            continue
+
+        if fetch:
+            weather_data = []
+            for location in locations:
+                print(
+                    json.dumps(
+                        {
+                            "text": f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching {location}...",
+                            "class": "loading",
+                            "tooltip": f"Fetching {location}...",
+                        }
+                    )
+                )
+                location_data = get_weather(api_key=api_key, location=location)
+                weather_data.append(location_data)
+
+        if weather_data and len(weather_data) > 0:
+            if redraw:
+                icon = weather_data[format_index].icon or glyphs.md_alert
+                text, output_class, tooltip = render_output(
+                    location_data=weather_data[format_index],
+                    use_celsius=use_celsius,
+                    icon=icon,
+                )
                 output = {
-                    "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
-                    "class": "error",
-                    "tooltip": "Weather update error",
+                    "text": text,
+                    "class": output_class,
+                    "tooltip": tooltip,
                 }
                 print(json.dumps(output))
-                weather_data = None
-                continue
-
-            if fetch:
-                weather_data = []
-                for location in locations:
-                    print(
-                        json.dumps(
-                            {
-                                "text": f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching {location}...",
-                                "class": "loading",
-                                "tooltip": f"Fetching {location}...",
-                            }
-                        )
-                    )
-                    location_data = get_weather(api_key=api_key, location=location)
-                    weather_data.append(location_data)
-
-            if weather_data and len(weather_data) > 0:
-                if redraw:
-                    icon = weather_data[format_index].icon or glyphs.md_alert
-                    text, output_class, tooltip = render_output(
-                        location_data=weather_data[format_index],
-                        use_celsius=use_celsius,
-                        icon=icon,
-                    )
-                    output = {
-                        "text": text,
-                        "class": output_class,
-                        "tooltip": tooltip,
-                    }
-                    print(json.dumps(output))
 
 
 @click.command(

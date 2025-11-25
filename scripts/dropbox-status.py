@@ -36,36 +36,31 @@ def get_dropbox_status() -> DropboxStatus:
 
     if rc == 0:
         if stdout != "":
-            if stdout == "Up to date":
+            lines = [line.strip() for line in stdout.split("\n")]
+            if lines[0] == "Up to date":
                 dropbox_status = DropboxStatus(
                     success=True,
                     message=stdout,
                 )
-            elif stdout == "Dropbox isn't running!":
+            elif lines[0] == "Dropbox isn't running!":
                 dropbox_status = DropboxStatus(
                     success=True,
                     message=stdout,
                 )
-            elif stdout == "Syncing paused":
+            elif lines[0] == "Syncing paused":
                 dropbox_status = DropboxStatus(
                     success=True,
                     message=stdout,
                 )
-            elif stdout.startswith("Syncing"):
+            elif lines[0].startswith("Syncing"):
                 message: str = "Syncing"
                 tooltip: str = "Syncing..."
 
-                match = re.search(r"(Syncing\s+(\d[\d,]*)+\s+files)", stdout)
+                match = re.search(r"(Syncing\s+(\d[\d,]*)+\s+files)", lines[0])
                 if match:
                     message = match.group(1)
 
-                match = re.search(
-                    r"^(Uploading|Downloading)\s+(\d[\d,]*) files(.*)",
-                    stdout,
-                    re.MULTILINE,
-                )
-                if match:
-                    tooltip = match.group(0)
+                tooltip = "\n".join(lines[1:])
 
                 dropbox_status = DropboxStatus(
                     success=True,

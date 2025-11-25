@@ -78,12 +78,9 @@ class Results:
 cache_dir = util.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
-loading = f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running..."
-loading_dict = {"text": loading, "class": "loading", "tooltip": "Speedtest is running"}
 logfile = cache_dir / "waybar-speedtest.log"
-speedtest_data: Results = Results()
-
-update_event = threading.Event()
+needs_fetch: bool = False
+speedtest_data: Results | None = Results()
 
 
 def configure_logging(debug: bool = False):
@@ -96,8 +93,11 @@ def configure_logging(debug: bool = False):
 
 
 def refresh_handler(_signum: int, _frame: object | None):
+    global needs_fetch, needs_redra
     logging.info("[refresh_handler] - received SIGHUP — triggering speedtest")
-    update_event.set()
+    with condition:
+        needs_fetch = True
+        condition.notify()
 
 
 _ = signal.signal(signal.SIGHUP, refresh_handler)
@@ -343,47 +343,70 @@ def render_output(speedtest_data: Results, icon: str) -> tuple[str, str, str]:
 
 
 def worker():
-    global speedtest_data
+    global speedtest_data, needs_fetch
 
     while True:
-        _ = update_event.wait()
-        update_event.clear()
+        with condition:
+            while not needs_fetch:
+                _ = condition.wait()
 
-        if not util.waybar_is_running():
-            logging.info("[worker] - waybar not running")
-            sys.exit(0)
-        else:
-            if util.network_is_reachable():
-                if speedtest_data:
-                    if speedtest_data.success:
-                        text, _, tooltip = render_output(
-                            speedtest_data=speedtest_data, icon=glyphs.md_timer_outline
-                        )
-                        print(
-                            json.dumps(
-                                {"text": text, "class": "loading", "tooltip": tooltip}
-                            )
-                        )
-                    else:
-                        print(json.dumps(loading_dict))
+            fetch = needs_fetch
+            needs_fetch = False
 
-                speedtest_data = run_speedtest()
-                text, output_class, tooltip = render_output(
-                    speedtest_data=speedtest_data, icon=speedtest_data.icon
+        if not util.network_is_reachable():
+            print(
+                json.dumps(
+                    {
+                        "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
+                        "class": "error",
+                        "tooltip": "Speedtest error",
+                    }
                 )
-                output = {
-                    "text": text,
-                    "class": output_class,
-                    "tooltip": tooltip,
-                }
-            else:
-                output = {
-                    "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
-                    "class": "error",
-                    "tooltip": "Speedtest error",
-                }
+            )
+            continue
 
-        print(json.dumps(output))
+        if fetch:
+            loading = (
+                f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Speedtest running..."
+            )
+            loading_dict = {
+                "text": loading,
+                "class": "loading",
+                "tooltip": "Speedtest is running",
+            }
+
+            if (
+                speedtest_data
+                and type(speedtest_data) is Results
+                and speedtest_data.success
+            ):
+                text, _, tooltip = render_output(
+                    speedtest_data=speedtest_data, icon=glyphs.md_timer_outline
+                )
+                print(
+                    json.dumps({"text": text, "class": "loading", "tooltip": tooltip})
+                )
+            else:
+                print(json.dumps(loading_dict))
+
+            speedtest_data = run_speedtest()
+
+        if speedtest_data is None:
+            continue
+
+        if speedtest_data and type(speedtest_data) is Results:
+            text, output_class, tooltip = render_output(
+                speedtest_data=speedtest_data, icon=speedtest_data.icon
+            )
+            print(
+                json.dumps(
+                    {
+                        "text": text,
+                        "class": output_class,
+                        "tooltip": tooltip,
+                    }
+                )
+            )
 
 
 @click.command(
@@ -397,6 +420,8 @@ def worker():
     "-t", "--test", default=False, is_flag=True, help="Print the output and exit"
 )
 def main(interval: int, test: bool):
+    global formats, needs_fetch
+
     if test:
         speedtest_data = run_speedtest()
         text, output_class, tooltip = render_output(
@@ -410,11 +435,16 @@ def main(interval: int, test: bool):
     logging.info("[main] - entering function")
 
     threading.Thread(target=worker, args=(), daemon=True).start()
-    update_event.set()
+
+    with condition:
+        needs_fetch = True
+        condition.notify()
 
     while True:
         time.sleep(interval)
-        update_event.set()
+        with condition:
+            needs_fetch = True
+            condition.notify()
 
 
 if __name__ == "__main__":

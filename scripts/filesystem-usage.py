@@ -541,10 +541,6 @@ def worker(mountpoints: list[str], unit: str, show_stats: bool):
                 print(
                     json.dumps({"text": text, "class": "loading", "tooltip": tooltip})
                 )
-
-                disk_info = get_disk_usage(
-                    mountpoints=mountpoints, show_stats=show_stats
-                )
             else:
                 print(json.dumps(loading_dict))
 

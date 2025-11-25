@@ -339,7 +339,6 @@ def worker(interfaces: list[str]):
             else:
                 print(json.dumps(loading_dict))
 
-            logging.debug("[worker] - passing to get_network_throughput")
             network_throughput = get_network_throughput(interfaces=interfaces)
 
         if network_throughput is None:
@@ -350,12 +349,15 @@ def worker(interfaces: list[str]):
                 text, output_class, tooltip = render_output(
                     network_throughput=network_throughput[format_index], icon=None
                 )
-                output = {
-                    "text": text,
-                    "class": output_class,
-                    "tooltip": tooltip,
-                }
-                print(json.dumps(output))
+                print(
+                    json.dumps(
+                        {
+                            "text": text,
+                            "class": output_class,
+                            "tooltip": tooltip,
+                        }
+                    )
+                )
 
 
 @click.command(name="run", help="Get network throughput via /sys/class/net")

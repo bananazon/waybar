@@ -542,49 +542,51 @@ def worker(package_types: list[str]):
             needs_redraw = False
 
         logging.info("[worker] - entering worker loop")
-        if not util.waybar_is_running():
-            logging.info("[worker] - waybar not running")
-            sys.exit(0)
-        else:
-            if not util.network_is_reachable():
-                output = {
-                    "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
-                    "class": "error",
-                    "tooltip": "Software update error",
-                }
-                print(json.dumps(output))
-                update_data = None
-                continue
-
-            if fetch:
-                update_data = []
-                for package_type in package_types:
-                    print(
-                        json.dumps(
-                            {
-                                "text": f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type} updates...",
-                                "class": "loading",
-                                "tooltip": f"Checking {package_type} updates...",
-                            }
-                        )
-                    )
-                    package_data = find_updates(package_type=package_type)
-                    if package_data:
-                        update_data.append(package_data)
-
-            if update_data and len(update_data) > 0:
-                if redraw:
-                    count = sum(item.count for item in update_data)
-                    icon = glyphs.md_alert if count > 0 else util.get_distro_icon()
-                    text, output_class, tooltip = render_output(
-                        update_data=update_data[format_index], icon=icon
-                    )
-                    output = {
-                        "text": text,
-                        "class": output_class,
-                        "tooltip": tooltip,
+        if not util.network_is_reachable():
+            print(
+                json.dumps(
+                    {
+                        "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
+                        "class": "error",
+                        "tooltip": "Software update error",
                     }
-                    print(json.dumps(output))
+                )
+            )
+            update_data = None
+            continue
+
+        if fetch:
+            update_data = []
+            for package_type in package_types:
+                print(
+                    json.dumps(
+                        {
+                            "text": f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking {package_type} updates...",
+                            "class": "loading",
+                            "tooltip": f"Checking {package_type} updates...",
+                        }
+                    )
+                )
+                package_data = find_updates(package_type=package_type)
+                if package_data:
+                    update_data.append(package_data)
+
+        if update_data and len(update_data) > 0:
+            if redraw:
+                count = sum(item.count for item in update_data)
+                icon = glyphs.md_alert if count > 0 else util.get_distro_icon()
+                text, output_class, tooltip = render_output(
+                    update_data=update_data[format_index], icon=icon
+                )
+                print(
+                    json.dumps(
+                        {
+                            "text": text,
+                            "class": output_class,
+                            "tooltip": tooltip,
+                        }
+                    )
+                )
 
 
 @click.command(

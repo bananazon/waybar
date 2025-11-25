@@ -224,34 +224,28 @@ def worker(radius: str, limit: int, magnitude: float):
         update_event.clear()
 
         logging.info("[worker] entering main loop")
-        if not util.waybar_is_running():
-            logging.info("[worker] waybar not running")
-            sys.exit(0)
-        else:
-            if util.network_is_reachable():
-                print(json.dumps(loading_dict))
+        if util.network_is_reachable():
+            print(json.dumps(loading_dict))
 
-                quake_data = get_quake_data(
-                    radius=radius, limit=limit, magnitude=magnitude
-                )
-                if quake_data.success:
-                    output = {
-                        "text": f"Earthquakes: {len(quake_data.quakes)}",
-                        "class": "success",
-                        "tooltip": generate_tooltip(quake_data=quake_data),
-                    }
-                else:
-                    output = {
-                        "text": f"Earthquakes: {quake_data.error}",
-                        "class": "error",
-                        "tooltip": "Earthquakes error",
-                    }
+            quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
+            if quake_data.success:
+                output = {
+                    "text": f"Earthquakes: {len(quake_data.quakes)}",
+                    "class": "success",
+                    "tooltip": generate_tooltip(quake_data=quake_data),
+                }
             else:
                 output = {
-                    "text": "the network is unreachable",
+                    "text": f"Earthquakes: {quake_data.error}",
                     "class": "error",
                     "tooltip": "Earthquakes error",
                 }
+        else:
+            output = {
+                "text": "the network is unreachable",
+                "class": "error",
+                "tooltip": "Earthquakes error",
+            }
 
         print(json.dumps(output))
 

@@ -190,7 +190,7 @@ def worker(paths: list[str]) -> list[PathEntry]:
                 if path_usage:
                     disk_consumers.append(path_usage)
 
-        if disk_consumers:
+        if not disk_consumers:
             continue
 
         if disk_consumers and len(disk_consumers) > 0:
@@ -198,12 +198,15 @@ def worker(paths: list[str]) -> list[PathEntry]:
                 text, output_class, tooltip = render_output(
                     disk_consumers=disk_consumers[format_index], icon=glyphs.md_folder
                 )
-                output = {
-                    "text": text,
-                    "class": output_class,
-                    "tooltip": tooltip,
-                }
-                print(json.dumps(output))
+                print(
+                    json.dumps(
+                        {
+                            "text": text,
+                            "class": output_class,
+                            "tooltip": tooltip,
+                        }
+                    )
+                )
 
 
 @click.command(

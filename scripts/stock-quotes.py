@@ -30,7 +30,6 @@ class StockQuotes:
         self.error: str | None = None
 
         self.symbols = kwargs.get("symbols", [])
-        self.extended_details_enabled = kwargs.get("extended_details_enabled", False)
         self.logger = util.configure_logger(
             debug=False, name=os.path.basename(__file__), logfile=logfile
         )
@@ -196,87 +195,34 @@ class StockQuotes:
         self.logger.info("refresh complete")
         self.updated = util.get_human_timestamp()
 
-        # Only for extended details
-        # if self.extended_details_enabled:
-        #     for symbol, item in self.ticker.asset_profile.items():
-        #         if quotes_map[symbol]:
-        #             asset_profile = from_dict(
-        #                 data_class=yfinance.AssetProfile,
-        #                 data=cast(dict, item),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].assetProfile = asset_profile
-
-        #     for symbol, item in self.ticker.earnings_trend.items():
-        #         if quotes_map[symbol]:
-        #             item = cast(dict[str, Any], item)
-        #             # pprint(item["trend"])
-
-        #             for idx, trend_item in enumerate(item["trend"]):
-        #                 if "epsTrend" in item["trend"][idx]:
-        #                     old_eps_trend = item["trend"][idx]["epsTrend"]
-        #                     try:
-        #                         item["trend"][idx]["epsTrend"] = {
-        #                             "thirtyDaysAgo": old_eps_trend["30daysAgo"],
-        #                             "sixtyDaysAgo": old_eps_trend["60daysAgo"],
-        #                             "sevenDaysAgo": old_eps_trend["7daysAgo"],
-        #                             "ninetyDaysAgo": old_eps_trend["90daysAgo"],
-        #                             "current": old_eps_trend["current"],
-        #                             "epsTrendCurrency": old_eps_trend[
-        #                                 "epsTrendCurrency"
-        #                             ],
-        #                         }
-        #                     except Exception:
-        #                         pass
-
-        #             earnings_trend = from_dict(
-        #                 data_class=yfinance.EarningsTrend,
-        #                 data=cast(dict, item),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].earnings_trend = earnings_trend
-
-        #     for symbol, item in self.ticker.key_stats.items():
-        #         if quotes_map[symbol]:
-        #             item = cast(dict[str, Any], item)
-        #             if "52WeekChange" in item:
-        #                 item["fiftyTwoWeekChange"] = item["52WeekChange"]
-        #                 del item["52WeekChange"]
-
-        #             key_stats = from_dict(
-        #                 data_class=yfinance.KeyStats,
-        #                 data=cast(dict, item),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].key_stats = key_stats
-
-        #     quotes_dict = cast(dict[str, dict], self.ticker.quotes)
+        # for symbol, item in self.ticker.earnings_trend.items():
         #     if quotes_map[symbol]:
-        #         for symbol, item in quotes_dict.items():
-        #             quotes = from_dict(
-        #                 data_class=yfinance.Quotes,
-        #                 data=cast(dict, item),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].quotes = quotes
+        #         item = cast(dict[str, Any], item)
+        #         # pprint(item["trend"])
 
-        #     for symbol, detail in self.ticker.summary_detail.items():
-        #         if quotes_map[symbol]:
-        #             summary_detail = from_dict(
-        #                 data_class=yfinance.SummaryDetail,
-        #                 data=cast(dict, detail),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].summary_detail = summary_detail
+        #         for idx, trend_item in enumerate(item["trend"]):
+        #             if "epsTrend" in item["trend"][idx]:
+        #                 old_eps_trend = item["trend"][idx]["epsTrend"]
+        #                 try:
+        #                     item["trend"][idx]["epsTrend"] = {
+        #                         "thirtyDaysAgo": old_eps_trend["30daysAgo"],
+        #                         "sixtyDaysAgo": old_eps_trend["60daysAgo"],
+        #                         "sevenDaysAgo": old_eps_trend["7daysAgo"],
+        #                         "ninetyDaysAgo": old_eps_trend["90daysAgo"],
+        #                         "current": old_eps_trend["current"],
+        #                         "epsTrendCurrency": old_eps_trend[
+        #                             "epsTrendCurrency"
+        #                         ],
+        #                     }
+        #                 except Exception:
+        #                     pass
 
-        #     for symbol, item in self.ticker.summary_profile.items():
-        #         if quotes_map[symbol]:
-        #             summary_profile = from_dict(
-        #                 data_class=yfinance.SummaryProfile,
-        #                 data=cast(dict, item),
-        #                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #             )
-        #             quotes_map[symbol].summary_profile = summary_profile
+        #         earnings_trend = from_dict(
+        #             data_class=yfinance.EarningsTrend,
+        #             data=cast(dict, item),
+        #             config=Config(type_hooks={datetime: datetime.fromisoformat}),
+        #         )
+        #         quotes_map[symbol].earnings_trend = earnings_trend
 
         for _, quote in quotes_map.items():
             self.data.append(quote)

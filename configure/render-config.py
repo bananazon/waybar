@@ -67,6 +67,13 @@ class SoftwareUpdates:
 
 
 @dataclass
+class StockQuotes:
+    enabled: bool = False
+    interval: int = 900
+    symbols: list[str] = field(default_factory=list)
+
+
+@dataclass
 class WifiStatus:
     enabled: bool = False
     interval: int = 1800
@@ -95,6 +102,7 @@ class Configuration:
     filesystem_usage: FilesystemUsage = field(default_factory=FilesystemUsage)
     network_throughput: NetworkThroughput = field(default_factory=NetworkThroughput)
     software_updates: SoftwareUpdates = field(default_factory=SoftwareUpdates)
+    stock_quotes: StockQuotes = field(default_factory=StockQuotes)
     weather: Weather = field(default_factory=Weather)
     wifi_status: WifiStatus = field(default_factory=WifiStatus)
 
@@ -225,6 +233,10 @@ def render_template(
         if len(configuration.software_updates.package_types) > 0:
             modules_right.append("custom/software-updates")
 
+    if configuration.stock_quotes and configuration.stock_quotes.enabled:
+        if len(configuration.stock_quotes.symbols) > 0:
+            modules_right.append("custom/stock-quotes")
+
     if configuration.weather and configuration.weather.enabled:
         if configuration.weather.api_key and len(configuration.weather.locations) > 0:
             modules_right.append("custom/weather")
@@ -261,6 +273,7 @@ def render_template(
             quakes=static_module_map.get("quakes", StaticModule()),
             scripts_path=configuration.scripts_path or "~/.config/waybar/scripts",
             su=configuration.software_updates or StaticModule(),
+            stock_quotes=configuration.stock_quotes or StockQuotes(),
             spacing=configuration.spacing or 5,
             speedtest=static_module_map.get("speedtest", StaticModule()),
             wifi=configuration.wifi_status or StaticModule(),

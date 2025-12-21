@@ -1,8 +1,8 @@
 {
     "layer": "{{ layer }}",
     "position": "{{ position }}",
-    "height": {{ height }},
-    "spacing": {{ spacing }},
+    "height": "{{ height }}",
+    "spacing": "{{ spacing }}",
     "exclusive": {{ ("true" if exclusive is not none) or "false" }},
 
     "modules-right": {{ modules_right | tojson(indent=4) | indent(4) }},
@@ -85,6 +85,18 @@
         "return-type": "json",
         "exec": "{{ scripts_path }}/quakes.py --interval {{ quakes.interval if quakes is defined else 1800 }} --radius {{ quakes.radius if quakes is defined else "100m" }} --limit {{ quakes.limit if quakes is defined else 20 }} --magnitude {{ quakes.magnitude if quakes is defined else 0.1 }}",
         "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/quakes.py --interval {{ quakes.interval if quakes is defined else 1800 }} --radius {{ quakes.radius if quakes is defined else "100m" }} --limit {{ quakes.limit if quakes is defined else 20 }} --magnitude {{ quakes.magnitude if quakes is defined else 0.1 }}')"
+    },
+    {% endif %}
+
+    {% if stock_quotes.enabled %}
+    "custom/stock-quotes": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "{{ scripts_path }}/stock-quotes.py {% for s in stock_quotes.symbols %}--symbol '{{ s }}' {% endfor %}--interval {{ stock_quotes.interval if stock_quotes is defined else 900 }}",
+        {% if weather.locations|length > 1 %}
+            "on-click": "kill -USR1 $(pgrep -f 'python3 {{ scripts_path }}/stock-quotes.py {% for s in stock_quotes.symbols %}--symbol {{ s }} {% endfor %}--interval {{ stock_quotes.interval if stock_quotes is defined else 900 }}')",
+        {% endif %}
+        "on-click-right": "kill -HUP $(pgrep -f 'python3 {{ scripts_path }}/stock-quotes.py {% for s in stock_quotes.symbols %}--symbol {{ s }} {% endfor %}--interval {{ stock_quotes.interval if stock_quotes is defined else 900 }}')"
     },
     {% endif %}
 

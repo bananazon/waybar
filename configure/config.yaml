@@ -67,6 +67,14 @@ software_updates:
     - flatpak
     - snap
 
+stock_quotes:
+  enabled: true
+  interval: 900
+  symbols:
+    - AAPL
+    - GOOG
+    - NOW
+
 wifi_status:
   enabled: true
   interval: 10
@@ -79,5 +87,5 @@ weather:
   api_key: "{key:wapi_key}"
   locations:
     - "San Diego, CA, US"
-    - "Tucson, AZ, US"
+    - "Chula Vista, CA, US"
     - "Yucaipa, CA, US"

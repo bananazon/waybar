@@ -37,6 +37,7 @@ tooltip label {
 #custom-quakes,
 #custom-software-updates,
 #custom-speedtest,
+#custom-stock-quotes,
 #custom-weather,
 #custom-wifi-status {
     background: transparent;
@@ -52,6 +53,7 @@ tooltip label {
 #custom-quakes.loading,
 #custom-software-updates.loading,
 #custom-speedtest.loading,
+#custom-stock-quotes.loading,
 #custom-weather.loading,
 #custom-wifi-status.loading {
     color: #adadad;
@@ -68,6 +70,7 @@ tooltip label {
 #custom-quakes.error,
 #custom-software-updates.error,
 #custom-speedtest.error,
+#custom-stock-quotes.error,
 #custom-weather.error,
 #custom-wifi-status.error {
     color: #ffb8b8;

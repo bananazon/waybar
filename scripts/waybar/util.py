@@ -1,5 +1,6 @@
 import getpass
 import json
+import logging
 import os
 import re
 import shlex
@@ -18,6 +19,17 @@ from dacite import Config, from_dict
 from . import glyphs, http
 
 
+class LevelPadFormatter(logging.Formatter):
+    LEVEL_WIDTH = len("WARNING")
+
+    def format(self, record):
+        level = record.levelname
+        pad = " " * (self.LEVEL_WIDTH - len(level))
+        record.padded = f"[{level}]{pad}"
+        record.unpadded = f"[{level}]"
+        return super().format(record)
+
+
 @dataclass
 class LocationData:
     city: str | None = None
@@ -30,6 +42,33 @@ class LocationData:
     readme: str | None = None
     region: str | None = None
     timezone: str | None = None
+
+
+def configure_logger(debug: bool, name: str, logfile: Path) -> logging.Logger:
+    level = logging.DEBUG if debug else logging.INFO
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Logs go only to your file
+    # No interference from pytest / SwiftBar / root handlers
+    # First log line is written immediately
+    logger.propagate = False
+
+    # Do not add handlers twice
+    if any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        return logger
+
+    handler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
+    handler.setLevel(level)
+    formatter = LevelPadFormatter(
+        # f"%(asctime)s %(padded)s {self.plugin_basename_no_suffix}.%(funcName)s - %(message)s"
+        f"%(asctime)s %(unpadded)s {name}.%(funcName)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
 
 
 def run_piped_command(
@@ -205,17 +244,21 @@ def byte_converter(number: float, unit: str | None, use_int: bool) -> str:
             return f"{number} {suffix}"
 
 
-def pad_float(number: float | str, round_int: bool) -> str:
+def pad_float(number: float = 0.0, round_int: bool = False) -> str:
     """
     Pad a float to two decimal places.
     """
-    if type(number) is str:
-        number = float(number)
-
     if isinstance(number, int) and round_int:
         return str(int(number))
     else:
         return f"{number:.2f}"
+
+
+def float_to_pct(number: float = 0.0) -> str:
+    """
+    Convert a floating point number to its percent equivalent.
+    """
+    return f"{number:.2f}%"
 
 
 def processor_speed(number: float) -> str | None:

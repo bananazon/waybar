@@ -7,169 +7,21 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
 import click
 from dacite import Config, from_dict
 from waybar import glyphs, util
+from waybar.data import filesystem_usage
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
-
-
-@dataclass
-class DFEntry:
-    available: int = 0
-    blocks: int = 0
-    filesystem: str = ""
-    free: int = 0
-    free_percent: int = 0
-    mounted_on: str | None = None
-    use_percent: int = 0
-    used: int = 0
-
-
-@dataclass
-class KvOptions:
-    discard: str | None = None
-    space_cache: str | None = None
-    subvolid: str | None = None
-    subvol: str | None = None
-
-
-@dataclass
-class FindMount:
-    target: str | None = None
-    source: str | None = None
-    fstype: str | None = None
-    options: list[str] = field(default_factory=list)
-    kv_options: KvOptions = field(default_factory=KvOptions)
-
-
-@dataclass
-class DiskStatsSample:
-    device: str | None = None
-    discarding_time_ms: int = 0
-    discards_completed_successfully: int = 0
-    discards_merged: int = 0
-    flush_requests_completed_successfully: int = 0
-    flushing_time_ms: int = 0
-    io_in_progress: int = 0
-    io_time_ms: int = 0
-    maj: int = 0
-    min: int = 0
-    read_time_ms: int = 0
-    reads_completed: int = 0
-    reads_merged: int = 0
-    sectors_discarded: int = 0
-    sectors_read: int = 0
-    sectors_written: int = 0
-    weighted_io_time_ms: int = 0
-    write_time_ms: int = 0
-    writes_completed: int = 0
-    writes_merged: int = 0
-
-
-@dataclass
-class BlockDevice:
-    alignment: int = 0
-    dax: bool = False
-    disc_aln: int = 0
-    disc_gran: str | None = None
-    disc_max: str | None = None
-    disc_zero: bool = False
-    disk_seq: int = 0
-    fsavail: str | None = None
-    fsroots: list[str] = field(default_factory=list)
-    fssize: str | None = None
-    fstype: str | None = None
-    fsuse_pct: str | None = None
-    fsused: str | None = None
-    fsver: str | None = None
-    group: str | None = None
-    hctl: str | None = None
-    hotplug: bool = False
-    id: str | None = None
-    id_link: str | None = None
-    kname: str | None = None
-    label: str | None = None
-    log_sec: int = 0
-    maj: str | None = None
-    maj_min: str | None = None
-    min: str | None = None
-    min_io: int = 0
-    mode: str | None = None
-    model: str | None = None
-    mountpoint: str | None = None
-    mountpoints: list[str] = field(default_factory=list)
-    mq: str | None = None
-    name: str | None = None
-    opt_io: int = 0
-    owner: str | None = None
-    partflags: str | None = None
-    partlabel: str | None = None
-    partn: int = 0
-    parttype: str | None = None
-    parttypename: str | None = None
-    partuuid: str | None = None
-    path: str | None = None
-    phy_sec: int = 0
-    pkname: str | None = None
-    pttype: str | None = None
-    ptuuid: str | None = None
-    ra: int = 0
-    rand: bool = False
-    rev: str | None = None
-    rm: bool = False
-    ro: bool = False
-    rota: bool = False
-    rq_size: int = 0
-    sched: str | None = None
-    serial: str | None = None
-    size: str | None = None
-    start: int = 0
-    state: str | None = None
-    subsystems: str | None = None
-    tran: str | None = None
-    type: str | None = None
-    uuid: str | None = None
-    vendor: str | None = None
-    wsame: str | None = None
-    wwn: str | None = None
-    zone_amax: int = 0
-    zone_app: str | None = None
-    zone_nr: int = 0
-    zone_omax: int = 0
-    zone_sz: str | None = None
-    zone_wgran: str | None = None
-    zoned: str | None = None
-
-
-@dataclass
-class FilesystemInfo:
-    success: bool = False
-    error: str | None = None
-    filesystem: str | None = None
-    free: int = 0
-    fsopts: str | None = None
-    fstype: str | None = None
-    lsblk: BlockDevice = field(default_factory=BlockDevice)
-    mountpoint: str | None = None
-    pct_free: int = 0
-    pct_total: int = 0
-    pct_used: int = 0
-    total: int = 0
-    used: int = 0
-    sample1: DiskStatsSample = field(default_factory=DiskStatsSample)
-    sample2: DiskStatsSample = field(default_factory=DiskStatsSample)
-    updated: str | None = None
 
 
 cache_dir = util.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
-disk_info: list[FilesystemInfo] | None = []
+disk_info: list[filesystem_usage.FilesystemInfo] | None = []
 format_index: int = 0
 logfile: Path = cache_dir / "waybar-filesystem-usage.log"
 needs_fetch: bool = False
@@ -215,7 +67,9 @@ _ = signal.signal(signal.SIGHUP, refresh_handler)
 _ = signal.signal(signal.SIGUSR1, toggle_format)
 
 
-def generate_tooltip(disk_info: FilesystemInfo, show_stats: bool) -> str:
+def generate_tooltip(
+    disk_info: filesystem_usage.FilesystemInfo, show_stats: bool
+) -> str:
     logging.debug(
         f"[generate_tooltip] - entering with mountpoint={disk_info.mountpoint}"
     )
@@ -275,9 +129,9 @@ def filesystem_exists(mountpoint: str) -> bool:
     return True if rc == 0 else False
 
 
-def get_sample() -> list[DiskStatsSample]:
+def get_sample() -> list[filesystem_usage.DiskStatsSample]:
     logging.debug("[get_sample] - entering function")
-    sample: list[DiskStatsSample] = []
+    sample: list[filesystem_usage.DiskStatsSample] = []
     command = "cat /proc/diskstats | jc --pretty --proc-diskstats"
     rc, stdout_raw, _ = util.run_piped_command(command)
 
@@ -287,14 +141,16 @@ def get_sample() -> list[DiskStatsSample]:
         json_data = cast(list[dict[str, object]], json.loads(stdout))
         for device in json_data:
             entry = from_dict(
-                data_class=DiskStatsSample, data=device, config=Config(cast=[int, str])
+                data_class=filesystem_usage.DiskStatsSample,
+                data=device,
+                config=Config(cast=[int, str]),
             )
             sample.append(entry)
 
     return sample
 
 
-def parse_lsblk(filesystem: str) -> BlockDevice:
+def parse_lsblk(filesystem: str) -> filesystem_usage.BlockDevice:
     logging.debug(f"[parse_lsblk] - entering with filesystem={filesystem}")
     mapping: dict[str, str] = {
         "id-link": "id_link",
@@ -312,7 +168,7 @@ def parse_lsblk(filesystem: str) -> BlockDevice:
         "zone-app": "zone_app",
     }
 
-    block_device: BlockDevice = BlockDevice()
+    block_device: filesystem_usage.BlockDevice = filesystem_usage.BlockDevice()
     command = f"lsblk -O --json {filesystem}"
     rc, stdout_raw, _ = util.run_piped_command(command)
 
@@ -325,7 +181,7 @@ def parse_lsblk(filesystem: str) -> BlockDevice:
                 bd[good] = bd.pop(bad)
 
         block_device = from_dict(
-            data_class=BlockDevice,
+            data_class=filesystem_usage.BlockDevice,
             data=bd,
             config=Config(
                 cast=[int, float],
@@ -335,16 +191,18 @@ def parse_lsblk(filesystem: str) -> BlockDevice:
         )
         return block_device
 
-    return BlockDevice()
+    return filesystem_usage.BlockDevice()
 
 
-def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemInfo]:
+def get_disk_usage(
+    mountpoints: list[str], show_stats: bool
+) -> list[filesystem_usage.FilesystemInfo]:
     logging.debug(f"[get_disk_usage] - entering with mountpoints={mountpoints}")
-    disk_usage: list[FilesystemInfo] = []
-    first: DiskStatsSample = DiskStatsSample()
-    first_sample: list[DiskStatsSample] = []
-    second: DiskStatsSample = DiskStatsSample()
-    second_sample: list[DiskStatsSample] = []
+    disk_usage: list[filesystem_usage.FilesystemInfo] = []
+    first: filesystem_usage.DiskStatsSample = filesystem_usage.DiskStatsSample()
+    first_sample: list[filesystem_usage.DiskStatsSample] = []
+    second: filesystem_usage.DiskStatsSample = filesystem_usage.DiskStatsSample()
+    second_sample: list[filesystem_usage.DiskStatsSample] = []
 
     if show_stats:
         first_sample = get_sample()
@@ -371,7 +229,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                             item[good] = item.pop(bad)
 
                     df_item = from_dict(
-                        data_class=DFEntry,
+                        data_class=filesystem_usage.DFEntry,
                         data=item,
                         config=Config(
                             cast=[int, float],
@@ -380,14 +238,14 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                         ),
                     )
                 else:
-                    error_item = FilesystemInfo(
+                    error_item = filesystem_usage.FilesystemInfo(
                         success=False,
                         error=stderr or f"failed to execute {command}",
                     )
                     disk_usage.append(error_item)
                     return disk_usage
             except Exception as e:
-                error_item = FilesystemInfo(
+                error_item = filesystem_usage.FilesystemInfo(
                     success=False,
                     error=stderr or f"failed to execute {command}: {e}",
                 )
@@ -405,7 +263,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                         json_data = cast(list[dict[str, object]], json.loads(stdout))
                         item = json_data[0]
                         findmnt_item = from_dict(
-                            data_class=FindMount,
+                            data_class=filesystem_usage.FindMount,
                             data=item,
                             config=Config(
                                 cast=[int, float, dict],
@@ -414,14 +272,14 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                             ),
                         )
                     else:
-                        error_item = FilesystemInfo(
+                        error_item = filesystem_usage.FilesystemInfo(
                             success=False,
                             error=stderr or f"failed to execute {command}",
                         )
                         disk_usage.append(error_item)
                         return disk_usage
                 except Exception as e:
-                    error_item = FilesystemInfo(
+                    error_item = filesystem_usage.FilesystemInfo(
                         success=False,
                         error=stderr or f"failed to execute {command}: {e}",
                     )
@@ -444,7 +302,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
 
                 if df_item and findmnt_item:
                     disk_usage.append(
-                        FilesystemInfo(
+                        filesystem_usage.FilesystemInfo(
                             success=True,
                             filesystem=df_item.filesystem,
                             mountpoint=mountpoint,
@@ -464,7 +322,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                     )
             else:
                 disk_usage.append(
-                    FilesystemInfo(
+                    filesystem_usage.FilesystemInfo(
                         success=False,
                         error="failed to find the data",
                         mountpoint=mountpoint,
@@ -472,7 +330,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
                 )
         else:
             disk_usage.append(
-                FilesystemInfo(
+                filesystem_usage.FilesystemInfo(
                     success=False,
                     error="doesn't exist",
                     mountpoint=mountpoint,
@@ -483,7 +341,7 @@ def get_disk_usage(mountpoints: list[str], show_stats: bool) -> list[FilesystemI
 
 
 def render_output(
-    disk_info: FilesystemInfo, unit: str, icon: str, show_stats: bool
+    disk_info: filesystem_usage.FilesystemInfo, unit: str, icon: str, show_stats: bool
 ) -> tuple[str, str, str]:
     if disk_info.success:
         pct_free = disk_info.pct_free
@@ -607,7 +465,7 @@ def main(
     formats = list(range(len(mountpoint)))
 
     if test:
-        disk_info: list[FilesystemInfo] = get_disk_usage(
+        disk_info: list[filesystem_usage.FilesystemInfo] = get_disk_usage(
             mountpoints=mountpoint, show_stats=show_stats
         )
 

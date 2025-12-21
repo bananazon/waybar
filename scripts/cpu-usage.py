@@ -2,111 +2,18 @@
 
 import json
 import platform
-from dataclasses import dataclass, field
 from typing import cast
 
 import click
 from dacite import Config, from_dict
 from waybar import glyphs, util
-
-
-@dataclass
-class CacheValues:
-    associativity: str | None = None
-    configuration: str | None = None
-    error_correction_type: str | None = None
-    install_sram_type: str | None = None
-    installed_size: str = ""
-    location: str | None = None
-    maximum_size: str | None = None
-    operational_mode: str | None = None
-    socket_designation: str | None = None
-    supported_sram_types: list[str] = field(default_factory=list)
-    speed: str | None = None
-    system_type: str | None = None
-
-
-@dataclass
-class CpuCache:
-    handle: str | None = None
-    type: int = 0
-    bytes: int = 0
-    description: str | None = None
-    values: CacheValues = field(default_factory=CacheValues)
-
-
-@dataclass
-class CoreInfo:
-    tlb_size: str | None = None
-    address_sizes: str | None = None
-    address_size_physical: str | None = None
-    address_size_virtual: str | None = None
-    apicid: int = 0
-    bogomips: float = 0.0
-    bugs: list[str] = field(default_factory=list)
-    cache_size: str | None = None
-    cache_alignment: int = 0
-    cache_size_num: int = 0
-    cache_size_unit: str | None = None
-    clfush_size: int = 0
-    core_id: int = 0
-    cpu_cores: int = 0
-    cpu_family: int = 0
-    cpu_frequency: float = 0.0
-    cpuid_level: int = 0
-    flags: list[str] = field(default_factory=list)
-    fpu: bool = False
-    fpu_exception: bool = False
-    initial_apicid: int = 0
-    microcode: str | None = None
-    model_name: str | None = None
-    model: int = 0
-    physical_id: int = 0
-    power_management: str | None = None
-    processor: int = 0
-    siblings: int = 0
-    stepping: int = 0
-    vendor_id: str | None = None
-    wp: bool = False
-
-
-@dataclass
-class CorePercent:
-    cpu: str | None = None
-    percent_usr: float = 0.0
-    percent_nice: float = 0.0
-    percent_sys: float = 0.0
-    percent_iowait: float = 0.0
-    percent_irq: float = 0.0
-    percent_soft: float = 0.0
-    percent_steal: float = 0.0
-    percent_guest: float = 0.0
-    percent_gnice: float = 0.0
-    percent_idle: float = 0.0
-    type: str | None = None
-    timestamp: str | None = None
-
-
-@dataclass
-class CpuInfo:
-    success: bool = False
-    error: str | None = None
-    caches: list[CpuCache] = field(default_factory=list)
-    cores_logical: int = 0
-    cores_physical: int = 0
-    cpu_load: list[CorePercent] = field(default_factory=list)
-    freq_cur: float = 0.0
-    freq_max: float = 0.0
-    freq_min: float = 0.0
-    model: str | None = None
-    updated: str | None = None
-
+from waybar.data import cpu_usage
 
 context_settings = dict(help_option_names=["-h", "--help"])
-CORE_INFO: list[CoreInfo] = []
+CORE_INFO: list[cpu_usage.CoreInfo] = []
 
 
-def generate_tooltip(cpu_info: CpuInfo) -> str:
+def generate_tooltip(cpu_info: cpu_usage.CpuInfo) -> str:
     tooltip: list[str] = []
 
     if cpu_info.model:
@@ -171,8 +78,8 @@ def get_icon():
         return glyphs.oct_cpu
 
 
-def get_cache_info() -> list[CpuCache]:
-    caches: list[CpuCache] = []
+def get_cache_info() -> list[cpu_usage.CpuCache]:
+    caches: list[cpu_usage.CpuCache] = []
     command = "sudo dmidecode -t cache | jc --dmidecode"
     rc, stdout_raw, _ = util.run_piped_command(command)
 
@@ -181,7 +88,7 @@ def get_cache_info() -> list[CpuCache]:
         json_data = cast(list[dict[str, object]], json.loads(stdout))
         for item in json_data:
             cache_item = from_dict(
-                data_class=CpuCache,
+                data_class=cpu_usage.CpuCache,
                 data=item,
                 config=Config(
                     cast=[int, float],
@@ -248,7 +155,7 @@ def parse_proc_cpuinfo():
                     core[good] = core.pop(bad)
 
             core_item = from_dict(
-                data_class=CoreInfo,
+                data_class=cpu_usage.CoreInfo,
                 data=core,
                 config=Config(
                     cast=[int, float],
@@ -259,15 +166,15 @@ def parse_proc_cpuinfo():
             CORE_INFO.append(core_item)
 
 
-def get_cpu_info() -> CpuInfo:
+def get_cpu_info() -> cpu_usage.CpuInfo:
     global CORE_INFO
 
     mapping: dict[str, str] = {
         "time": "timestamp",
     }
 
-    cpu_info: CpuInfo = CpuInfo()
-    cpu_load: list[CorePercent] = []
+    cpu_info: cpu_usage.CpuInfo = cpu_usage.CpuInfo()
+    cpu_load: list[cpu_usage.CorePercent] = []
 
     command = "mpstat -A | jc --pretty --mpstat"
     rc, stdout_raw, stderr_raw = util.run_piped_command(command)
@@ -284,7 +191,7 @@ def get_cpu_info() -> CpuInfo:
                         stanza[good] = stanza.pop(bad)
 
                         core_percent = from_dict(
-                            data_class=CorePercent,
+                            data_class=cpu_usage.CorePercent,
                             data=stanza,
                             config=Config(
                                 cast=[int, float],
@@ -294,7 +201,7 @@ def get_cpu_info() -> CpuInfo:
                         )
                         cpu_load.append(core_percent)
 
-        cpu_info = CpuInfo(
+        cpu_info = cpu_usage.CpuInfo(
             success=True,
             caches=get_cache_info(),
             cores_logical=len(CORE_INFO) or -1,
@@ -307,7 +214,7 @@ def get_cpu_info() -> CpuInfo:
             updated=util.get_human_timestamp(),
         )
     else:
-        cpu_info = CpuInfo(
+        cpu_info = cpu_usage.CpuInfo(
             success=False,
             error=stderr or f'failed to execute "{command}"',
         )

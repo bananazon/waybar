@@ -2,212 +2,40 @@
 
 import json
 import logging
+import os
 import signal
 import sys
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from typing import cast
 
 import click
 from dacite import Config, from_dict
 from waybar import glyphs, http, util
+from waybar.data import weather
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
-
-
-@dataclass
-class WeatherLocation:
-    country: str = ""
-    lat: str = ""
-    localtime_epoch: int = 0
-    locatime: str = ""
-    lon: str = ""
-    name: str = ""
-    region: str = ""
-    tz_id: str = ""
-
-
-# Condition
-@dataclass
-class WeatherCondition:
-    code: int = 0
-    icon: str | None = None
-    text: str | None = None
-
-
-@dataclass
-class WeatherCurrent:
-    cloud: int = 0
-    condition: WeatherCondition = field(default_factory=WeatherCondition)
-    dewpoint_c: float = 0.0
-    dewpoint_f: float = 0.0
-    feelslike_c: float = 0.0
-    feelslike_f: float = 0.0
-    gust_kph: float = 0.0
-    gust_mph: float = 0.0
-    heatindex_c: float = 0.0
-    heatindex_f: float = 0.0
-    humidity: int = 0
-    is_day: int = 0
-    last_updated: str | None = None
-    last_updated_epoch: int = 0
-    precip_in: float = 0.0
-    precip_mm: float = 0.0
-    pressure_in: float = 0.0
-    pressure_mb: float = 0.0
-    temp_c: float = 0.0
-    temp_f: float = 0.0
-    uv: float = 0.0
-    vis_km: float = 0.0
-    vis_miles: float = 0.0
-    wind_degree: int = 0
-    wind_dir: str | None = None
-    wind_kph: float = 0.0
-    wind_mph: float = 0.0
-    windchill_c: float = 0.0
-    windchill_f: float = 0.0
-
-
-# Forecast
-@dataclass
-class WeatherAstro:
-    in_sun_up: bool = False
-    is_moon_up: bool = False
-    moon_illumination: int = 0
-    moon_phase: str | None = None
-    moonrise: str | None = None
-    moonrise_unix: int = 0
-    moonset: str | None = None
-    moonset_unix: int = 0
-    sunrise: str | None = None
-    sunrise_unix: int = 0
-    sunset: str | None = None
-    sunset_unix: int = 0
-
-
-@dataclass
-class WeatherDay:
-    avghumidity: int = 0
-    avgtemp_c: float = 0.0
-    avgtemp_f: float = 0.0
-    avgvis_km: float = 0.0
-    avgvis_miles: float = 0.0
-    condition: WeatherCondition = field(default_factory=WeatherCondition)
-    daily_chance_of_rain: int = 0
-    daily_chance_of_snow: int = 0
-    daily_will_it_rain: int = 0
-    daily_will_it_snow: int = 0
-    maxtemp: float = 0.0
-    maxtemp_c: float = 0.0
-    maxtemp_f: float = 0.0
-    maxwind_kph: float = 0.0
-    maxwind_mph: float = 0.0
-    mintemp_c: float = 0.0
-    mintemp_f: float = 0.0
-    totalprecip_in: float = 0.0
-    totalprecip_mm: float = 0.0
-    totalsnow_cm: float = 0.0
-    uv: float = 0.0
-
-
-@dataclass
-class WeatherForecastHour:
-    chance_of_rain: int = 0
-    chance_of_snow: int = 0
-    cloud: int = 0
-    condition: WeatherCondition = field(default_factory=WeatherCondition)
-    dewpoint_c: float = 0.0
-    dewpoint_f: float = 0.0
-    feelslike_c: float = 0.0
-    feelslike_f: float = 0.0
-    gust_kph: float = 0.0
-    gust_mph: float = 0.0
-    heatindex_c: float = 0.0
-    heatindex_f: float = 0.0
-    humidity: int = 0
-    is_day: int = 0
-    precip_in: float = 0.0
-    precip_mm: float = 0.0
-    pressure_in: float = 0.0
-    pressure_mb: float = 0.0
-    snow_cm: float = 0.0
-    temp_c: float = 0.0
-    temp_f: float = 0.0
-    time_epoch: int = 0
-    timestamp: str | None = None
-    uv: int = 0
-    vis_km: float = 0.0
-    vis_miles: float = 0.0
-    will_it_rain: int = 0
-    will_it_snow: int = 0
-    wind_degree: int = 0
-    wind_dir: str | None = None
-    wind_kph: float = 0.0
-    wind_mph: float = 0.0
-    windchill_c: float = 0.0
-    windchill_f: float = 0.0
-
-
-@dataclass
-class WeatherForecastDay:
-    astro: WeatherAstro = field(default_factory=WeatherAstro)
-    date: str | None = None
-    date_epoch: int = 0
-    day: WeatherDay = field(default_factory=WeatherDay)
-    hour: list[WeatherForecastHour] = field(default_factory=list)
-
-
-@dataclass
-class WeatherForecast:
-    forecastday: list[WeatherForecastDay] = field(default_factory=list)
-
-
-@dataclass
-class WeatherData:
-    location: WeatherLocation = field(default_factory=WeatherLocation)
-    current: WeatherCurrent = field(default_factory=WeatherCurrent)
-    forecast: WeatherForecast = field(default_factory=WeatherForecast)
-
-
-@dataclass
-class LocationData:
-    success: bool = False
-    error: str | None = None
-    icon: str = ""
-    location_short: str = ""
-    location_full: str = ""
-    updated: str | None = None
-    weather: WeatherData = field(default_factory=WeatherData)
 
 
 cache_dir = util.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 format_index: int = 0
+logger: logging.Logger
 logfile = cache_dir / "waybar-weather.log"
 needs_fetch: bool = False
 needs_redraw: bool = False
-weather_data: list[LocationData] | None = []
+weather_data: list[weather.LocationData] | None = []
 
 formats: list[int] = []
 
 update_event = threading.Event()
 
 
-def configure_logging(debug: bool = False):
-    logging.basicConfig(
-        filename=logfile,
-        filemode="w",  # 'a' = append, 'w' = overwrite
-        format="%(asctime)s [%(levelname)-5s] - %(message)s",
-        level=logging.DEBUG if debug else logging.INFO,
-    )
-
-
 def refresh_handler(_signum: int, _frame: object | None):
-    global needs_fetch, needs_redraw
-    logging.info("[refresh_handler] - received SIGHUP — re-fetching data")
+    global needs_fetch, needs_redraw, logger
+    logger.info("received SIGHUP — re-fetching data")
     with condition:
         needs_fetch = True
         needs_redraw = True
@@ -215,15 +43,13 @@ def refresh_handler(_signum: int, _frame: object | None):
 
 
 def toggle_format(_signum: int, _frame: object | None):
-    global formats, format_index, needs_redraw
+    global formats, format_index, needs_redraw, logger
     format_index = (format_index + 1) % len(formats)
     if weather_data and type(weather_data) is list:
         location = weather_data[format_index].location_full
     else:
         location = format_index + 1
-    logging.info(
-        f"[toggle_format] - received SIGUSR1 - switching output format to {location}"
-    )
+    logger.info(f"received SIGUSR1 - switching output format to {location}")
     with condition:
         needs_redraw = True
         condition.notify()
@@ -233,12 +59,11 @@ _ = signal.signal(signal.SIGHUP, refresh_handler)
 _ = signal.signal(signal.SIGUSR1, toggle_format)
 
 
-def generate_tooltip(location_data: LocationData, use_celsius: bool):
+def generate_tooltip(location_data: weather.LocationData, use_celsius: bool):
+    global logger
     # pprint(location_data)
     # exit()
-    logging.debug(
-        f"[generate_tooltip] - entering with mountpoint={location_data.location_full}"
-    )
+    logger.debug(f"entering with mountpoint={location_data.location_full}")
     tooltip: list[str] = []
     tooltip_od: OrderedDict[str, str | int | float] = OrderedDict()
 
@@ -432,10 +257,12 @@ def get_weather_icon(condition_code: int, is_day: bool) -> str:
     return glyphs.md_weather_sunny
 
 
-def get_weather(api_key: str, location: str) -> LocationData:
-    logging.info(f"[get_weather] - entering function with location={location}")
+def get_weather(api_key: str, location: str) -> weather.LocationData:
+    global logger
 
-    location_data: LocationData = LocationData()
+    logger.info(f"entering function with location={location}")
+
+    location_data: weather.LocationData = weather.LocationData()
     response = http.request(
         method="GET",
         url="https://api.weatherapi.com/v1/forecast.json",
@@ -450,47 +277,47 @@ def get_weather(api_key: str, location: str) -> LocationData:
         if response.status == 200:
             if response.body:
                 json_data = cast(dict[str, object], json.loads(response.body))
-                weather = from_dict(
-                    data_class=WeatherData,
+                weather_data = from_dict(
+                    data_class=weather.WeatherData,
                     data=json_data,
                     config=Config(cast=[int, str]),
                 )
 
-                for idx, _ in enumerate(weather.forecast.forecastday):
-                    if weather.forecast.forecastday[idx].astro.moonrise:
-                        weather.forecast.forecastday[
+                for idx, _ in enumerate(weather_data.forecast.forecastday):
+                    if weather_data.forecast.forecastday[idx].astro.moonrise:
+                        weather_data.forecast.forecastday[
                             idx
                         ].astro.moonrise_unix = util.to_unix_time(
-                            input=weather.forecast.forecastday[idx].astro.moonrise
+                            input=weather_data.forecast.forecastday[idx].astro.moonrise
                         )
-                    if weather.forecast.forecastday[idx].astro.moonset:
-                        weather.forecast.forecastday[
+                    if weather_data.forecast.forecastday[idx].astro.moonset:
+                        weather_data.forecast.forecastday[
                             idx
                         ].astro.moonset_unix = util.to_unix_time(
-                            input=weather.forecast.forecastday[idx].astro.moonset
+                            input=weather_data.forecast.forecastday[idx].astro.moonset
                         )
-                    if weather.forecast.forecastday[idx].astro.sunrise:
-                        weather.forecast.forecastday[
+                    if weather_data.forecast.forecastday[idx].astro.sunrise:
+                        weather_data.forecast.forecastday[
                             idx
                         ].astro.sunrise_unix = util.to_unix_time(
-                            input=weather.forecast.forecastday[idx].astro.sunrise
+                            input=weather_data.forecast.forecastday[idx].astro.sunrise
                         )
-                    if weather.forecast.forecastday[idx].astro.sunset:
-                        weather.forecast.forecastday[
+                    if weather_data.forecast.forecastday[idx].astro.sunset:
+                        weather_data.forecast.forecastday[
                             idx
                         ].astro.sunset_unix = util.to_unix_time(
-                            input=weather.forecast.forecastday[idx].astro.sunset
+                            input=weather_data.forecast.forecastday[idx].astro.sunset
                         )
 
-                return LocationData(
+                return weather.LocationData(
                     success=True,
                     icon=get_weather_icon(
-                        condition_code=weather.current.condition.code,
-                        is_day=True if weather.current.is_day == 1 else False,
+                        condition_code=weather_data.current.condition.code,
+                        is_day=True if weather_data.current.is_day == 1 else False,
                     ),
-                    location_short=weather.location.name,
+                    location_short=weather_data.location.name,
                     location_full=location,
-                    weather=weather,
+                    weather=weather_data,
                     updated=util.get_human_timestamp(),
                 )
 
@@ -498,7 +325,7 @@ def get_weather(api_key: str, location: str) -> LocationData:
 
 
 def render_output(
-    location_data: LocationData, use_celsius: bool, icon: str
+    location_data: weather.LocationData, use_celsius: bool, icon: str
 ) -> tuple[str, str, str]:
     text: str = ""
     output_class: str = ""
@@ -511,7 +338,7 @@ def render_output(
     )
     if location_data.success:
         text = f"{icon}{glyphs.icon_spacer}{location_data.location_short} {current_temp}°{'C' if use_celsius else 'F'}"
-        output_class = "success!"
+        output_class = "success"
         tooltip = generate_tooltip(location_data=location_data, use_celsius=use_celsius)
     else:
         text = f"{glyphs.md_alert}{glyphs.icon_spacer}{location_data.location_full} {location_data.error if location_data.error is not None else 'Unknown error'}"
@@ -522,7 +349,7 @@ def render_output(
 
 
 def worker(api_key: str, locations: list[str], use_celsius: bool):
-    global weather_data, needs_fetch, needs_redraw, format_index
+    global weather_data, needs_fetch, needs_redraw, format_index, logger
 
     while True:
         with condition:
@@ -534,7 +361,7 @@ def worker(api_key: str, locations: list[str], use_celsius: bool):
             needs_fetch = False
             needs_redraw = False
 
-        logging.info("[worker] - entering worker loop")
+        logger.info("entering worker loop")
 
         if not util.network_is_reachable():
             output = {
@@ -610,12 +437,15 @@ def main(
     test: bool,
     debug: bool,
 ):
-    global formats, needs_fetch, needs_redraw
+    global formats, needs_fetch, needs_redraw, logger
 
-    configure_logging(debug=debug)
+    logger = util.configure_logger(
+        debug=debug, name=os.path.basename(__file__), logfile=logfile
+    )
+
     formats = list(range(len(location)))
 
-    logging.info("[main] - entering function")
+    logger.info("entering function")
 
     if test:
         weather_data = get_weather(api_key=api_key, location=location[0])

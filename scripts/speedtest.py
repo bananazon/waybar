@@ -10,69 +10,14 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from typing import cast
 
 import click
 from dacite import Config, from_dict
 from waybar import glyphs, util
+from waybar.data import speedtest
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
-
-
-@dataclass
-class Server:
-    cc: str | None = None
-    city: str | None = None
-    country: str | None = None
-    d: str | None = None
-    host: str | None = None
-    id: str | int | None = None
-    ip: str | None = None
-    lat: str | None = None
-    latency: float = 0.0
-    lon: str | None = None
-    name: str = ""
-    region: str | None = None
-    sponsor: str | None = None
-    timezone: str | None = None
-    url: str | None = None
-
-
-@dataclass
-class Client:
-    city: str | None = None
-    country: str | None = None
-    ip: str | None = None
-    isp: str | None = None
-    ispdlavg: str | int | None = None
-    isprating: str | float | None = None
-    ispulavg: str | int | None = None
-    lat: str | None = None
-    loggedin: str | bool | None = None
-    lon: str | None = None
-    rating: str | int | None = None
-    region: str | None = None
-    timezone: str | None = None
-
-
-@dataclass
-class Results:
-    success: bool = False
-    error: str | None = None
-    icon: str = ""
-    bytes_received: float = 0.0
-    bytes_sent: float = 0.0
-    client: Client = field(default_factory=Client)
-    download: float = 0.0
-    ping: float = 0.0
-    server: Server = field(default_factory=Server)
-    share: str | None = None
-    speed_rx: float = 0.0
-    speed_tx: float = 0.0
-    timestamp: str = ""
-    updated: str | None = None
-    upload: float = 0.0
 
 
 cache_dir = util.get_cache_directory()
@@ -80,7 +25,7 @@ condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 logfile = cache_dir / "waybar-speedtest.log"
 needs_fetch: bool = False
-speedtest_data: Results | None = Results()
+speedtest_data: speedtest.Results | None = speedtest.Results()
 
 
 def configure_logging(debug: bool = False):
@@ -103,7 +48,7 @@ def refresh_handler(_signum: int, _frame: object | None):
 _ = signal.signal(signal.SIGHUP, refresh_handler)
 
 
-def generate_tooltip(results: Results) -> str:
+def generate_tooltip(results: speedtest.Results) -> str:
     tooltip: list[str] = []
     tooltip_od: OrderedDict[str, str | int | float | None] = OrderedDict()
 
@@ -200,7 +145,7 @@ def get_icon(speed: int) -> str:
         return glyphs.md_speedometer_fast
 
 
-def parse_results(results: Results) -> Results:
+def parse_results(results: speedtest.Results) -> speedtest.Results:
     server_ip: str | None = None
     client_location: util.LocationData | None = None
     server_location: util.LocationData | None = None
@@ -274,9 +219,9 @@ def parse_results(results: Results) -> Results:
     return results
 
 
-def run_speedtest() -> Results:
+def run_speedtest() -> speedtest.Results:
     # speedtest_results: Results = Results()
-    results: Results = Results()
+    results: speedtest.Results = speedtest.Results()
     stdout: str = ""
     stderr: str = ""
 
@@ -291,7 +236,7 @@ def run_speedtest() -> Results:
         stderr = result.stderr.strip()
         rc = result.returncode
     except Exception as e:
-        return Results(
+        return speedtest.Results(
             success=False,
             error=stderr or f'failed to execute "{command}": {e}',
             icon=glyphs.md_alert,
@@ -300,7 +245,7 @@ def run_speedtest() -> Results:
     if rc == 0 and stdout != "":
         json_data = cast(dict[str, object], json.loads(stdout))
         results = from_dict(
-            data_class=Results,
+            data_class=speedtest.Results,
             data=json_data,
             config=Config(cast=[int, float, str]),
         )
@@ -309,7 +254,7 @@ def run_speedtest() -> Results:
     return speedtest_results
 
 
-def render_output(speedtest_data: Results, icon: str) -> tuple[str, str, str]:
+def render_output(speedtest_data: speedtest.Results, icon: str) -> tuple[str, str, str]:
     logging.info("[render_output] - entering function")
     text: str = ""
     output_class: str = ""
@@ -377,7 +322,7 @@ def worker():
 
             if (
                 speedtest_data
-                and type(speedtest_data) is Results
+                and type(speedtest_data) is speedtest.Results
                 and speedtest_data.success
             ):
                 text, _, tooltip = render_output(
@@ -394,7 +339,7 @@ def worker():
         if speedtest_data is None:
             continue
 
-        if speedtest_data and type(speedtest_data) is Results:
+        if speedtest_data and type(speedtest_data) is speedtest.Results:
             text, output_class, tooltip = render_output(
                 speedtest_data=speedtest_data, icon=speedtest_data.icon
             )

@@ -9,54 +9,14 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass
 from typing import cast
 
 import click
 from dacite import Config, from_dict
 from waybar import glyphs, util
+from waybar.data import network_throughput as nt
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
-
-
-@dataclass
-class Sample:
-    interface: str | None = None
-    r_bytes: int = 0
-    r_packets: int = 0
-    r_errs: int = 0
-    r_drop: int = 0
-    r_fifo: int = 0
-    r_frame: int = 0
-    r_compressed: int = 0
-    r_multicast: int = 0
-    t_bytes: int = 0
-    t_packets: int = 0
-    t_errs: int = 0
-    t_drop: int = 0
-    t_fifo: int = 0
-    t_colls: int = 0
-    t_carrier: int = 0
-    t_compressed: int = 0
-
-
-@dataclass
-class NetworkThroughput:
-    success: bool = False
-    error: str | None = None
-    alias: str | None = None
-    device_name: str | None = None
-    driver: str | None = None
-    icon: str | None = None
-    interface: str = ""
-    ip_private: str | None = None
-    ip_public: str | None = None
-    mac_address: str | None = None
-    model: str | None = None
-    received: str | None = None
-    transmitted: str | None = None
-    vendor: str | None = None
-    updated: str | None = None
 
 
 cache_dir = util.get_cache_directory()
@@ -66,7 +26,7 @@ format_index: int = 0
 logfile = cache_dir / "waybar-network-throughput.log"
 needs_fetch = False
 needs_redraw = False
-network_throughput: list[NetworkThroughput] | None = []
+network_throughput: list[nt.NetworkThroughput] | None = []
 
 format: list[str] = []
 
@@ -108,7 +68,7 @@ _ = signal.signal(signal.SIGHUP, refresh_handler)
 _ = signal.signal(signal.SIGUSR1, toggle_format)
 
 
-def generate_tooltip(network_throughput: NetworkThroughput) -> str:
+def generate_tooltip(network_throughput: nt.NetworkThroughput) -> str:
     logging.debug(
         f"[generate_tooltip] - entering with interface={network_throughput.interface}"
     )
@@ -162,8 +122,8 @@ def get_icon(interface: str) -> str:
         return glyphs.md_network if is_connected else glyphs.md_network_off
 
 
-def get_sample() -> list[Sample] | None:
-    entries: list[Sample] = []
+def get_sample() -> list[nt.Sample] | None:
+    entries: list[nt.Sample] = []
     command = "jc --pretty /proc/net/dev"
     rc, stdout_raw, _ = util.run_piped_command(command)
 
@@ -172,7 +132,7 @@ def get_sample() -> list[Sample] | None:
         json_data = cast(list[dict[str, object]], json.loads(stdout))
         for item in json_data:
             entry = from_dict(
-                data_class=Sample,
+                data_class=nt.Sample,
                 data=item,
                 config=Config(cast=[str, int]),
             )
@@ -181,14 +141,14 @@ def get_sample() -> list[Sample] | None:
     return None
 
 
-def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
-    network_throughput: list[NetworkThroughput] = []
+def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
+    network_throughput: list[nt.NetworkThroughput] = []
     first_sample = get_sample()
     time.sleep(1)
     second_sample = get_sample()
 
     if not first_sample or not second_sample:
-        return [NetworkThroughput(success=False, error="failed to get network data")]
+        return [nt.NetworkThroughput(success=False, error="failed to get network data")]
 
     for interface in interfaces:
         if util.interface_exists(interface=interface):
@@ -243,7 +203,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                 ][0]
 
                 network_throughput.append(
-                    NetworkThroughput(
+                    nt.NetworkThroughput(
                         success=True,
                         alias=alias,
                         device_name=device_name,
@@ -266,7 +226,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                 )
             else:
                 network_throughput.append(
-                    NetworkThroughput(
+                    nt.NetworkThroughput(
                         success=False,
                         error="disconnected",
                         icon=get_icon(interface=interface),
@@ -275,7 +235,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
                 )
         else:
             network_throughput.append(
-                NetworkThroughput(
+                nt.NetworkThroughput(
                     success=False,
                     error="doesn't exist",
                     icon=get_icon(interface=interface),
@@ -286,7 +246,7 @@ def get_network_throughput(interfaces: list[str]) -> list[NetworkThroughput]:
 
 
 def render_output(
-    network_throughput: NetworkThroughput, icon: str | None
+    network_throughput: nt.NetworkThroughput, icon: str | None
 ) -> tuple[str, str, str]:
     interface = network_throughput.interface
     logging.debug("[render_output] - entering function")

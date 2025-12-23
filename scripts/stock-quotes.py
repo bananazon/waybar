@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import signal
 import sys
 import threading
@@ -35,6 +36,15 @@ class StockQuotes:
         )
         self.data: list[stock_quotes.QuoteData] = []
         self.updated: str | None = None
+
+    def _validate_symbols(self):
+        pass
+
+    def _sanitize_phone_number(self, phone_number: str) -> str:
+        parts = re.findall(r"(\d+)", phone_number)
+        if parts and len(parts) == 3:
+            return "-".join(parts)
+        return phone_number
 
     def _get_change_and_change_percent(
         self, current: float, previous: float
@@ -105,6 +115,7 @@ class StockQuotes:
         try:
             self.ticker = Ticker(self.symbols)
         except Exception as e:
+            self.logger.error(f"failed to get quote data: {e}")
             self.success = False
             self.error = str(e)
             return
@@ -112,11 +123,41 @@ class StockQuotes:
         self.logger.info("refreshing data")
         quotes_dict = cast(dict[str, dict], self.ticker.all_modules)
         for symbol, data in quotes_dict.items():
+            # Preprocess some stuff that dataclass doesn't like
+            try:
+                if "52WeekChange" in data["defaultKeyStatistics"]:
+                    data["defaultKeyStatistics"]["fiftyTwoWeekChange"] = data[
+                        "defaultKeyStatistics"
+                    ]["52WeekChange"]
+                    del data["defaultKeyStatistics"]["52WeekChange"]
+            except Exception:
+                pass
+
+            for idx, trend_item in enumerate(data["earningsTrend"]["trend"]):
+                if "epsTrend" in data["earningsTrend"]["trend"][idx]:
+                    old_eps_trend = data["earningsTrend"]["trend"][idx]["epsTrend"]
+                    try:
+                        data["earningsTrend"]["trend"][idx]["epsTrend"] = {
+                            "thirtyDaysAgo": old_eps_trend["30daysAgo"],
+                            "sixtyDaysAgo": old_eps_trend["60daysAgo"],
+                            "sevenDaysAgo": old_eps_trend["7daysAgo"],
+                            "ninetyDaysAgo": old_eps_trend["90daysAgo"],
+                            "current": old_eps_trend["current"],
+                            "epsTrendCurrency": old_eps_trend["epsTrendCurrency"],
+                        }
+                    except Exception:
+                        pass
+
             all_modules = from_dict(
                 data_class=stock_quotes.AllModules,
                 data=data,
                 config=Config(type_hooks={datetime: datetime.fromisoformat}),
             )
+            if all_modules.assetProfile.phone:
+                all_modules.assetProfile.phone = self._sanitize_phone_number(
+                    phone_number=all_modules.assetProfile.phone
+                )
+
             quotes_map[symbol] = stock_quotes.QuoteData(
                 symbol=symbol,
                 currency_symbol=all_modules.price.currencySymbol
@@ -188,41 +229,19 @@ class StockQuotes:
             #     del quotes_map[symbol]
 
         if len(quotes_map) <= 0:
+            self.logger.error("No quote data found")
             self.success = False
             self.error = "No quote data found"
             return
 
+        if len(quotes_map.keys()) < len(self.symbols):
+            missing = list(set(self.symbols).difference(quotes_map.keys()))
+            self.logger.error(
+                f"the following symbols were not found in the results set: {','.join(missing)}"
+            )
+
         self.logger.info("refresh complete")
         self.updated = util.get_human_timestamp()
-
-        # for symbol, item in self.ticker.earnings_trend.items():
-        #     if quotes_map[symbol]:
-        #         item = cast(dict[str, Any], item)
-        #         # pprint(item["trend"])
-
-        #         for idx, trend_item in enumerate(item["trend"]):
-        #             if "epsTrend" in item["trend"][idx]:
-        #                 old_eps_trend = item["trend"][idx]["epsTrend"]
-        #                 try:
-        #                     item["trend"][idx]["epsTrend"] = {
-        #                         "thirtyDaysAgo": old_eps_trend["30daysAgo"],
-        #                         "sixtyDaysAgo": old_eps_trend["60daysAgo"],
-        #                         "sevenDaysAgo": old_eps_trend["7daysAgo"],
-        #                         "ninetyDaysAgo": old_eps_trend["90daysAgo"],
-        #                         "current": old_eps_trend["current"],
-        #                         "epsTrendCurrency": old_eps_trend[
-        #                             "epsTrendCurrency"
-        #                         ],
-        #                     }
-        #                 except Exception:
-        #                     pass
-
-        #         earnings_trend = from_dict(
-        #             data_class=yfinance.EarningsTrend,
-        #             data=cast(dict, item),
-        #             config=Config(type_hooks={datetime: datetime.fromisoformat}),
-        #         )
-        #         quotes_map[symbol].earnings_trend = earnings_trend
 
         for _, quote in quotes_map.items():
             self.data.append(quote)
@@ -242,15 +261,6 @@ formats: list[int] = []
 update_event = threading.Event()
 
 
-def configure_logging(debug: bool = False):
-    logging.basicConfig(
-        filename=logfile,
-        filemode="a",  # 'a' = append, 'w' = overwrite
-        format="%(asctime)s [%(levelname)-5s] - %(funcName)s - %(message)s",
-        level=logging.DEBUG if debug else logging.INFO,
-    )
-
-
 def refresh_handler(_signum: int, _frame: object | None):
     global needs_fetch, needs_redraw
     logging.info("received SIGHUP — re-fetching data")
@@ -261,14 +271,14 @@ def refresh_handler(_signum: int, _frame: object | None):
 
 
 def toggle_format(_signum: int, _frame: object | None):
-    global formats, format_index, needs_redraw
+    global formats, format_index, needs_redraw, logger
+
     format_index = (format_index + 1) % len(formats)
     if quotes.data and type(quotes.data) is list:
         symbol = quotes.data[format_index].symbol
     else:
         symbol = format_index + 1
-    logging.info(f"received SIGUSR1 - switching output format to {symbol}")
-    logging.info(f"symbol is of type {type(symbol)}")
+    logger.info(f"received SIGUSR1 - switching output format to {symbol}")
     with condition:
         needs_redraw = True
         condition.notify()
@@ -279,14 +289,13 @@ _ = signal.signal(signal.SIGUSR1, toggle_format)
 
 
 def generate_tooltip():
-    global format_index, quotes
+    global format_index, quotes, logger
 
     q = quotes.data[format_index]
 
-    logging.debug(f"entering with symbol={q.symbol}")
+    logger.debug(f"entering with symbol={q.symbol}")
     tooltip: list[str] = []
     company_info: OrderedDict[str, str | int | float] = OrderedDict()
-    tooltip.append("Company Info:")
     if q.price.longName:
         company_info["Company"] = q.price.longName
     if q.assetProfile.website:
@@ -309,18 +318,19 @@ def generate_tooltip():
         if q.price.exchangeName:
             company_info["Exchange"] = q.price.exchangeName
 
-    max_key_length = 0
-    for key in company_info.keys():
-        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+    if len(company_info) > 0:
+        tooltip.append("Company Info:")
+        max_key_length = 0
+        for key in company_info.keys():
+            max_key_length = len(key) if len(key) > max_key_length else max_key_length
 
-    for key, value in company_info.items():
-        tooltip.append(f"  {key:{max_key_length}} {value}")
+        for key, value in company_info.items():
+            tooltip.append(f"  {key:{max_key_length}} {value}")
 
-    if len(tooltip) > 0:
-        tooltip.append("")
+        if len(tooltip) > 0:
+            tooltip.append("")
 
     key_stats: OrderedDict = OrderedDict()
-    tooltip.append("Key Stats:")
     if q.summaryDetail.open:
         key_stats["Open"] = quotes.to_dollar(q.summaryDetail.open)
     if q.summaryDetail.dayHigh:
@@ -483,28 +493,25 @@ def generate_tooltip():
             "_", " "
         ).title()
 
-    max_key_length = 0
-    for key in key_stats.keys():
-        max_key_length = len(key) if len(key) > max_key_length else max_key_length
+    if len(key_stats) > 0:
+        tooltip.append("Key Stats:")
+        max_key_length = 0
+        for key in key_stats.keys():
+            max_key_length = len(key) if len(key) > max_key_length else max_key_length
 
-    for key, value in key_stats.items():
-        tooltip.append(f"  {key:{max_key_length}} {value}")
+        for key, value in key_stats.items():
+            tooltip.append(f"  {key:{max_key_length}} {value}")
 
-    if len(tooltip) > 0:
-        tooltip.append("")
+        if len(tooltip) > 0:
+            tooltip.append("")
 
     if q.defaultKeyStatistics and q.summaryDetail:
         dividend_information: OrderedDict = OrderedDict()
-        tooltip.append("Dividend Information:")
-        if q.quotes.dividendYield:
-            dividend_information["Dividend Yield"] = util.float_to_pct(
-                number=q.quotes.dividendYield
+        if q.summaryDetail.dividendRate and q.quotes.dividendYield:
+            dividend_information["Forward Dividend and Yield"] = (
+                f"{util.pad_float(number=q.summaryDetail.dividendRate)} ({util.float_to_pct(number=q.quotes.dividendYield)})"
             )
-        if q.summaryDetail.dividendRate:
-            dividend_information["Annual Dividend"] = quotes.to_dollar(
-                number=q.summaryDetail.dividendRate,
-                symbol=q.currency_symbol,
-            )
+
         if q.defaultKeyStatistics.lastDividendDate:
             dividend_information["Last Dividend Date"] = datetime.fromtimestamp(
                 timestamp=q.defaultKeyStatistics.lastDividendDate,
@@ -520,19 +527,22 @@ def generate_tooltip():
         #         symbol=q.currency_symbol,
         #     )
 
-        max_key_length = 0
-        for key in dividend_information.keys():
-            max_key_length = len(key) if len(key) > max_key_length else max_key_length
+        if len(dividend_information) > 0:
+            tooltip.append("Dividend Information:")
+            max_key_length = 0
+            for key in dividend_information.keys():
+                max_key_length = (
+                    len(key) if len(key) > max_key_length else max_key_length
+                )
 
-        for key, value in dividend_information.items():
-            tooltip.append(f"  {key:{max_key_length}} {value}")
+            for key, value in dividend_information.items():
+                tooltip.append(f"  {key:{max_key_length}} {value}")
 
-        if len(tooltip) > 0:
-            tooltip.append("")
+            if len(tooltip) > 0:
+                tooltip.append("")
 
         if q.defaultKeyStatistics and q.price and q.quotes and q.summaryDetail:
             valuation_measures: OrderedDict = OrderedDict()
-            tooltip.append("Validation Measures")
             if q.price.marketCap:
                 valuation_measures["Market Cap"] = quotes.to_dollar(
                     number=q.price.marketCap,
@@ -566,14 +576,16 @@ def generate_tooltip():
                     q.defaultKeyStatistics.enterpriseToEbitda
                 )
 
-            max_key_length = 0
-            for key in valuation_measures.keys():
-                max_key_length = (
-                    len(key) if len(key) > max_key_length else max_key_length
-                )
+            if len(valuation_measures) > 0:
+                tooltip.append("Validation Measures")
+                max_key_length = 0
+                for key in valuation_measures.keys():
+                    max_key_length = (
+                        len(key) if len(key) > max_key_length else max_key_length
+                    )
 
-            for key, value in valuation_measures.items():
-                tooltip.append(f"  {key:{max_key_length}} {value}")
+                for key, value in valuation_measures.items():
+                    tooltip.append(f"  {key:{max_key_length}} {value}")
 
     if len(tooltip) > 0:
         tooltip.append("")
@@ -582,16 +594,18 @@ def generate_tooltip():
     return "\n".join(tooltip)
 
 
-def render_output() -> tuple[str, str, str]:
+def render_output(icon: str | None = None) -> tuple[str, str, str]:
     global format_index, quotes
+
+    icon = icon if icon else glyphs.cod_graph_line
 
     if quotes.success:
         q = quotes.data[format_index]
-        text = f"{glyphs.cod_graph_line}{glyphs.icon_spacer}{q.symbol} {util.pad_float(q.current)} {q.change} ({q.change_pct})"
+        text = f"{icon}{glyphs.icon_spacer}{q.symbol} {util.pad_float(q.current)} {q.change} ({q.change_pct})"
         output_class = "success"
         tooltip = generate_tooltip()
     else:
-        text = f"{glyphs.cod_graph_line}{glyphs.icon_spacer}Error"
+        text = f"{icon}{glyphs.icon_spacer}Error"
         output_class = "error"
         tooltip = str(quotes.error)
     return text, output_class, tooltip
@@ -623,17 +637,34 @@ def worker(symbols: list[str]):
             continue
 
         if fetch:
-            quotes.data = []
-            print(
-                json.dumps(
-                    {
-                        "text": f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching stock quotes...",
-                        "class": "loading",
-                        "tooltip": "Fetching stock quotes...",
-                    }
-                )
+            loading = (
+                f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Fetching stock quotes..."
             )
+            loading_dict = {
+                "text": loading,
+                "class": "loading",
+                "tooltip": "Fetching stock quotes...",
+            }
+
+            if quotes.data and type(quotes.data) is list and len(quotes.data) > 0:
+                text, output_class, tooltip = render_output(
+                    icon=glyphs.md_timer_outline
+                )
+                output = {
+                    "text": text,
+                    "class": output_class,
+                    "tooltip": tooltip,
+                }
+                print(
+                    json.dumps({"text": text, "class": "loading", "tooltip": tooltip})
+                )
+            else:
+                print(json.dumps(loading_dict))
+
             quotes.get_quotes()
+
+        if quotes.data is None:
+            continue
 
         if quotes.data and len(quotes.data) > 0:
             if redraw:
@@ -684,6 +715,8 @@ def main(symbol: str, debug: bool, test: bool, interval: int):
 
     if test:
         quotes.get_quotes()
+        # pprint(quotes.data)
+        # exit()
         text, output_class, tooltip = render_output()
         print(text)
         print(output_class)

@@ -369,14 +369,14 @@ class IndustryTrend:
 
 @dataclass
 class InsiderHolder:
+    latestTransDate: datetime | None = None
     maxAge: int = 0
     name: str | None = None
-    relation: str | None = None
-    url: str | None = None
-    transactionDescription: str | None = None
-    latestTransDate: datetime | None = None
     positionDirect: int = 0
     positionDirectDate: datetime | None = None
+    relation: str | None = None
+    transactionDescription: str | None = None
+    url: str | None = None
 
 
 @dataclass
@@ -460,24 +460,6 @@ class PageViews:
     maxAge: int = 0
 
 
-# Quote Type
-@dataclass
-class QuoteType:
-    exchange: str | None = None
-    quoteType: str | None = None
-    symbol: str | None = None
-    underlyingSymbol: str | None = None
-    shortName: str | None = None
-    longName: str | None = None
-    firstTradeDateEpochUtc: datetime | None = None
-    timeZoneFullName: str | None = None
-    timeZoneShortName: str | None = None
-    uuid: str | None = None
-    messageBoardId: str | None = None
-    gmtOffSetMilliseconds: int = 0
-    maxAge: int = 0
-
-
 # Price
 @dataclass
 class Price:
@@ -514,6 +496,24 @@ class Price:
     symbol: str | None = None
     toCurrency: str | None = None
     underlyingSymbol: str | None = None
+
+
+# Quote Type
+@dataclass
+class QuoteType:
+    exchange: str | None = None
+    firstTradeDateEpochUtc: datetime | None = None
+    gmtOffSetMilliseconds: int = 0
+    longName: str | None = None
+    maxAge: int = 0
+    messageBoardId: str | None = None
+    quoteType: str | None = None
+    shortName: str | None = None
+    symbol: str | None = None
+    timeZoneFullName: str | None = None
+    timeZoneShortName: str | None = None
+    underlyingSymbol: str | None = None
+    uuid: str | None = None
 
 
 # Quotes
@@ -605,11 +605,11 @@ class Quotes:
 # Recommendation Trend
 @dataclass
 class RecommendationTrendItem:
-    period: str | None = None
-    strongBuy: int = 0
     buy: int = 0
     hold: int = 0
+    period: str | None = None
     sell: int = 0
+    strongBuy: int = 0
     strongSell: int = 0
 
 
@@ -622,6 +622,7 @@ class RecommendationTrend:
 # SEC Filings
 @dataclass
 class SecFilingExhibit:
+    downloadUrl: str | None = None
     type: str | None = None
     url: str | None = None
 
@@ -629,12 +630,12 @@ class SecFilingExhibit:
 @dataclass
 class SecFiling:
     date: datetime | None = None
-    epochDate: datetime | None = None
-    type: str | None = None
-    title: str | None = None
     edgarUrl: str | None = None
+    epochDate: datetime | None = None
     exhibits: list[SecFilingExhibit] = field(default_factory=list)
     maxAge: int = 0
+    title: str | None = None
+    type: str | None = None
 
 
 @dataclass
@@ -955,73 +956,3 @@ class QuoteData:
     upgradeDowngradeHistory: UpgradeDowngradeHistory = field(
         default_factory=UpgradeDowngradeHistory
     )
-
-
-# # Key Stats
-# @dataclass
-# class KeyStats:
-#     fiftyTwoWeekChange: float = 0.0
-#     SandP52WeekChange: float = 0.0
-#     beta: float = 0.0
-#     bookValue: float = 0.0
-#     category: str | None = None
-#     dateShortInterest: datetime | None = None
-#     earningsQuarterlyGrowth: float = 0.0
-#     enterpriseToEbitda: float = 0.0
-#     enterpriseToRevenue: float = 0.0
-#     enterpriseValue: int = 0
-#     floatShares: int = 0
-#     forwardEps: float = 0.0
-#     forwardPE: float = 0.0
-#     fundFamily: str | None = None
-#     heldPercentInsiders: float = 0.0
-#     heldPercentInstitutions: float = 0.0
-#     impliedSharesOutstanding: int = 0
-#     lastDividendDate: int = 0
-#     lastDividendValue: float = 0.0
-#     lastFiscalYearEnd: datetime | None = None
-#     lastSplitDate: datetime | None = None
-#     lastSplitFactor: str | None = None
-#     latestShareClass: str | None = None
-#     leadInvestor: str | None = None
-#     legalType: str | None = None
-#     maxAge: int = 0
-#     mostRecentQuarter: datetime | None = None
-#     netIncomeToCommon: int = 0
-#     nextFiscalYearEnd: datetime | None = None
-#     priceHint: int = 0
-#     priceToBook: float = 0.0
-#     profitMargins: float = 0.0
-#     sharesOutstanding: int = 0
-#     sharesPercentSharesOut: float = 0.0
-#     sharesShort: int = 0
-#     sharesShortPreviousMonthDate: datetime | None = None
-#     sharesShortPriorMonth: int = 0
-#     shortPercentOfFloat: float = 0.0
-#     shortRatio: float = 0.0
-#     trailingEps: float = 0.0
-
-
-# # Quote Data
-# @dataclass
-# class QuoteData:
-#     symbol: str =
-#     current: float = 0.0
-#     previous: float = 0.0
-#     change: str =
-#     change_pct: str =
-#     currency_symbol: str =
-#     asset_profile: AssetProfile = field(default_factory=AssetProfile)
-#     earnings_trend: EarningsTrend = field(default_factory=EarningsTrend)
-#     financial_data: FinancialData = field(default_factory=FinancialData)
-#     key_stats: KeyStats = field(default_factory=KeyStats)
-#     price: Price = field(default_factory=Price)
-#     quotes: Quotes = field(default_factory=Quotes)
-#     summary_detail: SummaryDetail = field(default_factory=SummaryDetail)
-#     summary_profile: SummaryProfile = field(default_factory=SummaryProfile)
-#     technical_insights: TechnicalInsights = field(default_factory=TechnicalInsights)
-
-
-# @dataclass
-# class Results:
-#     quotes: list[QuoteData] = field(default_factory=list)

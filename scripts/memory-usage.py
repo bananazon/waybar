@@ -7,8 +7,9 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util
+from waybar import glyphs
 from waybar.data import memory_usage
+from waybar.util import conversion, misc, system, time
 
 context_settings = dict(help_option_names=["-h", "--help"])
 
@@ -20,37 +21,37 @@ def generate_tooltip(memory_info: memory_usage.MemoryInfo) -> str:
     tooltip_od: OrderedDict[str, str | int] = OrderedDict()
 
     if memory_info.total >= 0:
-        tooltip_od["Total"] = util.byte_converter(
+        tooltip_od["Total"] = conversion.byte_converter(
             number=memory_info.total, unit=unit, use_int=False
         )
 
     if memory_info.used >= 0:
-        tooltip_od["Used"] = util.byte_converter(
+        tooltip_od["Used"] = conversion.byte_converter(
             number=memory_info.used, unit=unit, use_int=False
         )
 
     if memory_info.free >= 0:
-        tooltip_od["Free"] = util.byte_converter(
+        tooltip_od["Free"] = conversion.byte_converter(
             number=memory_info.free, unit=unit, use_int=False
         )
 
     if memory_info.shared >= 0:
-        tooltip_od["Shared"] = util.byte_converter(
+        tooltip_od["Shared"] = conversion.byte_converter(
             number=memory_info.shared, unit=unit, use_int=False
         )
 
     if memory_info.buffers >= 0:
-        tooltip_od["Buffers"] = util.byte_converter(
+        tooltip_od["Buffers"] = conversion.byte_converter(
             number=memory_info.buffers, unit=unit, use_int=False
         )
 
     if memory_info.cached >= 0:
-        tooltip_od["Cached"] = util.byte_converter(
+        tooltip_od["Cached"] = conversion.byte_converter(
             number=memory_info.cached, unit=unit, use_int=False
         )
 
     if memory_info.available >= 0:
-        tooltip_od["Available"] = util.byte_converter(
+        tooltip_od["Available"] = conversion.byte_converter(
             number=memory_info.available, unit=unit, use_int=False
         )
 
@@ -67,17 +68,17 @@ def generate_tooltip(memory_info: memory_usage.MemoryInfo) -> str:
     tooltip.append("Swap")
     tooltip_od = OrderedDict()
     if memory_info.swap_total >= 0:
-        tooltip_od["Total"] = util.byte_converter(
+        tooltip_od["Total"] = conversion.byte_converter(
             number=memory_info.swap_total, unit=unit, use_int=False
         )
 
     if memory_info.swap_used >= 0:
-        tooltip_od["Used"] = util.byte_converter(
+        tooltip_od["Used"] = conversion.byte_converter(
             number=memory_info.swap_used, unit=unit, use_int=False
         )
 
     if memory_info.swap_free >= 0:
-        tooltip_od["Free"] = util.byte_converter(
+        tooltip_od["Free"] = conversion.byte_converter(
             number=memory_info.swap_free, unit=unit, use_int=False
         )
 
@@ -100,7 +101,7 @@ def generate_tooltip(memory_info: memory_usage.MemoryInfo) -> str:
                 and dimm.values.speed
             ):
                 tooltip.append(
-                    f"DIMM {idx:02d} - {util.byte_converter(number=dimm.values.size_raw, unit=unit, use_int=False)} {dimm.type} {dimm.values.form_factor} @ {dimm.values.speed}"
+                    f"DIMM {idx:02d} - {conversion.byte_converter(number=dimm.values.size_raw, unit=unit, use_int=False)} {dimm.type} {dimm.values.form_factor} @ {dimm.values.speed}"
                 )
 
     if len(tooltip) > 0:
@@ -113,7 +114,7 @@ def generate_tooltip(memory_info: memory_usage.MemoryInfo) -> str:
 def get_dimm_info() -> list[memory_usage.DimmInfo]:
     dimms: list[memory_usage.DimmInfo] = []
     command = "sudo dmidecode -t memory | jc --dmidecode"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     if rc == 0 and stdout != "":
@@ -141,7 +142,7 @@ def get_dimm_info() -> list[memory_usage.DimmInfo]:
 def get_memory_usage() -> memory_usage.MemoryInfo:
     memory_info: memory_usage.MemoryInfo = memory_usage.MemoryInfo()
     command = "cat /proc/meminfo | jc --pretty --proc-meminfo"
-    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+    rc, stdout_raw, stderr_raw = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -187,7 +188,7 @@ def get_memory_usage() -> memory_usage.MemoryInfo:
             swap_pct_total=swap_pct_total,
             swap_pct_used=swap_pct_used,
             swap_pct_free=swap_pct_free,
-            updated=util.get_human_timestamp(),
+            updated=time.get_human_timestamp(),
         )
     else:
         memory_info = memory_usage.MemoryInfo(
@@ -206,7 +207,7 @@ def get_memory_usage() -> memory_usage.MemoryInfo:
     "-u",
     "--unit",
     required=False,
-    type=click.Choice(util.get_valid_units()),
+    type=click.Choice(misc.valid_storage_units()),
     help="The unit to use for output display",
 )
 def main(unit: str):
@@ -217,8 +218,12 @@ def main(unit: str):
     if memory_info.success:
         tooltip = generate_tooltip(memory_info)
         pct_free = memory_info.pct_free
-        total = util.byte_converter(number=memory_info.total, unit=unit, use_int=False)
-        used = util.byte_converter(number=memory_info.used, unit=unit, use_int=False)
+        total = conversion.byte_converter(
+            number=memory_info.total, unit=unit, use_int=False
+        )
+        used = conversion.byte_converter(
+            number=memory_info.used, unit=unit, use_int=False
+        )
 
         if pct_free < 20:
             output_class = "critical"

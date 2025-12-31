@@ -7,12 +7,13 @@ import signal
 import subprocess
 import sys
 import threading
-import time
 from dataclasses import dataclass, field
+from time import sleep
 
 import click
 from typing_extensions import Protocol
-from waybar import glyphs, util
+from waybar import glyphs
+from waybar.util import network, system, time
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -37,7 +38,7 @@ class UpdateFn(Protocol):
     def __call__(self, *, package_type: str) -> SoftwareUpdates: ...
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 format_index: int = 0
@@ -166,7 +167,7 @@ def success(package_type: str, packages: list[Package]) -> SoftwareUpdates:
         count=len(packages),
         packages=packages,
         package_type=package_type,
-        updated=util.get_human_timestamp(),
+        updated=time.get_human_timestamp(),
     )
 
 
@@ -542,7 +543,7 @@ def worker(package_types: list[str]):
             needs_redraw = False
 
         logging.info("[worker] - entering worker loop")
-        if not util.network_is_reachable():
+        if not network.network_is_reachable():
             print(
                 json.dumps(
                     {
@@ -574,7 +575,7 @@ def worker(package_types: list[str]):
         if update_data and len(update_data) > 0:
             if redraw:
                 count = sum(item.count for item in update_data)
-                icon = glyphs.md_alert if count > 0 else util.get_distro_icon()
+                icon = glyphs.md_alert if count > 0 else system.get_distro_icon()
                 text, output_class, tooltip = render_output(
                     update_data=update_data[format_index], icon=icon
                 )
@@ -619,7 +620,7 @@ def main(package_type: str, interval: int, test: bool, debug: bool):
         software_updates = find_updates(package_type=package_type[0])
         if software_updates:
             text, output_class, tooltip = render_output(
-                update_data=software_updates, icon=util.get_distro_icon()
+                update_data=software_updates, icon=system.get_distro_icon()
             )
             print(text)
             print(output_class)
@@ -634,7 +635,7 @@ def main(package_type: str, interval: int, test: bool, debug: bool):
         condition.notify()
 
     while True:
-        time.sleep(interval)
+        sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

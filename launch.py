@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
-from scripts.waybar import util
-from typing import cast, override
-import click
+
 import getpass
 import logging
 import os
-import psutil
 import signal
 import subprocess
 import sys
 import time
+from typing import cast, override
 
-cache_dir = util.get_cache_directory()
+import click
+import psutil
+
+from scripts.waybar.util import system
+
+cache_dir = system.get_cache_directory()
 context_settings = dict(help_option_names=["-h", "--help"])
 logfile = cache_dir / "waybar.log"
 
@@ -49,7 +52,7 @@ def get_background_scripts() -> list[dict[str, str | list[str] | int | None]]:
                     cmd_short = " ".join(cmdline[:2])
                 if (
                     cmd_str.startswith("python3")
-                    and util.get_script_directory() in cmd_str
+                    and system.get_script_directory() in cmd_str
                     and proc.info.get("username") == getpass.getuser()
                 ):
                     created = cast(int, proc.info.get("create_time"))
@@ -113,7 +116,7 @@ def configure_logging(debug: bool = False):
 def setup(debug: bool = False):
     """Run some quick checks"""
     for binary in ["waybar"]:
-        if not util.which(binary):
+        if not system.which(binary):
             logging.error(f"{binary} is not installed")
             sys.exit(1)
 
@@ -245,12 +248,12 @@ def status(debug: bool):
         now = int(time.time())
         for process in modules:
             created: int = cast(int, process["created"])
-            process["duration"] = util.get_duration(seconds=(now - created))
-            longest_duration = (
-                len(process["duration"])
-                if len(process["duration"]) > longest_duration
-                else longest_duration
-            )
+            # process["duration"] = waybar_time.get_duration(seconds=(now - created))
+            # longest_duration = (
+            #     len(process["duration"])
+            #     if len(process["duration"]) > longest_duration
+            #     else longest_duration
+            # )
 
         for process in modules:
             print(

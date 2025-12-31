@@ -5,14 +5,15 @@ import re
 from dataclasses import dataclass
 
 import click
-from waybar import glyphs, util
+from waybar import glyphs
+from waybar.util import system
 
 
 @dataclass
 class DropboxStatus:
     success: bool = False
     error: str | None = None
-    icon: str = glyphs.nf_fa_dropbox
+    icon: str = glyphs.fa_dropbox
     message: str | None = None
     tooltip: str | None = None
 
@@ -29,7 +30,7 @@ def generate_tooltip(dropbox_status: DropboxStatus) -> str:
 def get_dropbox_status() -> DropboxStatus:
     dropbox_status: DropboxStatus = DropboxStatus()
     command = "dropbox status"
-    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+    rc, stdout_raw, stderr_raw = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     stderr = stderr_raw if isinstance(stderr_raw, str) else ""

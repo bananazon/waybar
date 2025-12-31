@@ -5,20 +5,21 @@ import logging
 import signal
 import sys
 import threading
-import time
 from collections import OrderedDict
 from pathlib import Path
+from time import sleep
 from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util
+from waybar import glyphs
 from waybar.data import filesystem_usage
+from waybar.util import conversion, misc, system, time
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 disk_info: list[filesystem_usage.FilesystemInfo] | None = []
@@ -125,7 +126,7 @@ def generate_tooltip(
 
 def filesystem_exists(mountpoint: str) -> bool:
     command = f"jc findmnt {mountpoint}"
-    rc, _, _ = util.run_piped_command(command)
+    rc, _, _ = system.run_piped_command(command)
     return True if rc == 0 else False
 
 
@@ -133,7 +134,7 @@ def get_sample() -> list[filesystem_usage.DiskStatsSample]:
     logging.debug("[get_sample] - entering function")
     sample: list[filesystem_usage.DiskStatsSample] = []
     command = "cat /proc/diskstats | jc --pretty --proc-diskstats"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
 
@@ -170,7 +171,7 @@ def parse_lsblk(filesystem: str) -> filesystem_usage.BlockDevice:
 
     block_device: filesystem_usage.BlockDevice = filesystem_usage.BlockDevice()
     command = f"lsblk -O --json {filesystem}"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     if rc == 0 and stdout != "":
@@ -185,7 +186,7 @@ def parse_lsblk(filesystem: str) -> filesystem_usage.BlockDevice:
             data=bd,
             config=Config(
                 cast=[int, float],
-                type_hooks={str: util.str_hook, int: util.int_hook},
+                type_hooks={str: misc.str_hook, int: misc.int_hook},
                 strict=False,
             ),
         )
@@ -206,7 +207,7 @@ def get_disk_usage(
 
     if show_stats:
         first_sample = get_sample()
-        time.sleep(1)
+        sleep(1)
         second_sample = get_sample()
 
     for mountpoint in mountpoints:
@@ -216,7 +217,7 @@ def get_disk_usage(
         if filesystem_exists(mountpoint=mountpoint):
             command = f"jc --pretty df {mountpoint}"
             try:
-                rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                rc, stdout_raw, stderr_raw = system.run_piped_command(command)
 
                 stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                 stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -233,7 +234,7 @@ def get_disk_usage(
                         data=item,
                         config=Config(
                             cast=[int, float],
-                            type_hooks={str: util.str_hook, int: util.int_hook},
+                            type_hooks={str: misc.str_hook, int: misc.int_hook},
                             strict=False,
                         ),
                     )
@@ -255,7 +256,7 @@ def get_disk_usage(
             if df_item:
                 command = f"jc --pretty findmnt {mountpoint}"
                 try:
-                    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                    rc, stdout_raw, stderr_raw = system.run_piped_command(command)
 
                     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -267,7 +268,7 @@ def get_disk_usage(
                             data=item,
                             config=Config(
                                 cast=[int, float, dict],
-                                type_hooks={str: util.str_hook, int: util.int_hook},
+                                type_hooks={str: misc.str_hook, int: misc.int_hook},
                                 strict=False,
                             ),
                         )
@@ -317,7 +318,7 @@ def get_disk_usage(
                             lsblk=lsblk_data,
                             sample1=first,
                             sample2=second,
-                            updated=util.get_human_timestamp(),
+                            updated=time.get_human_timestamp(),
                         )
                     )
             else:
@@ -345,8 +346,12 @@ def render_output(
 ) -> tuple[str, str, str]:
     if disk_info.success:
         pct_free = disk_info.pct_free
-        total = util.byte_converter(number=disk_info.total, unit=unit, use_int=False)
-        used = util.byte_converter(number=disk_info.used, unit=unit, use_int=False)
+        total = conversion.byte_converter(
+            number=disk_info.total, unit=unit, use_int=False
+        )
+        used = conversion.byte_converter(
+            number=disk_info.used, unit=unit, use_int=False
+        )
 
         if pct_free < 20:
             output_class = "critical"
@@ -435,7 +440,7 @@ def worker(mountpoints: list[str], unit: str, show_stats: bool):
     "--unit",
     required=False,
     default="auto",
-    type=click.Choice(util.get_valid_units()),
+    type=click.Choice(misc.valid_storage_units()),
     help="The unit to use for output display",
 )
 @click.option(
@@ -489,7 +494,7 @@ def main(
         condition.notify()
 
     while True:
-        time.sleep(interval)
+        sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -34,7 +35,7 @@ class Client:
     lon: str | None = None
     rating: str | int | None = None
     region: str | None = None
-    timezone: str | None = None
+    timezone: datetime | None = None
 
 
 @dataclass

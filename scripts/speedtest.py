@@ -14,13 +14,14 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util
+from waybar import glyphs, util2
 from waybar.data import speedtest
+from waybar.util import network
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = util2.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 logfile = cache_dir / "waybar-speedtest.log"
@@ -53,18 +54,18 @@ def generate_tooltip(results: speedtest.Results) -> str:
     tooltip_od: OrderedDict[str, str | int | float | None] = OrderedDict()
 
     if results.bytes_sent and results.bytes_received:
-        tooltip_od["Bytes sent"] = util.byte_converter(
+        tooltip_od["Bytes sent"] = util2.byte_converter(
             number=results.bytes_sent, unit="auto", use_int=False
         )
-        tooltip_od["Bytes received"] = util.byte_converter(
+        tooltip_od["Bytes received"] = util2.byte_converter(
             number=results.bytes_received, unit="auto", use_int=False
         )
 
     if results.speed_tx and results.speed_rx:
-        tooltip_od["Upload speed"] = util.network_speed(
+        tooltip_od["Upload speed"] = util2.network_speed(
             number=results.speed_tx, bytes=False
         )
-        tooltip_od["Download speed"] = util.network_speed(
+        tooltip_od["Download speed"] = util2.network_speed(
             number=results.speed_rx, bytes=False
         )
 
@@ -147,8 +148,8 @@ def get_icon(speed: int) -> str:
 
 def parse_results(results: speedtest.Results) -> speedtest.Results:
     server_ip: str | None = None
-    client_location: util.LocationData | None = None
-    server_location: util.LocationData | None = None
+    client_location: network.LocationData | None = None
+    server_location: network.LocationData | None = None
 
     results.client.loggedin = True if results.client.loggedin == "1" else False
     if results.client.ispdlavg:
@@ -167,7 +168,7 @@ def parse_results(results: speedtest.Results) -> speedtest.Results:
         results.server.id = int(results.server.id)
 
     if results.client.ip:
-        client_location = util.ip_to_location(ip=results.client.ip)
+        client_location = network.ip_to_location(ip=results.client.ip)
 
     if results.server.host:
         hostname = results.server.host.split(":")[0]
@@ -177,7 +178,7 @@ def parse_results(results: speedtest.Results) -> speedtest.Results:
             server_ip = None
 
     if server_ip:
-        server_location = util.ip_to_location(ip=server_ip)
+        server_location = network.ip_to_location(ip=server_ip)
         results.server.ip = server_ip
 
     if client_location:
@@ -213,7 +214,7 @@ def parse_results(results: speedtest.Results) -> speedtest.Results:
         avg_speed = cast(int, (results.speed_rx + results.speed_tx) / 2)
 
         results.icon = get_icon(speed=avg_speed)
-        results.updated = util.get_human_timestamp()
+        results.updated = util2.get_human_timestamp()
         results.success = True
 
     return results
@@ -264,11 +265,11 @@ def render_output(speedtest_data: speedtest.Results, icon: str) -> tuple[str, st
         parts: list[str] = []
         if speedtest_data.speed_rx:
             parts.append(
-                f"{glyphs.cod_arrow_small_down}{util.network_speed(number=speedtest_data.speed_rx, bytes=False)}"
+                f"{glyphs.cod_arrow_small_down}{util2.network_speed(number=speedtest_data.speed_rx, bytes=False)}"
             )
         if speedtest_data.speed_tx:
             parts.append(
-                f"{glyphs.cod_arrow_small_up}{util.network_speed(number=speedtest_data.speed_tx, bytes=False)}"
+                f"{glyphs.cod_arrow_small_up}{util2.network_speed(number=speedtest_data.speed_tx, bytes=False)}"
             )
 
         if len(parts) == 2:
@@ -298,7 +299,7 @@ def worker():
             fetch = needs_fetch
             needs_fetch = False
 
-        if not util.network_is_reachable():
+        if not util2.network_is_reachable():
             print(
                 json.dumps(
                     {

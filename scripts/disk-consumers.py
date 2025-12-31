@@ -8,14 +8,15 @@ import signal
 import subprocess
 import sys
 import threading
-import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from glob import glob
 from pathlib import Path
+from time import sleep
 
 import click
-from waybar import glyphs, util
+from waybar import glyphs
+from waybar.util import conversion, misc, system, time
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -30,7 +31,7 @@ class PathEntry:
     updated: str | None = None
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 disk_consumers: list[PathEntry] = []
@@ -92,7 +93,7 @@ def generate_tooltip(disk_consumers: PathEntry):
     for key, value in disk_consumers.usage.items():
         icon = glyphs.md_folder if os.path.isdir(key) else glyphs.md_file
         tooltip.append(
-            f"{icon}{glyphs.icon_spacer}{os.path.basename(key):{max_len}} {util.byte_converter(number=value, unit='auto', use_int=False)}"
+            f"{icon}{glyphs.icon_spacer}{os.path.basename(key):{max_len}} {conversion.byte_converter(number=value, unit='auto', use_int=False)}"
         )
 
     tooltip.append("")
@@ -132,7 +133,7 @@ def find_consumers(path: str):
                     path=path,
                     count=len(usage_od),
                     usage=usage_od,
-                    updated=util.get_human_timestamp(),
+                    updated=time.get_human_timestamp(),
                 )
         except Exception:
             return PathEntry(
@@ -226,7 +227,7 @@ def worker(paths: list[str]) -> list[PathEntry]:
     "--unit",
     required=False,
     default="auto",
-    type=click.Choice(util.get_valid_units()),
+    type=click.Choice(misc.valid_storage_units()),
     help="The unit to use for output display",
 )
 @click.option(
@@ -273,7 +274,7 @@ def main(path: str, unit: str, interval: int, test: bool, debug: bool):
         condition.notify()
 
     while True:
-        time.sleep(interval)
+        sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

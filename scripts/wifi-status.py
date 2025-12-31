@@ -11,13 +11,13 @@ import time
 from collections import OrderedDict
 
 import click
-from waybar import glyphs, util
+from waybar import glyphs, util2
 from waybar.data import wifi_status
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = util2.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 format_index: int = 0
@@ -75,7 +75,7 @@ def generate_tooltip(wifi_data: wifi_status.WifiStatus) -> str:
         tooltip_od["Connected To"] = f"{wifi_data.ssid_name} ({wifi_data.ssid_mac})"
 
     if wifi_data.connected_time:
-        tooltip_od["Connection Time"] = util.get_duration(
+        tooltip_od["Connection Time"] = util2.get_duration(
             seconds=wifi_data.connected_time
         )
 
@@ -157,13 +157,13 @@ def get_wifi_data(interfaces: list[str]) -> list[wifi_status.WifiStatus]:
     wifi_data: list[wifi_status.WifiStatus] = []
 
     for interface in interfaces:
-        if util.interface_exists(interface=interface):
-            if util.interface_is_connected(interface=interface):
+        if util2.interface_exists(interface=interface):
+            if util2.interface_is_connected(interface=interface):
                 if os.path.isdir(f"/sys/class/net/{interface}/wireless"):
                     wiphy = -1
 
                     command = f"iw dev {interface} link"
-                    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                    rc, stdout_raw, stderr_raw = util2.run_piped_command(command)
 
                     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -186,7 +186,7 @@ def get_wifi_data(interfaces: list[str]) -> list[wifi_status.WifiStatus]:
                         )
 
                     command = f"iw dev {interface} info"
-                    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                    rc, stdout_raw, stderr_raw = util2.run_piped_command(command)
 
                     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -223,7 +223,7 @@ def get_wifi_data(interfaces: list[str]) -> list[wifi_status.WifiStatus]:
                         )
 
                     command = f"iw dev {interface} station dump"
-                    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                    rc, stdout_raw, stderr_raw = util2.run_piped_command(command)
 
                     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -271,7 +271,7 @@ def get_wifi_data(interfaces: list[str]) -> list[wifi_status.WifiStatus]:
 
                     if wiphy >= 0:
                         command = f"iw phy phy{wiphy} info"
-                        rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+                        rc, stdout_raw, stderr_raw = util2.run_piped_command(command)
 
                         stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                         stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -311,7 +311,7 @@ def get_wifi_data(interfaces: list[str]) -> list[wifi_status.WifiStatus]:
                         signal_strength=signal_strength,
                         ssid_mac=ssid_mac,
                         ssid_name=ssid_name,
-                        updated=util.get_human_timestamp(),
+                        updated=util2.get_human_timestamp(),
                     )
             else:
                 interface_status = wifi_status.WifiStatus(

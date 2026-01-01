@@ -12,10 +12,10 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
+
 from waybar import glyphs, http
 from waybar.data import quakes
-from waybar.util import misc, network, system
-from waybar.util import time as waybar_time
+from waybar.util import misc, network, system, wtime
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
@@ -140,7 +140,7 @@ def get_quake_data(radius: str, limit: int, magnitude: float) -> quakes.QuakeDat
                             quake_data = quakes.QuakeData(
                                 success=True,
                                 quakes=quakes_list,
-                                updated=waybar_time.get_human_timestamp(),
+                                updated=wtime.get_human_timestamp(),
                             )
                         else:
                             quake_data = quakes.QuakeData(

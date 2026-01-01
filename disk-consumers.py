@@ -8,15 +8,16 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from glob import glob
 from pathlib import Path
-from time import sleep
 
 import click
+
 from waybar import glyphs
-from waybar.util import conversion, misc, system, time
+from waybar.util import conversion, misc, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -133,7 +134,7 @@ def find_consumers(path: str):
                     path=path,
                     count=len(usage_od),
                     usage=usage_od,
-                    updated=time.get_human_timestamp(),
+                    updated=wtime.get_human_timestamp(),
                 )
         except Exception:
             return PathEntry(
@@ -274,7 +275,7 @@ def main(path: str, unit: str, interval: int, test: bool, debug: bool):
         condition.notify()
 
     while True:
-        sleep(interval)
+        time.sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

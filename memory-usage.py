@@ -7,9 +7,10 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
+
 from waybar import glyphs
 from waybar.data import memory_usage
-from waybar.util import conversion, misc, system, time
+from waybar.util import conversion, misc, system, wtime
 
 context_settings = dict(help_option_names=["-h", "--help"])
 
@@ -188,7 +189,7 @@ def get_memory_usage() -> memory_usage.MemoryInfo:
             swap_pct_total=swap_pct_total,
             swap_pct_used=swap_pct_used,
             swap_pct_free=swap_pct_free,
-            updated=time.get_human_timestamp(),
+            updated=wtime.get_human_timestamp(),
         )
     else:
         memory_info = memory_usage.MemoryInfo(

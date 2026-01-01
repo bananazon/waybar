@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 
 
 @dataclass
@@ -7,7 +6,7 @@ class Server:
     cc: str | None = None
     city: str | None = None
     country: str | None = None
-    d: str | None = None
+    d: str | float | None = None
     host: str | None = None
     id: str | int | None = None
     ip: str | None = None
@@ -35,7 +34,7 @@ class Client:
     lon: str | None = None
     rating: str | int | None = None
     region: str | None = None
-    timezone: datetime | None = None
+    timezone: str | None = None
 
 
 @dataclass

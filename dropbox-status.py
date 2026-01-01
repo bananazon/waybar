@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 
 import click
+
 from waybar import glyphs
 from waybar.util import system
 

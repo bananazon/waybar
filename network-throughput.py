@@ -2,19 +2,21 @@
 
 import json
 import logging
+import os
 import re
 import signal
 import sys
 import threading
+import time
 from collections import OrderedDict
-from time import sleep
 from typing import cast
 
 import click
 from dacite import Config, from_dict
+
 from waybar import glyphs
 from waybar.data import network_throughput as nt
-from waybar.util import network, system, time
+from waybar.util import network, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -110,16 +112,16 @@ def generate_tooltip(network_throughput: nt.NetworkThroughput) -> str:
     return "\n".join(tooltip)
 
 
-# def get_icon(interface: str) -> str:
-#     is_connected = util.interface_is_connected(interface=interface)
-#     if os.path.isdir(f"/sys/class/net/{interface}/wireless"):
-#         return (
-#             glyphs.md_wifi_strength_4
-#             if is_connected
-#             else glyphs.md_wifi_strength_alert_outline
-#         )
-#     else:
-#         return glyphs.md_network if is_connected else glyphs.md_network_off
+def get_icon(interface: str) -> str:
+    is_connected = network._interface_connected(interface=interface)
+    if os.path.isdir(f"/sys/class/net/{interface}/wireless"):
+        return (
+            glyphs.md_wifi_strength_4
+            if is_connected
+            else glyphs.md_wifi_strength_alert_outline
+        )
+    else:
+        return glyphs.md_network if is_connected else glyphs.md_network_off
 
 
 def get_sample() -> list[nt.Sample] | None:
@@ -144,7 +146,7 @@ def get_sample() -> list[nt.Sample] | None:
 def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
     network_throughput: list[nt.NetworkThroughput] = []
     first_sample = get_sample()
-    sleep(1)
+    time.sleep(1)
     second_sample = get_sample()
 
     if not first_sample or not second_sample:
@@ -160,7 +162,7 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                 model: str = ""
                 vendor: str = ""
 
-                # public_ip = util.find_public_ip()
+                # public_ip = network.g()
                 # private_ip, mac_address = util.find_private_ip_and_mac(
                 #     interface=interface
                 # )
@@ -210,7 +212,7 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                         device_name=device_name,
                         driver=driver,
                         interface=interface,
-                        icon=interface_data.Icon,
+                        icon=get_icon(interface=interface),
                         ip_private=interface_data.Inet,
                         ip_public=interface_data.PublicIP,
                         mac_address=interface_data.Mac,
@@ -222,7 +224,7 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                             number=second.t_bytes - first.t_bytes, bytes=False
                         ),
                         vendor=vendor,
-                        updated=time.get_human_timestamp(),
+                        updated=wtime.get_human_timestamp(),
                     )
                 )
             else:
@@ -230,7 +232,7 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                     nt.NetworkThroughput(
                         success=False,
                         error="disconnected",
-                        icon=interface_data.Icon,
+                        icon=get_icon(interface=interface),
                         interface=interface,
                     )
                 )
@@ -239,7 +241,7 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                 nt.NetworkThroughput(
                     success=False,
                     error="doesn't exist",
-                    icon=interface_data.Icon,
+                    icon=get_icon(interface=interface),
                     interface=interface,
                 )
             )
@@ -252,7 +254,11 @@ def render_output(
     interface = network_throughput.interface
     logging.debug("[render_output] - entering function")
     if not icon:
-        icon = network_throughput.icon if network_throughput.icon else glyphs.md_alert
+        icon = (
+            network_throughput.icon
+            if not network_throughput.icon
+            else get_icon(interface=interface)
+        )
     if network_throughput.success:
         text = f"{icon}{glyphs.icon_spacer}{interface} {glyphs.cod_arrow_small_down}{network_throughput.received} {glyphs.cod_arrow_small_up}{network_throughput.transmitted}"
         output_class = "success"
@@ -317,7 +323,10 @@ def worker(interfaces: list[str]):
                 )
 
 
-@click.command(name="run", help="Get network throughput via /sys/class/net")
+@click.command(
+    help="Get network throughput via /sys/class/net",
+    context_settings=dict(help_option_names=["-h", "--help"]),
+)
 @click.option(
     "-i", "--interface", required=True, multiple=True, help="The interface to check"
 )
@@ -355,7 +364,7 @@ def main(interface: list[str], interval: int, test: bool, debug: bool):
         condition.notify()
 
     while True:
-        sleep(interval)
+        time.sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

@@ -3,6 +3,7 @@
 import json
 
 import click
+
 from waybar import glyphs, http
 from waybar.util import network
 

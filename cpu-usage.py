@@ -6,9 +6,10 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
+
 from waybar import glyphs
 from waybar.data import cpu_usage
-from waybar.util import conversion, misc, system, time
+from waybar.util import conversion, misc, system, wtime
 
 context_settings = dict(help_option_names=["-h", "--help"])
 CORE_INFO: list[cpu_usage.CoreInfo] = []
@@ -212,7 +213,7 @@ def get_cpu_info() -> cpu_usage.CpuInfo:
             freq_min=freq_min,
             freq_max=freq_max,
             model=CORE_INFO[0].model_name or "Unknown",
-            updated=time.get_human_timestamp(),
+            updated=wtime.get_human_timestamp(),
         )
     else:
         cpu_info = cpu_usage.CpuInfo(

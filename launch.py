@@ -13,7 +13,7 @@ from typing import cast, override
 import click
 import psutil
 
-from scripts.waybar.util import system
+from waybar.util import system
 
 cache_dir = system.get_cache_directory()
 context_settings = dict(help_option_names=["-h", "--help"])

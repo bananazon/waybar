@@ -7,13 +7,14 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass, field
-from time import sleep
 
 import click
 from typing_extensions import Protocol
+
 from waybar import glyphs
-from waybar.util import network, system, time
+from waybar.util import network, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -167,7 +168,7 @@ def success(package_type: str, packages: list[Package]) -> SoftwareUpdates:
         count=len(packages),
         packages=packages,
         package_type=package_type,
-        updated=time.get_human_timestamp(),
+        updated=wtime.get_human_timestamp(),
     )
 
 
@@ -635,7 +636,7 @@ def main(package_type: str, interval: int, test: bool, debug: bool):
         condition.notify()
 
     while True:
-        sleep(interval)
+        time.sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

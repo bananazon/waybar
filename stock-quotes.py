@@ -14,24 +14,40 @@ from typing import Tuple, cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util2
-from waybar.data import stock_quotes
 from yahooquery import Ticker
+
+from waybar import glyphs
+from waybar.data import stock_quotes
+from waybar.util import conversion, log, network, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
-logger: logging.Logger
 
 DEFAULT_SYMBOLS = ["GOOG", "AAPL"]
 
+cache_dir = system.get_cache_directory()
+condition = threading.Condition()
+context_settings = dict(help_option_names=["-h", "--help"])
+format_index: int = 0
+logfile = cache_dir / "waybar-stock-quotes.log"
+logger: logging.Logger
+needs_fetch: bool = False
+needs_redraw: bool = False
+
+formats: list[int] = []
+
+update_event = threading.Event()
+
 
 class StockQuotes:
+    global logger
+
     def __init__(self, **kwargs) -> None:
         self.success: bool = True
         self.error: str | None = None
 
         self.symbols = kwargs.get("symbols", [])
-        self.logger = util2.configure_logger(
+        self.logger = log.configure(
             debug=False, name=os.path.basename(__file__), logfile=logfile
         )
         self.data: list[stock_quotes.QuoteData] = []
@@ -54,8 +70,8 @@ class StockQuotes:
 
         symbol = "+" if amount > 0 else "-"
 
-        change_amt = f"{symbol}{util2.pad_float(abs(amount))}"
-        change_pct = f"{symbol}{util2.pad_float(abs(percent))}%"
+        change_amt = f"{symbol}{conversion.pad_float(abs(amount))}"
+        change_pct = f"{symbol}{conversion.pad_float(abs(percent))}%"
 
         return change_amt, change_pct
 
@@ -241,24 +257,13 @@ class StockQuotes:
             )
 
         self.logger.info("refresh complete")
-        self.updated = util2.get_human_timestamp()
+        self.updated = wtime.get_human_timestamp()
 
         for _, quote in quotes_map.items():
             self.data.append(quote)
 
 
-cache_dir = util2.get_cache_directory()
-condition = threading.Condition()
-context_settings = dict(help_option_names=["-h", "--help"])
-format_index: int = 0
-logfile = cache_dir / "waybar-stock-quotes.log"
-needs_fetch: bool = False
-needs_redraw: bool = False
 quotes: StockQuotes = StockQuotes()
-
-formats: list[int] = []
-
-update_event = threading.Event()
 
 
 def refresh_handler(_signum: int, _frame: object | None):
@@ -372,7 +377,7 @@ def generate_tooltip():
             symbol=q.currency_symbol,
         )
     if q.quotes.fiftyTwoWeekLowChangePercent:
-        key_stats["52 Week Low Change %"] = util2.float_to_pct(
+        key_stats["52 Week Low Change %"] = conversion.float_to_pct(
             number=q.quotes.fiftyTwoWeekLowChangePercent,
         )
     if q.summaryDetail.fiftyTwoWeekHigh:
@@ -386,7 +391,7 @@ def generate_tooltip():
             symbol=q.currency_symbol,
         )
     if q.quotes.fiftyTwoWeekHighChangePercent:
-        key_stats["52 Week High Change %"] = util2.float_to_pct(
+        key_stats["52 Week High Change %"] = conversion.float_to_pct(
             number=q.quotes.fiftyTwoWeekHighChangePercent,
         )
     if q.defaultKeyStatistics.fiftyTwoWeekChange:
@@ -395,7 +400,7 @@ def generate_tooltip():
             symbol=q.currency_symbol,
         )
     if q.quotes.fiftyTwoWeekChangePercent:
-        key_stats["52 Week Change %"] = util2.float_to_pct(
+        key_stats["52 Week Change %"] = conversion.float_to_pct(
             q.quotes.fiftyTwoWeekChangePercent
         )
     # 50 Day
@@ -410,7 +415,7 @@ def generate_tooltip():
             symbol=q.currency_symbol,
         )
     if q.quotes.fiftyDayAverageChangePercent:
-        key_stats["50 Day Average Change %"] = util2.float_to_pct(
+        key_stats["50 Day Average Change %"] = conversion.float_to_pct(
             q.quotes.fiftyDayAverageChangePercent
         )
     # Targets
@@ -485,7 +490,7 @@ def generate_tooltip():
             symbol=q.currency_symbol,
         )
     if q.financialData.debtToEquity:
-        key_stats["Total Debt/Equity"] = util2.float_to_pct(
+        key_stats["Total Debt/Equity"] = conversion.float_to_pct(
             number=q.financialData.debtToEquity
         )
     if q.financialData.recommendationKey:
@@ -509,7 +514,7 @@ def generate_tooltip():
         dividend_information: OrderedDict = OrderedDict()
         if q.summaryDetail.dividendRate and q.quotes.dividendYield:
             dividend_information["Forward Dividend and Yield"] = (
-                f"{util2.pad_float(number=q.summaryDetail.dividendRate)} ({util2.float_to_pct(number=q.quotes.dividendYield)})"
+                f"{conversion.pad_float(number=q.summaryDetail.dividendRate)} ({conversion.float_to_pct(number=q.quotes.dividendYield)})"
             )
 
         if q.defaultKeyStatistics.lastDividendDate:
@@ -518,7 +523,7 @@ def generate_tooltip():
                 tz=timezone.utc,
             ).strftime(format="%Y-%m-%d")
         if q.summaryDetail.payoutRatio:
-            dividend_information["Payout Ratio"] = util2.float_to_pct(
+            dividend_information["Payout Ratio"] = conversion.float_to_pct(
                 number=q.summaryDetail.payoutRatio * 100
             )
         # if q.defaultKeyStatistics.lastDividendValue:
@@ -554,27 +559,27 @@ def generate_tooltip():
                     symbol=q.currency_symbol,
                 )
             if q.quotes.trailingPE:
-                valuation_measures["Trailing P/E"] = util2.pad_float(
+                valuation_measures["Trailing P/E"] = conversion.pad_float(
                     q.quotes.trailingPE
                 )
             if q.defaultKeyStatistics.forwardPE:
-                valuation_measures["Forward P/E"] = util2.pad_float(
+                valuation_measures["Forward P/E"] = conversion.pad_float(
                     q.defaultKeyStatistics.forwardPE
                 )
             if q.summaryDetail.priceToSalesTrailing12Months:
-                valuation_measures["Price/Sales (ttm)"] = util2.pad_float(
+                valuation_measures["Price/Sales (ttm)"] = conversion.pad_float(
                     q.summaryDetail.priceToSalesTrailing12Months
                 )
             if q.defaultKeyStatistics.priceToBook:
-                valuation_measures["Price/Book (mrq)"] = util2.pad_float(
+                valuation_measures["Price/Book (mrq)"] = conversion.pad_float(
                     q.defaultKeyStatistics.priceToBook
                 )
             if q.defaultKeyStatistics.enterpriseToRevenue:
-                valuation_measures["Enterprise Value/Revenue"] = util2.pad_float(
+                valuation_measures["Enterprise Value/Revenue"] = conversion.pad_float(
                     q.defaultKeyStatistics.enterpriseToRevenue
                 )
             if q.defaultKeyStatistics.enterpriseToEbitda:
-                valuation_measures["Enterprise Value/EBITDA"] = util2.pad_float(
+                valuation_measures["Enterprise Value/EBITDA"] = conversion.pad_float(
                     q.defaultKeyStatistics.enterpriseToEbitda
                 )
 
@@ -603,7 +608,7 @@ def render_output(icon: str | None = None) -> tuple[str, str, str]:
 
     if quotes.success:
         q = quotes.data[format_index]
-        text = f"{icon}{glyphs.icon_spacer}{q.symbol} {util2.pad_float(q.current)} {q.change} ({q.change_pct})"
+        text = f"{icon}{glyphs.icon_spacer}{q.symbol} {conversion.pad_float(q.current)} {q.change} ({q.change_pct})"
         output_class = "success"
         tooltip = generate_tooltip()
     else:
@@ -629,7 +634,7 @@ def worker(symbols: list[str]):
         logger.info("entering worker loop")
         logger.info(f"symbols = {symbols}")
 
-        if not util2.network_is_reachable():
+        if not network.network_is_reachable():
             output = {
                 "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
                 "class": "error",
@@ -701,7 +706,7 @@ def worker(symbols: list[str]):
 def main(symbol: str, debug: bool, test: bool, interval: int):
     global formats, needs_fetch, needs_redraw, quotes, logger
 
-    logger = util2.configure_logger(
+    logger = log.configure(
         debug=debug, name=os.path.basename(__file__), logfile=logfile
     )
 
@@ -717,8 +722,6 @@ def main(symbol: str, debug: bool, test: bool, interval: int):
 
     if test:
         quotes.get_quotes()
-        # pprint(quotes.data)
-        # exit()
         text, output_class, tooltip = render_output()
         print(text)
         print(output_class)

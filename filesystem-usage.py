@@ -5,16 +5,17 @@ import logging
 import signal
 import sys
 import threading
+import time
 from collections import OrderedDict
 from pathlib import Path
-from time import sleep
 from typing import cast
 
 import click
 from dacite import Config, from_dict
+
 from waybar import glyphs
 from waybar.data import filesystem_usage
-from waybar.util import conversion, misc, system, time
+from waybar.util import conversion, misc, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
@@ -207,7 +208,7 @@ def get_disk_usage(
 
     if show_stats:
         first_sample = get_sample()
-        sleep(1)
+        time.sleep(1)
         second_sample = get_sample()
 
     for mountpoint in mountpoints:
@@ -318,7 +319,7 @@ def get_disk_usage(
                             lsblk=lsblk_data,
                             sample1=first,
                             sample2=second,
-                            updated=time.get_human_timestamp(),
+                            updated=wtime.get_human_timestamp(),
                         )
                     )
             else:
@@ -494,7 +495,7 @@ def main(
         condition.notify()
 
     while True:
-        sleep(interval)
+        time.sleep(interval)
         with condition:
             needs_fetch = True
             needs_redraw = True

@@ -6,7 +6,7 @@ height: 31
 spacing: 5
 exclusive: true
 font: "Arimo Nerd Font 12"
-scripts_path: /home/gdanko/.config/waybar/scripts
+scripts_path: /home/gdanko/.config/waybar
 
 static_modules:
   - name: cpu-usage

@@ -6,8 +6,10 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util
+
+from waybar import glyphs
 from waybar.data import cpu_usage
+from waybar.util import conversion, misc, system, wtime
 
 context_settings = dict(help_option_names=["-h", "--help"])
 CORE_INFO: list[cpu_usage.CoreInfo] = []
@@ -29,7 +31,7 @@ def generate_tooltip(cpu_info: cpu_usage.CpuInfo) -> str:
 
     if cpu_info.freq_min and cpu_info.freq_max:
         tooltip.append(
-            f"Frequency: {util.processor_speed(cpu_info.freq_min)} > {util.processor_speed(cpu_info.freq_max)}"
+            f"Frequency: {conversion.processor_speed(cpu_info.freq_min)} > {conversion.processor_speed(cpu_info.freq_max)}"
         )
 
     if cpu_info.cpu_load and type(cpu_info.cpu_load) is list:
@@ -39,7 +41,7 @@ def generate_tooltip(cpu_info: cpu_usage.CpuInfo) -> str:
                 core_number = int(core.cpu)
                 core_freq = CORE_INFO[core_number].cpu_frequency
                 tooltip.append(
-                    f"  core {int(core.cpu):02} user {util.pad_float(core.percent_usr, False)}%, sys {util.pad_float(core.percent_sys, False)}%, idle {util.pad_float(core.percent_idle, False)}% ({util.processor_speed(core_freq)})"
+                    f"  core {int(core.cpu):02} user {conversion.pad_float(core.percent_usr, False)}%, sys {conversion.pad_float(core.percent_sys, False)}%, idle {conversion.pad_float(core.percent_idle, False)}% ({conversion.processor_speed(core_freq)})"
                 )
 
     if cpu_info.caches and type(cpu_info.caches) is list and len(cpu_info.caches) > 0:
@@ -81,7 +83,7 @@ def get_icon():
 def get_cache_info() -> list[cpu_usage.CpuCache]:
     caches: list[cpu_usage.CpuCache] = []
     command = "sudo dmidecode -t cache | jc --dmidecode"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     if rc == 0 and stdout != "":
@@ -92,7 +94,7 @@ def get_cache_info() -> list[cpu_usage.CpuCache]:
                 data=item,
                 config=Config(
                     cast=[int, float],
-                    type_hooks={str: util.str_hook, int: util.int_hook},
+                    type_hooks={str: misc.str_hook, int: misc.int_hook},
                     strict=False,
                 ),
             )
@@ -102,17 +104,17 @@ def get_cache_info() -> list[cpu_usage.CpuCache]:
 
 
 def get_cpu_freq() -> tuple[float, float, float]:
-    rc, stdout_raw, _ = util.run_piped_command(
+    rc, stdout_raw, _ = system.run_piped_command(
         "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
     )
     freq_cur_raw = stdout_raw if (rc == 0 and isinstance(stdout_raw, str)) else "-1"
 
-    rc, stdout_raw, _ = util.run_piped_command(
+    rc, stdout_raw, _ = system.run_piped_command(
         "cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq"
     )
     freq_min_raw = stdout_raw if (rc == 0 and isinstance(stdout_raw, str)) else "-1"
 
-    rc, stdout_raw, _ = util.run_piped_command(
+    rc, stdout_raw, _ = system.run_piped_command(
         "cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
     )
     freq_max_raw = stdout_raw if (rc == 0 and isinstance(stdout_raw, str)) else "-1"
@@ -144,7 +146,7 @@ def parse_proc_cpuinfo():
     }
 
     command = "jc --pretty /proc/cpuinfo"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     if rc == 0 and stdout != "":
@@ -159,7 +161,7 @@ def parse_proc_cpuinfo():
                 data=core,
                 config=Config(
                     cast=[int, float],
-                    type_hooks={str: util.str_hook, int: util.int_hook},
+                    type_hooks={str: misc.str_hook, int: misc.int_hook},
                     strict=False,
                 ),
             )
@@ -177,7 +179,7 @@ def get_cpu_info() -> cpu_usage.CpuInfo:
     cpu_load: list[cpu_usage.CorePercent] = []
 
     command = "mpstat -A | jc --pretty --mpstat"
-    rc, stdout_raw, stderr_raw = util.run_piped_command(command)
+    rc, stdout_raw, stderr_raw = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     stderr = stderr_raw if isinstance(stderr_raw, str) else ""
@@ -195,7 +197,7 @@ def get_cpu_info() -> cpu_usage.CpuInfo:
                             data=stanza,
                             config=Config(
                                 cast=[int, float],
-                                type_hooks={str: util.str_hook, int: util.int_hook},
+                                type_hooks={str: misc.str_hook, int: misc.int_hook},
                                 strict=False,
                             ),
                         )
@@ -211,7 +213,7 @@ def get_cpu_info() -> cpu_usage.CpuInfo:
             freq_min=freq_min,
             freq_max=freq_max,
             model=CORE_INFO[0].model_name or "Unknown",
-            updated=util.get_human_timestamp(),
+            updated=wtime.get_human_timestamp(),
         )
     else:
         cpu_info = cpu_usage.CpuInfo(

@@ -12,14 +12,16 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, http, util
+
+from waybar import glyphs, http
 from waybar.data import quakes
+from waybar.util import misc, network, system, wtime
 
 update_event = threading.Event()
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 context_settings = dict(help_option_names=["-h", "--help"])
 loading = f"{glyphs.md_timer_outline}{glyphs.icon_spacer}Checking USGS..."
 loading_dict = {"text": loading, "class": "loading", "tooltip": "Checking USGS..."}
@@ -71,11 +73,10 @@ def get_quake_data(radius: str, limit: int, magnitude: float) -> quakes.QuakeDat
     quake_data: quakes.QuakeData = quakes.QuakeData()
     quakes_list: list[quakes.Quake] = []
 
-    ip = util.find_public_ip()
+    ip = network.get_public_ip()
     if ip:
-        location_data = util.ip_to_location(ip=ip)
+        location_data = network.ip_to_location(ip=ip)
         if location_data:
-            print(location_data.loc)
             if location_data.loc:
                 lat, lon = re.split(r"\s*,\s*", location_data.loc)
 
@@ -124,8 +125,8 @@ def get_quake_data(radius: str, limit: int, magnitude: float) -> quakes.QuakeDat
                                         config=Config(
                                             cast=[str, int, float],
                                             type_hooks={
-                                                str: util.str_hook,
-                                                int: util.int_hook,
+                                                str: misc.str_hook,
+                                                int: misc.int_hook,
                                             },
                                         ),
                                     )
@@ -139,7 +140,7 @@ def get_quake_data(radius: str, limit: int, magnitude: float) -> quakes.QuakeDat
                             quake_data = quakes.QuakeData(
                                 success=True,
                                 quakes=quakes_list,
-                                updated=util.get_human_timestamp(),
+                                updated=wtime.get_human_timestamp(),
                             )
                         else:
                             quake_data = quakes.QuakeData(
@@ -172,7 +173,7 @@ def worker(radius: str, limit: int, magnitude: float):
         update_event.clear()
 
         logging.info("[worker] entering main loop")
-        if util.network_is_reachable():
+        if network.network_is_reachable():
             print(json.dumps(loading_dict))
 
             quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
@@ -226,7 +227,6 @@ def worker(radius: str, limit: int, magnitude: float):
 )
 def main(radius: str, limit: int, magnitude: float, interval: int, test: bool):
     if test:
-        print(interval)
         quake_data = get_quake_data(radius=radius, limit=limit, magnitude=magnitude)
         print(generate_tooltip(quake_data=quake_data))
         return

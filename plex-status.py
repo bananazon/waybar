@@ -3,7 +3,9 @@
 import json
 
 import click
-from waybar import glyphs, http, util
+
+from waybar import glyphs, http
+from waybar.util import network
 
 context_settings = dict(help_option_names=["-h", "--help"])
 
@@ -54,7 +56,7 @@ def get_plex_status(ip: str, port: int, token: str) -> tuple[bool, bool]:
     help='Plex Server API token; stored in "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Preferences.xml"',
 )
 def main(ip: str, port: int, token: str):
-    if util.network_is_reachable():
+    if network.network_is_reachable():
         process, available = get_plex_status(ip=ip, port=port, token=token)
         process_color = "green" if process else "red"
         availability_color = "green" if available else "red"

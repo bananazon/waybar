@@ -271,7 +271,7 @@ def render_template(
             plex_status=static_module_map.get("plex-status", StaticModule()),
             position=configuration.position or "top",
             quakes=static_module_map.get("quakes", StaticModule()),
-            scripts_path=configuration.scripts_path or "~/.config/waybar/scripts",
+            scripts_path=configuration.scripts_path or "~/.config/waybar",
             su=configuration.software_updates or StaticModule(),
             stock_quotes=configuration.stock_quotes or StockQuotes(),
             spacing=configuration.spacing or 5,

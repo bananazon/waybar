@@ -13,13 +13,15 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, util
+
+from waybar import glyphs
 from waybar.data import network_throughput as nt
+from waybar.util import network, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 format_index: int = 0
@@ -111,7 +113,7 @@ def generate_tooltip(network_throughput: nt.NetworkThroughput) -> str:
 
 
 def get_icon(interface: str) -> str:
-    is_connected = util.interface_is_connected(interface=interface)
+    is_connected = network._interface_connected(interface=interface)
     if os.path.isdir(f"/sys/class/net/{interface}/wireless"):
         return (
             glyphs.md_wifi_strength_4
@@ -125,7 +127,7 @@ def get_icon(interface: str) -> str:
 def get_sample() -> list[nt.Sample] | None:
     entries: list[nt.Sample] = []
     command = "jc --pretty /proc/net/dev"
-    rc, stdout_raw, _ = util.run_piped_command(command)
+    rc, stdout_raw, _ = system.run_piped_command(command)
 
     stdout = stdout_raw if isinstance(stdout_raw, str) else ""
     if rc == 0 and stdout != "":
@@ -151,21 +153,22 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
         return [nt.NetworkThroughput(success=False, error="failed to get network data")]
 
     for interface in interfaces:
-        if util.interface_exists(interface=interface):
-            if util.interface_is_connected(interface=interface):
+        interface_data = network.get_interface_data(interface=interface)
+        if interface_data.Device:
+            if interface_data.Connected:
                 alias: str = ""
                 device_name: str = ""
                 driver: str = ""
                 model: str = ""
                 vendor: str = ""
 
-                public_ip = util.find_public_ip()
-                private_ip, mac_address = util.find_private_ip_and_mac(
-                    interface=interface
-                )
+                # public_ip = network.g()
+                # private_ip, mac_address = util.find_private_ip_and_mac(
+                #     interface=interface
+                # )
 
                 command = f"udevadm info --query=all --path=/sys/class/net/{interface}"
-                rc, stdout_raw, _ = util.run_piped_command(command)
+                rc, stdout_raw, _ = system.run_piped_command(command)
 
                 stdout = stdout_raw if isinstance(stdout_raw, str) else ""
                 if rc == 0 and stdout != "":
@@ -210,18 +213,18 @@ def get_network_throughput(interfaces: list[str]) -> list[nt.NetworkThroughput]:
                         driver=driver,
                         interface=interface,
                         icon=get_icon(interface=interface),
-                        ip_private=private_ip,
-                        ip_public=public_ip,
-                        mac_address=mac_address,
+                        ip_private=interface_data.Inet,
+                        ip_public=interface_data.PublicIP,
+                        mac_address=interface_data.Mac,
                         model=model,
-                        received=util.network_speed(
+                        received=network.network_speed(
                             number=second.r_bytes - first.r_bytes, bytes=False
                         ),
-                        transmitted=util.network_speed(
+                        transmitted=network.network_speed(
                             number=second.t_bytes - first.t_bytes, bytes=False
                         ),
                         vendor=vendor,
-                        updated=util.get_human_timestamp(),
+                        updated=wtime.get_human_timestamp(),
                     )
                 )
             else:
@@ -320,7 +323,10 @@ def worker(interfaces: list[str]):
                 )
 
 
-@click.command(name="run", help="Get network throughput via /sys/class/net")
+@click.command(
+    help="Get network throughput via /sys/class/net",
+    context_settings=dict(help_option_names=["-h", "--help"]),
+)
 @click.option(
     "-i", "--interface", required=True, multiple=True, help="The interface to check"
 )

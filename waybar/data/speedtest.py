@@ -6,7 +6,7 @@ class Server:
     cc: str | None = None
     city: str | None = None
     country: str | None = None
-    d: str | None = None
+    d: str | float | None = None
     host: str | None = None
     id: str | int | None = None
     ip: str | None = None

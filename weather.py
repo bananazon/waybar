@@ -12,13 +12,15 @@ from typing import cast
 
 import click
 from dacite import Config, from_dict
-from waybar import glyphs, http, util
+
+from waybar import glyphs, http
 from waybar.data import weather
+from waybar.util import log, network, system, wtime
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore
 
 
-cache_dir = util.get_cache_directory()
+cache_dir = system.get_cache_directory()
 condition = threading.Condition()
 context_settings = dict(help_option_names=["-h", "--help"])
 format_index: int = 0
@@ -61,8 +63,7 @@ _ = signal.signal(signal.SIGUSR1, toggle_format)
 
 def generate_tooltip(location_data: weather.LocationData, use_celsius: bool):
     global logger
-    # pprint(location_data)
-    # exit()
+
     logger.debug(f"entering with mountpoint={location_data.location_full}")
     tooltip: list[str] = []
     tooltip_od: OrderedDict[str, str | int | float] = OrderedDict()
@@ -129,15 +130,15 @@ def generate_tooltip(location_data: weather.LocationData, use_celsius: bool):
         tooltip_od["Visibility"] = f"{visibility} {distance}"
 
     if sunrise_unix and sunset_unix:
-        sunrise = util.to_24hour_time(input=sunrise_unix)
-        sunset = util.to_24hour_time(input=sunset_unix)
+        sunrise = wtime.to_24hour_time(input=sunrise_unix)
+        sunset = wtime.to_24hour_time(input=sunset_unix)
         if sunrise and sunset:
             tooltip_od["Sunrise"] = sunrise
             tooltip_od["Sunset"] = sunset
 
     if moonrise_unix and moonset_unix:
-        moonrise = util.to_24hour_time(input=moonrise_unix)
-        moonset = util.to_24hour_time(input=moonset_unix)
+        moonrise = wtime.to_24hour_time(input=moonrise_unix)
+        moonset = wtime.to_24hour_time(input=moonset_unix)
         if moonrise and moonset:
             tooltip_od["Moonrise"] = moonrise
             tooltip_od["Moonset"] = moonset
@@ -287,25 +288,25 @@ def get_weather(api_key: str, location: str) -> weather.LocationData:
                     if weather_data.forecast.forecastday[idx].astro.moonrise:
                         weather_data.forecast.forecastday[
                             idx
-                        ].astro.moonrise_unix = util.to_unix_time(
+                        ].astro.moonrise_unix = wtime.to_unix_time(
                             input=weather_data.forecast.forecastday[idx].astro.moonrise
                         )
                     if weather_data.forecast.forecastday[idx].astro.moonset:
                         weather_data.forecast.forecastday[
                             idx
-                        ].astro.moonset_unix = util.to_unix_time(
+                        ].astro.moonset_unix = wtime.to_unix_time(
                             input=weather_data.forecast.forecastday[idx].astro.moonset
                         )
                     if weather_data.forecast.forecastday[idx].astro.sunrise:
                         weather_data.forecast.forecastday[
                             idx
-                        ].astro.sunrise_unix = util.to_unix_time(
+                        ].astro.sunrise_unix = wtime.to_unix_time(
                             input=weather_data.forecast.forecastday[idx].astro.sunrise
                         )
                     if weather_data.forecast.forecastday[idx].astro.sunset:
                         weather_data.forecast.forecastday[
                             idx
-                        ].astro.sunset_unix = util.to_unix_time(
+                        ].astro.sunset_unix = wtime.to_unix_time(
                             input=weather_data.forecast.forecastday[idx].astro.sunset
                         )
 
@@ -318,7 +319,7 @@ def get_weather(api_key: str, location: str) -> weather.LocationData:
                     location_short=weather_data.location.name,
                     location_full=location,
                     weather=weather_data,
-                    updated=util.get_human_timestamp(),
+                    updated=wtime.get_human_timestamp(),
                 )
 
     return location_data
@@ -363,7 +364,7 @@ def worker(api_key: str, locations: list[str], use_celsius: bool):
 
         logger.info("entering worker loop")
 
-        if not util.network_is_reachable():
+        if not network.network_is_reachable():
             output = {
                 "text": f"{glyphs.md_alert}{glyphs.icon_spacer}the network is unreachable",
                 "class": "error",
@@ -439,7 +440,7 @@ def main(
 ):
     global formats, needs_fetch, needs_redraw, logger
 
-    logger = util.configure_logger(
+    logger = log.configure(
         debug=debug, name=os.path.basename(__file__), logfile=logfile
     )
 
